@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from discord.ext import commands, tasks
+from json import dump, load
 from os import getenv
 from randfacts import get_fact
 from random import choice, randint
@@ -18,6 +19,114 @@ class Random(commands.Cog):
         self.ch_general = None
 
         self.daily_fact.start()
+
+        with open('./hat.json', 'r') as inFile:
+            self.hat_store = load(inFile)
+
+    @commands.command(help='Use this command to interface with the hat pick system.\n'
+                           'This command is broken up into the following subcommands:\n\n'
+                           '**add:** Adds an element to the *main* hat.\n'
+                           'Example: `$hat add Moonfall`\n'
+                           'To add elements to a hat other than *main*, use the -h flag and specify a different hat.\n'
+                           'Example: `$hat add -h movies Troll 2`\n'
+                           'To add multiple elements at once, use the -m flag and include a comma-seperated list.\n'
+                           'Example: `$hat add -m Monster a Go-Go, Birdemic, Batman & Robin`\n\n'
+                           '**choice:** Randomly chooses and removes one element from the *main* hat.\n'
+                           'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
+                           'Example: `$hat choice -h games`\n\n'
+                           '**delete:** Deletes a specified hat.\n'
+                           'Example: `$hat delete enemies`\n\n'
+                           '**list:** Lists the active hats for this server.\n\n'
+                           '**new:** Creates a new a hat.\n'
+                           'Example: `$hat new cards`\n\n'
+                           '**view**: View all elements in a given hat (*main* by default)\n'
+                           'Example: `$hat view cats`',
+                      brief='Interface with the hat pick system')
+    async def hat(self, ctx, *, arg):
+        if str(ctx.guild.id) not in self.hat_store:
+            self.hat_store[str(ctx.guild.id)] = {'main': []}
+        this_guild = self.hat_store[str(ctx.guild.id)]
+        arg_lst = arg.split()
+        command = arg_lst.pop(0).lower()
+
+        flags = []
+        if arg_lst:
+            flg_args = 0
+            for arg in arg_lst:
+                if arg[0] == '-':
+                    flags.extend([i.lower() for i in arg])
+                    flg_args += 1
+                else:
+                    for i in range(flg_args):
+                        arg_lst.pop(i)
+                    break
+
+        hat_name = 'main' if 'h' not in flags else arg_lst.pop(0)
+
+        if command in ('a', 'add'):
+            if not arg_lst:
+                await ctx.send('**Error:** You must include the title you wish to add with this command.')
+                return
+            if hat_name not in this_guild:
+                this_guild[hat_name] = []
+            if 'm' in flags:
+                this_guild[hat_name].extend(' '.join(arg_lst).split(','))
+            else:
+                this_guild[hat_name].append(' '.join(arg_lst))
+            self.store_json()
+        elif command in ('c', 'choice'):
+            if hat_name not in this_guild:
+                await ctx.send(f'**Error:** No hat with name {hat_name} found in this guild.')
+                return
+            if not this_guild[hat_name]:
+                await ctx.send(f'**Error:** Hat with name {hat_name} is empty, no element can be chosen.')
+            if 'p' not in flags:
+                hat_draw = this_guild[hat_name].pop(randint(0, len(this_guild[hat_name])))
+                self.store_json()
+            else:
+                hat_draw = this_guild[hat_name][randint(0, len(this_guild[hat_name]))]
+            await ctx.send(f'I have randomly selected **{hat_draw}** from the hat!')
+        elif command in ('l', 'list'):
+            hats = '\n'.join([i for i in this_guild])
+            await ctx.send(f'**HATS**\n{hats}')
+        elif command in ('d', 'delete'):
+            if not arg_lst:
+                await ctx.send('**Error:** You must include a hat name with this subcommand.')
+                return
+            del_hat = arg_lst.pop(0).lower()
+            if del_hat not in this_guild:
+                await ctx.send(f'**Error**: No hat with name {del_hat} found in this guild.')
+                return
+            this_guild.pop(del_hat)
+            self.store_json()
+        elif command in ('n', 'new'):
+            if not arg_lst:
+                await ctx.send('**Error:** You must include a hat name with this subcommand.')
+                return
+            this_guild[arg_lst.pop(0).lower()] = []
+        elif command in ('v', 'view'):
+            if not arg_lst:
+                this_hat = 'main'
+            else:
+                this_hat = arg_lst.pop(0).lower()
+            if this_hat not in this_guild:
+                await ctx.send(f'**Error**: No hat with name {this_hat} found in this guild.')
+                return
+            await ctx.send(f'**Elements in {this_hat}**:\n{", ".join(this_guild[this_hat])}')
+
+    # Called if $choice encounters an unhandled exception
+    @hat.error
+    async def hat_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send('You must include a subcommand to use with $hat.\n'
+                           'Example: `$hat add Moonfall`\n\n'
+                           'Please use `$help hat` for more information.')
+        else:
+            print(f'$hat command failed with error:\n\n{error}')
+
+    def store_json(self):
+        with open('./hat.json', 'w') as outFile:
+            dump(self.hat_store, outFile, indent=2)
 
     @tasks.loop(hours=1)
     async def daily_fact(self):
