@@ -42,7 +42,7 @@ class Random(commands.Cog):
                            '**List:** Lists the active hats for this server.\n\n'
                            '**New:** Creates a new a hat.\n'
                            'Example: `$hat new cards`\n\n'
-                           '**Pop:** Randomly chooses and removes one element from the *main* hat.'
+                           '**Pop:** Randomly chooses and removes one element from the *main* hat.\n'
                            'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
                            'Example: `$hat pop -h games`\n\n'
                            '**View**: View all elements in a given hat (*main* by default)\n'
