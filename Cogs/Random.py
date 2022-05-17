@@ -33,10 +33,10 @@ class Random(commands.Cog):
                            'Example: `$hat add -m Monster a Go-Go, Birdemic, Batman & Robin`\n\n'
                            '**Choice:** Randomly chooses one element from the *main* hat.\n'
                            'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
-                           'Example: `$hat choice -h games`\n'
+                           'Example: `$hat choice -h games`\n\n'
                            '**cLear:** Clears all elements from the *main* hat.\n'
                            'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
-                           'Example: `$hat clear -h horses`'
+                           'Example: `$hat clear -h horses`\n\n'
                            '**Delete:** Deletes a specified hat.\n'
                            'Example: `$hat delete enemies`\n\n'
                            '**List:** Lists the active hats for this server.\n\n'
@@ -44,7 +44,7 @@ class Random(commands.Cog):
                            'Example: `$hat new cards`\n\n'
                            '**Pop:** Randomly chooses and removes one element from the *main* hat.'
                            'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
-                           'Example: `$hat pop -h games`\n'
+                           'Example: `$hat pop -h games`\n\n'
                            '**View**: View all elements in a given hat (*main* by default)\n'
                            'Example: `$hat view cats`',
                       brief='Interface with the hat pick system')
