@@ -82,15 +82,8 @@ class Random(commands.Cog):
                 return
             if not this_guild[hat_name]:
                 await ctx.send(f'**Error:** Hat with name {hat_name} is empty, no element can be chosen.')
-            if 'p' not in flags:
-                hat_draw = this_guild[hat_name].pop(randint(0, len(this_guild[hat_name])))
-                self.store_json()
-            else:
-                hat_draw = this_guild[hat_name][randint(0, len(this_guild[hat_name]))]
+            hat_draw = this_guild[hat_name][randint(0, len(this_guild[hat_name]))]
             await ctx.send(f'I have randomly selected **{hat_draw}** from the hat!')
-        elif command in ('l', 'list'):
-            hats = '\n'.join([i for i in this_guild])
-            await ctx.send(f'**HATS**\n{hats}')
         elif command in ('d', 'delete'):
             if not arg_lst:
                 await ctx.send('**Error:** You must include a hat name with this subcommand.')
@@ -101,11 +94,28 @@ class Random(commands.Cog):
                 return
             this_guild.pop(del_hat)
             self.store_json()
+        elif command in ('e', 'clear'):
+            if not arg_lst:
+                await ctx.send('**Error:** You must include a hat name with this subcommand.')
+                return
+            this_guild[hat_name] = []
+        elif command in ('l', 'list'):
+            hats = '\n'.join([i for i in this_guild])
+            await ctx.send(f'**HATS**\n{hats}')
         elif command in ('n', 'new'):
             if not arg_lst:
                 await ctx.send('**Error:** You must include a hat name with this subcommand.')
                 return
             this_guild[arg_lst.pop(0).lower()] = []
+        elif command in ('p', 'pop'):
+            if hat_name not in this_guild:
+                await ctx.send(f'**Error:** No hat with name {hat_name} found in this guild.')
+                return
+            if not this_guild[hat_name]:
+                await ctx.send(f'**Error:** Hat with name {hat_name} is empty, no element can be chosen.')
+            hat_draw = this_guild[hat_name].pop(randint(0, len(this_guild[hat_name])))
+            self.store_json()
+            await ctx.send(f'I have randomly selected **{hat_draw}** from the hat!')
         elif command in ('v', 'view'):
             if not arg_lst:
                 this_hat = 'main'
