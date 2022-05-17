@@ -25,23 +25,27 @@ class Random(commands.Cog):
 
     @commands.command(help='Use this command to interface with the hat pick system.\n'
                            'This command is broken up into the following subcommands:\n\n'
-                           '**add:** Adds an element to the *main* hat.\n'
+                           '**Add:** Adds an element to the *main* hat.\n'
                            'Example: `$hat add Moonfall`\n'
                            'To add elements to a hat other than *main*, use the -h flag and specify a different hat.\n'
                            'Example: `$hat add -h movies Troll 2`\n'
                            'To add multiple elements at once, use the -m flag and include a comma-seperated list.\n'
                            'Example: `$hat add -m Monster a Go-Go, Birdemic, Batman & Robin`\n\n'
-                           '**choice:** Randomly chooses and removes one element from the *main* hat.\n'
+                           '**Choice:** Randomly chooses one element from the *main* hat.\n'
                            'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
                            'Example: `$hat choice -h games`\n'
-                           'To preserve the state of the hat, use the -p flag.\n'
-                           'Example: `$hat choice -p`'
-                           '**delete:** Deletes a specified hat.\n'
+                           '**cLear:** Clears all elements from the *main* hat.\n'
+                           'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
+                           'Example: `$hat clear -h horses`'
+                           '**Delete:** Deletes a specified hat.\n'
                            'Example: `$hat delete enemies`\n\n'
-                           '**list:** Lists the active hats for this server.\n\n'
-                           '**new:** Creates a new a hat.\n'
+                           '**List:** Lists the active hats for this server.\n\n'
+                           '**New:** Creates a new a hat.\n'
                            'Example: `$hat new cards`\n\n'
-                           '**view**: View all elements in a given hat (*main* by default)\n'
+                           '**Pop:** Randomly chooses and removes one element from the *main* hat.'
+                           'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
+                           'Example: `$hat pop -h games`\n'
+                           '**View**: View all elements in a given hat (*main* by default)\n'
                            'Example: `$hat view cats`',
                       brief='Interface with the hat pick system')
     async def hat(self, ctx, *, arg):
@@ -95,9 +99,6 @@ class Random(commands.Cog):
             this_guild.pop(del_hat)
             self.store_json()
         elif command in ('e', 'clear'):
-            if not arg_lst:
-                await ctx.send('**Error:** You must include a hat name with this subcommand.')
-                return
             this_guild[hat_name] = []
         elif command in ('l', 'list'):
             hats = '\n'.join([i for i in this_guild])
