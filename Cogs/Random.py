@@ -34,7 +34,7 @@ class Random(commands.Cog):
                            '**Choice:** Randomly chooses one element from the *main* hat.\n'
                            'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
                            'Example: `$hat choice -h games`\n\n'
-                           '**cLear:** Clears all elements from the *main* hat.\n'
+                           '**clEar:** Clears all elements from the *main* hat.\n'
                            'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
                            'Example: `$hat clear -h horses`\n\n'
                            '**Delete:** Deletes a specified hat.\n'
