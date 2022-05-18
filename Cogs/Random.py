@@ -1,11 +1,12 @@
 # Cog that holds all commands related to RNG
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from discord.ext import commands, tasks
 from json import dump, load
 from os import getenv
 from randfacts import get_fact
 from random import choice, randint
+from re import findall
 import discord
 
 main_channel = int(getenv('GENERAL_CH_ID'))
@@ -23,29 +24,35 @@ class Random(commands.Cog):
         with open('./hat.json', 'r') as inFile:
             self.hat_store = load(inFile)
 
+        for guild in bot.guilds:
+            if str(guild.id) not in self.hat_store:
+                self.hat_store[str(guild.id)] = {'main': []}
+
     @commands.command(help='Use this command to interface with the hat pick system.\n'
-                           'Usage: `$hat <subcommand> [-flags] [flag arg] <subcommand arg>`\n\n'
+                           'Usage: `$hat <subcommand> [-flags] [flag arg] <subcommand arg>`\n\n\n'
                            'This command is broken up into the following subcommands:\n\n'
-                           '**Add:** Adds an element to the *main* hat.\n'
+                           '**Add**: Adds an element to the *main* hat.\n'
                            'Example: `$hat add Moonfall`\n\n'
-                           '**Choice:** Randomly chooses one element from the *main* hat.\n\n'
-                           '**clEar:** Clears all elements from the *main* hat.\n\n'
-                           '**Delete:** Deletes a specified hat.\n'
+                           '**Choice**: Randomly chooses one element from the *main* hat.\n\n'
+                           '**clEar**: Clears all elements from the *main* hat.\n\n'
+                           '**Delete**: Deletes a specified hat.\n'
                            'Example: `$hat delete enemies`\n\n'
-                           '**List:** Lists the active hats for this server.\n\n'
-                           '**New:** Creates a new a hat.\n'
+                           '**Import**: Bulk add elements from current text channel that match given a filter string.\n'
+                           'Example: $hat import "https://www.imdb.com/\S+"\n\n'
+                           '**List**: Lists the active hats for this server.\n\n'
+                           '**New**: Creates a new a hat.\n'
                            'Example: `$hat new cards`\n\n'
-                           '**Pop:** Randomly chooses and removes one element from the *main* hat.\n\n'
-                           '**View**: View all elements in the *main* hat\n\n'
+                           '**Pop**: Randomly chooses and removes one element from the *main* hat.\n\n'
+                           '**View**: View all elements in the *main* hat\n\n\n'
                            'This command has the following flags:\n\n'
+                           '**-c**: Used to specify a channel other than than the context channel.\n'
+                           'Example: `$hat import -c general "www.\S+.com"`'
                            '**-h**: Used to specify a hat other than *main*.\n'
                            'Example: `$hat add -h movies Troll 2`\n\n'
                            '**-m**: Indicates your subcommand argument is a comma-seperated list of elements.\n'
                            'Example: `$hat add -m Monster a Go-Go, Birdemic, Batman & Robin`',
                       brief='Interface with the hat pick system')
     async def hat(self, ctx, *, arg):
-        if str(ctx.guild.id) not in self.hat_store:
-            self.hat_store[str(ctx.guild.id)] = {'main': []}
         this_guild = self.hat_store[str(ctx.guild.id)]
         arg_lst = arg.split()
         command = arg_lst.pop(0).lower()
@@ -55,7 +62,7 @@ class Random(commands.Cog):
             flg_args = 0
             for arg in arg_lst:
                 if arg[0] == '-':
-                    flags.extend([i.lower() for i in arg])
+                    flags.extend([i.lower() for i in arg[1:]])
                     flg_args += 1
                 else:
                     for i in range(flg_args):
@@ -101,6 +108,40 @@ class Random(commands.Cog):
         elif command in ('e', 'clear'):
             this_guild[hat_name] = []
             await self.store_json()
+        elif command in ('h', 'help'):
+            await ctx.send(self.hat.help)
+        elif command in ('i', 'import'):
+            if hat_name not in this_guild:
+                await ctx.send(f'**Error:** No hat with name *{hat_name}* found in this guild.')
+                return
+            if 'c' in flags:
+                if not arg_lst:
+                    await ctx.send('**Error:** You must include a channel name to use the *-c* flag.')
+                    return
+                target_channel = arg_lst.pop(0).lower()
+                channel = list(filter(lambda x: x.name == target_channel, ctx.guild.text_channels))
+                if not channel:
+                    await ctx.send(f'**Error:** Channel with name *{target_channel}* not found in this guild.')
+                    return
+                channel = channel[0]
+            else:
+                channel = ctx.channel
+            if not arg_lst:
+                await ctx.send('**Error:** You must include a filter string to use with this command.')
+                return
+            filter_string = ' '.join(arg_lst).strip('\'"')
+
+            matched_messages = []
+            async for message in channel.history():
+                if message == ctx.message:
+                    continue
+                matched_messages.extend(findall(filter_string, message.content))
+
+            this_guild[hat_name].extend(matched_messages)
+
+            await ctx.send(f'Added {len(matched_messages)} elements found in {channel.name} '
+                           f'matching "{filter_string}" to *{hat_name}*.')
+
         elif command in ('l', 'list'):
             hats = '\n'.join([i for i in this_guild])
             await ctx.send(f'**HATS**\n{hats}')
