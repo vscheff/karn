@@ -177,6 +177,8 @@ class Random(commands.Cog):
                 await ctx.send(f'**Error**: No hat with name {this_hat} found in this guild.')
                 return
             await ctx.send(f'**Elements in {this_hat}**:\n{", ".join(this_guild[this_hat])}')
+        else:
+            await ctx.send(f'**Error**: Unknown hat command *{command}*')
 
     # Called if $hat encounters an unhandled exception
     @hat.error
