@@ -24,29 +24,24 @@ class Random(commands.Cog):
             self.hat_store = load(inFile)
 
     @commands.command(help='Use this command to interface with the hat pick system.\n'
+                           'Usage: `$hat <subcommand> [-flags] [flag arg] <subcommand arg>`\n\n'
                            'This command is broken up into the following subcommands:\n\n'
                            '**Add:** Adds an element to the *main* hat.\n'
-                           'Example: `$hat add Moonfall`\n'
-                           'To add elements to a hat other than *main*, use the -h flag and specify a different hat.\n'
-                           'Example: `$hat add -h movies Troll 2`\n'
-                           'To add multiple elements at once, use the -m flag and include a comma-seperated list.\n'
-                           'Example: `$hat add -m Monster a Go-Go, Birdemic, Batman & Robin`\n\n'
-                           '**Choice:** Randomly chooses one element from the *main* hat.\n'
-                           'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
-                           'Example: `$hat choice -h games`\n\n'
-                           '**clEar:** Clears all elements from the *main* hat.\n'
-                           'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
-                           'Example: `$hat clear -h horses`\n\n'
+                           'Example: `$hat add Moonfall`\n\n'
+                           '**Choice:** Randomly chooses one element from the *main* hat.\n\n'
+                           '**clEar:** Clears all elements from the *main* hat.\n\n'
                            '**Delete:** Deletes a specified hat.\n'
                            'Example: `$hat delete enemies`\n\n'
                            '**List:** Lists the active hats for this server.\n\n'
                            '**New:** Creates a new a hat.\n'
                            'Example: `$hat new cards`\n\n'
-                           '**Pop:** Randomly chooses and removes one element from the *main* hat.\n'
-                           'To chose from a hat other than *main*, use the -h flag and specify a different hat.\n'
-                           'Example: `$hat pop -h games`\n\n'
-                           '**View**: View all elements in a given hat (*main* by default)\n'
-                           'Example: `$hat view cats`',
+                           '**Pop:** Randomly chooses and removes one element from the *main* hat.\n\n'
+                           '**View**: View all elements in the *main* hat\n\n'
+                           'This command has the following flags:\n\n'
+                           '**-h**: Used to specify a hat other than *main*.\n'
+                           'Example: `$hat add -h movies Troll 2`\n\n'
+                           '**-m**: Indicates your subcommand argument is a comma-seperated list of elements.\n'
+                           'Example: `$hat add -m Monster a Go-Go, Birdemic, Batman & Robin`',
                       brief='Interface with the hat pick system')
     async def hat(self, ctx, *, arg):
         if str(ctx.guild.id) not in self.hat_store:
@@ -71,7 +66,7 @@ class Random(commands.Cog):
 
         if command in ('a', 'add'):
             if not arg_lst:
-                await ctx.send('**Error:** You must include the title you wish to add with this command.')
+                await ctx.send('**Error:** You must include the element name you wish to add with this command.')
                 return
             if hat_name not in this_guild:
                 this_guild[hat_name] = []
@@ -79,27 +74,33 @@ class Random(commands.Cog):
                 this_guild[hat_name].extend(' '.join(arg_lst).split(','))
             else:
                 this_guild[hat_name].append(' '.join(arg_lst))
-            self.store_json()
+            await self.store_json()
         elif command in ('c', 'choice'):
             if hat_name not in this_guild:
-                await ctx.send(f'**Error:** No hat with name {hat_name} found in this guild.')
+                await ctx.send(f'**Error:** No hat with name *{hat_name}* found in this guild.')
                 return
             if not this_guild[hat_name]:
-                await ctx.send(f'**Error:** Hat with name {hat_name} is empty, no element can be chosen.')
+                await ctx.send(f'**Error:** Hat with name *{hat_name}* is empty, no element can be chosen.')
+                return
             hat_draw = this_guild[hat_name][randint(0, len(this_guild[hat_name]))]
             await ctx.send(f'I have randomly selected **{hat_draw}** from the hat!')
         elif command in ('d', 'delete'):
             if not arg_lst:
                 await ctx.send('**Error:** You must include a hat name with this subcommand.')
                 return
-            del_hat = arg_lst.pop(0).lower()
-            if del_hat not in this_guild:
-                await ctx.send(f'**Error**: No hat with name {del_hat} found in this guild.')
-                return
-            this_guild.pop(del_hat)
-            self.store_json()
+            if 'm' in flags:
+                hats = [i.strip() for i in ' '.join(arg_lst).lower().split(',')]
+            else:
+                hats = [arg_lst.pop(0).lower()]
+            for del_hat in hats:
+                if del_hat not in this_guild:
+                    await ctx.send(f'**Error**: No hat with name *{del_hat}* found in this guild.')
+                    continue
+                this_guild.pop(del_hat)
+            await self.store_json()
         elif command in ('e', 'clear'):
             this_guild[hat_name] = []
+            await self.store_json()
         elif command in ('l', 'list'):
             hats = '\n'.join([i for i in this_guild])
             await ctx.send(f'**HATS**\n{hats}')
@@ -107,15 +108,24 @@ class Random(commands.Cog):
             if not arg_lst:
                 await ctx.send('**Error:** You must include a hat name with this subcommand.')
                 return
-            this_guild[arg_lst.pop(0).lower()] = []
+            if 'm' in flags:
+                hats = [i.strip() for i in ' '.join(arg_lst).lower().split(',')]
+            else:
+                hats = [arg_lst.pop(0).lower()]
+            for new_hat in hats:
+                if new_hat in this_guild:
+                    await ctx.send(f'**Error:** Hat with name *{new_hat}* already exists in this guild.')
+                    continue
+                this_guild[new_hat] = []
+            await self.store_json()
         elif command in ('p', 'pop'):
             if hat_name not in this_guild:
-                await ctx.send(f'**Error:** No hat with name {hat_name} found in this guild.')
+                await ctx.send(f'**Error:** No hat with name *{hat_name}* found in this guild.')
                 return
             if not this_guild[hat_name]:
-                await ctx.send(f'**Error:** Hat with name {hat_name} is empty, no element can be chosen.')
+                await ctx.send(f'**Error:** Hat with name *{hat_name}* is empty, no element can be chosen.')
             hat_draw = this_guild[hat_name].pop(randint(0, len(this_guild[hat_name])))
-            self.store_json()
+            await self.store_json()
             await ctx.send(f'I have randomly selected **{hat_draw}** from the hat!')
         elif command in ('v', 'view'):
             if not arg_lst:
@@ -127,7 +137,7 @@ class Random(commands.Cog):
                 return
             await ctx.send(f'**Elements in {this_hat}**:\n{", ".join(this_guild[this_hat])}')
 
-    # Called if $choice encounters an unhandled exception
+    # Called if $hat encounters an unhandled exception
     @hat.error
     async def hat_error(self, ctx, error):
         if isinstance(error, commands.errors.MissingRequiredArgument):
@@ -137,7 +147,7 @@ class Random(commands.Cog):
         else:
             print(f'$hat command failed with error:\n\n{error}')
 
-    def store_json(self):
+    async def store_json(self):
         with open('./hat.json', 'w') as outFile:
             dump(self.hat_store, outFile, indent=2)
 
