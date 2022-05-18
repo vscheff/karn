@@ -38,7 +38,7 @@ class Random(commands.Cog):
                            '**Delete**: Deletes a specified hat.\n'
                            'Example: `$hat delete enemies`\n\n'
                            '**Import**: Bulk add elements from current text channel that match given a filter string.\n'
-                           'Example: $hat import "https://www.imdb.com/\S+"\n\n'
+                           'Example: `$hat import "https://www.imdb.com/\S+"`\n\n'
                            '**List**: Lists the active hats for this server.\n\n'
                            '**New**: Creates a new a hat.\n'
                            'Example: `$hat new cards`\n\n'
@@ -46,7 +46,7 @@ class Random(commands.Cog):
                            '**View**: View all elements in the *main* hat\n\n\n'
                            'This command has the following flags:\n\n'
                            '**-c**: Used to specify a channel other than than the context channel.\n'
-                           'Example: `$hat import -c general "www.\S+.com"`'
+                           'Example: `$hat import -c general "www.\S+.com"`\n\n'
                            '**-h**: Used to specify a hat other than *main*.\n'
                            'Example: `$hat add -h movies Troll 2`\n\n'
                            '**-m**: Indicates your subcommand argument is a comma-seperated list of elements.\n'
@@ -65,60 +65,61 @@ class Random(commands.Cog):
                     flags.extend([i.lower() for i in arg[1:]])
                     flg_args += 1
                 else:
-                    for i in range(flg_args):
-                        arg_lst.pop(i)
                     break
+            for _ in range(flg_args):
+                arg_lst.pop(0)
 
         hat_name = 'main' if 'h' not in flags else arg_lst.pop(0)
+        if hat_name not in this_guild:
+            await ctx.send(f'**Error:** No hat with name *{hat_name}* found in this guild.')
+            return
 
-        if command in ('a', 'add'):
-            if not arg_lst:
-                await ctx.send('**Error:** You must include the element name you wish to add with this command.')
-                return
-            if hat_name not in this_guild:
-                this_guild[hat_name] = []
-            if 'm' in flags:
-                this_guild[hat_name].extend(' '.join(arg_lst).split(','))
-            else:
-                this_guild[hat_name].append(' '.join(arg_lst))
-            await self.store_json()
-        elif command in ('c', 'choice'):
-            if hat_name not in this_guild:
-                await ctx.send(f'**Error:** No hat with name *{hat_name}* found in this guild.')
-                return
+        if command in ('c', 'choice'):
             if not this_guild[hat_name]:
                 await ctx.send(f'**Error:** Hat with name *{hat_name}* is empty, no element can be chosen.')
                 return
-            hat_draw = this_guild[hat_name][randint(0, len(this_guild[hat_name]))]
+            hat_draw = this_guild[hat_name][randint(0, len(this_guild[hat_name])-1)]
             await ctx.send(f'I have randomly selected **{hat_draw}** from the hat!')
-        elif command in ('d', 'delete'):
-            if not arg_lst:
-                await ctx.send('**Error:** You must include a hat name with this subcommand.')
-                return
-            if 'm' in flags:
-                hats = [i.strip() for i in ' '.join(arg_lst).lower().split(',')]
-            else:
-                hats = [arg_lst.pop(0).lower()]
-            for del_hat in hats:
-                if del_hat not in this_guild:
-                    await ctx.send(f'**Error**: No hat with name *{del_hat}* found in this guild.')
-                    continue
-                this_guild.pop(del_hat)
-            await self.store_json()
-        elif command in ('e', 'clear'):
+            return
+
+        if command in ('e', 'clear'):
             this_guild[hat_name] = []
             await self.store_json()
-        elif command in ('h', 'help'):
+            return
+
+        if command in ('h', 'help'):
             await ctx.send(self.hat.help)
-        elif command in ('i', 'import'):
-            if hat_name not in this_guild:
-                await ctx.send(f'**Error:** No hat with name *{hat_name}* found in this guild.')
+            return
+
+        if command in ('l', 'list'):
+            hats = '\n'.join([i for i in this_guild])
+            await ctx.send(f'**HATS**\n{hats}')
+            return
+
+        if command in ('p', 'pop'):
+            if not this_guild[hat_name]:
+                await ctx.send(f'**Error:** Hat with name *{hat_name}* is empty, no element can be chosen.')
                 return
+            hat_draw = this_guild[hat_name].pop(randint(0, len(this_guild[hat_name])-1))
+            await ctx.send(f'I have randomly selected **{hat_draw}** from the hat!')
+            await self.store_json()
+            return
+
+        if command in ('v', 'view'):
+            await ctx.send(f'**Elements in {hat_name}**:\n{", ".join(this_guild[hat_name])}')
+            return
+
+        if not arg_lst:
+            await ctx.send('**Error:** You must include at least one subcommand argument.\n'
+                           'Please use `$help hat` for more usage information.')
+            return
+
+        if command in ('i', 'import'):
             if 'c' in flags:
-                if not arg_lst:
-                    await ctx.send('**Error:** You must include a channel name to use the *-c* flag.')
-                    return
                 target_channel = arg_lst.pop(0).lower()
+                if not arg_lst:
+                    await ctx.send('**Error:** You must include a filter string to use with this command.')
+                    return
                 channel = list(filter(lambda x: x.name == target_channel, ctx.guild.text_channels))
                 if not channel:
                     await ctx.send(f'**Error:** Channel with name *{target_channel}* not found in this guild.')
@@ -126,59 +127,50 @@ class Random(commands.Cog):
                 channel = channel[0]
             else:
                 channel = ctx.channel
-            if not arg_lst:
-                await ctx.send('**Error:** You must include a filter string to use with this command.')
-                return
             filter_string = ' '.join(arg_lst).strip('\'"')
-
             matched_messages = []
-            async for message in channel.history(limit=100000):
+            async for message in channel.history(limit=None):
                 if message == ctx.message:
                     continue
                 matched_messages.extend(findall(filter_string, message.content))
-
             this_guild[hat_name].extend(matched_messages)
-
             await ctx.send(f'Added {len(matched_messages)} elements found in {channel.name} '
                            f'matching "{filter_string}" to *{hat_name}*.')
+            await self.store_json()
+            return
 
-        elif command in ('l', 'list'):
-            hats = '\n'.join([i for i in this_guild])
-            await ctx.send(f'**HATS**\n{hats}')
-        elif command in ('n', 'new'):
-            if not arg_lst:
-                await ctx.send('**Error:** You must include a hat name with this subcommand.')
-                return
-            if 'm' in flags:
-                hats = [i.strip() for i in ' '.join(arg_lst).lower().split(',')]
-            else:
-                hats = [arg_lst.pop(0).lower()]
-            for new_hat in hats:
-                if new_hat in this_guild:
-                    await ctx.send(f'**Error:** Hat with name *{new_hat}* already exists in this guild.')
-                    continue
-                this_guild[new_hat] = []
-            await self.store_json()
-        elif command in ('p', 'pop'):
-            if hat_name not in this_guild:
-                await ctx.send(f'**Error:** No hat with name *{hat_name}* found in this guild.')
-                return
-            if not this_guild[hat_name]:
-                await ctx.send(f'**Error:** Hat with name *{hat_name}* is empty, no element can be chosen.')
-            hat_draw = this_guild[hat_name].pop(randint(0, len(this_guild[hat_name])))
-            await self.store_json()
-            await ctx.send(f'I have randomly selected **{hat_draw}** from the hat!')
-        elif command in ('v', 'view'):
-            if not arg_lst:
-                this_hat = 'main'
-            else:
-                this_hat = arg_lst.pop(0).lower()
-            if this_hat not in this_guild:
-                await ctx.send(f'**Error**: No hat with name {this_hat} found in this guild.')
-                return
-            await ctx.send(f'**Elements in {this_hat}**:\n{", ".join(this_guild[this_hat])}')
+        if 'm' in flags:
+            args = ' '.join(arg_lst).split(',')
         else:
-            await ctx.send(f'**Error**: Unknown hat command *{command}*')
+            args = [' '.join(arg_lst)]
+
+        if command in ('a', 'add'):
+            this_guild[hat_name].extend(args)
+            await self.store_json()
+            return
+
+        if command in ('d', 'delete'):
+            for arg in [i.strip().lower() for i in args]:
+                if arg not in this_guild:
+                    await ctx.send(f'**Error**: No hat with name *{arg}* found in this guild.')
+                    continue
+                if arg == 'main':
+                    await ctx.send(f'**Error**: Unable to delete *main* hat, trying clearing it instead.')
+                    continue
+                this_guild.pop(arg)
+            await self.store_json()
+            return
+
+        if command in ('n', 'new'):
+            for arg in [i.strip().lower() for i in args]:
+                if arg in this_guild:
+                    await ctx.send(f'**Error:** Hat with name *{arg}* already exists in this guild.')
+                    continue
+                this_guild[arg] = []
+            await self.store_json()
+            return
+
+        await ctx.send(f'**Error**: Unknown hat command *{command}*')
 
     # Called if $hat encounters an unhandled exception
     @hat.error
