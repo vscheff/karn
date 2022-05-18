@@ -132,7 +132,7 @@ class Random(commands.Cog):
             filter_string = ' '.join(arg_lst).strip('\'"')
 
             matched_messages = []
-            async for message in channel.history():
+            async for message in channel.history(limit=100000):
                 if message == ctx.message:
                     continue
                 matched_messages.extend(findall(filter_string, message.content))
