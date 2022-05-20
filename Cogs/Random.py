@@ -120,7 +120,7 @@ class Random(commands.Cog):
         if command in ('v', 'view'):
             await ctx.send(f'**{len(this_guild[hat_name])} Elements in {hat_name}**:')
             if this_guild[hat_name]:
-                await package_message(", ".join(this_guild[hat_name]), ctx)
+                await package_message("\n".join(this_guild[hat_name]), ctx)
             return
 
         if not arg_lst:
