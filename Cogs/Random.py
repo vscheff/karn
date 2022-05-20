@@ -34,10 +34,11 @@ class Random(commands.Cog):
         async def on_message(msg):
             g_id = str(msg.guild.id)
             this_guild = self.hat_store[g_id]['filters']
-            if msg.channel.name in this_guild:
+            if msg.channel.name in this_guild and msg.author.id != bot.user.id:
                 for filter_str in this_guild[msg.channel.name]:
                     if match := list(findall(filter_str, msg.content)):
                         self.hat_store[g_id]['hats'][this_guild[msg.channel.name][filter_str]].extend(match)
+                        await self.store_json()
             await bot.process_commands(msg)
 
     @commands.command(help='Use this command to interface with the hat pick system.\n'

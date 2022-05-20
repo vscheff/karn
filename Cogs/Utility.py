@@ -6,11 +6,13 @@ import discord
 import os
 import qrcode
 
+from msg_packager import package_message
+
 
 class Utility(commands.Cog):
 
     # attr      bot - our client
-    # attr inv_file - filename/path for storage of inivite link QR image
+    # attr inv_file - filename/path for storage of invite link QR image
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -27,7 +29,7 @@ class Utility(commands.Cog):
             await ctx.send(file=discord.File(temp_store))
             os.remove(temp_store)
         else:
-            print('Error occured while generating QR code. Temp file not created/deleted.')
+            print('Error occurred while generating QR code. Temp file not created/deleted.')
 
     # Called if $qr encounters an unhandled exception
     @qr.error
@@ -66,17 +68,7 @@ class Utility(commands.Cog):
         try:
             compiled = compile(arg, '<string>', 'eval')
             obj = eval(compiled)
-            if isinstance(obj, (int, float)):
-                obj = str(obj)
-            elif isinstance(obj, (list, set, tuple, dict)):
-                obj = ', '.join([str(i) for i in obj])
-            ret_list = []
-            while len(obj) >= 2000:
-                ret_list.append(obj[:2000])
-                obj = obj[2000:]
-            ret_list.append(obj)
-            for msg in ret_list:
-                await ctx.send(msg)
+            await package_message(obj, ctx)
         except SyntaxError as e:
             await ctx.send(f'Bad Syntax: Error occurred at Index [{e.offset-1}], '
                            f'Character ({e.text[e.offset-1]})')
