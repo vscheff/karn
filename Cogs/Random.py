@@ -26,7 +26,17 @@ class Random(commands.Cog):
 
         for guild in bot.guilds:
             if str(guild.id) not in self.hat_store:
-                self.hat_store[str(guild.id)] = {'main': []}
+                self.hat_store[str(guild.id)] = {'hats': {'main': []}, 'filters': {}}
+
+        @bot.event
+        async def on_message(msg):
+            g_id = str(msg.guild.id)
+            this_guild = self.hat_store[g_id]['filters']
+            if msg.channel.name in this_guild:
+                for filter_str in this_guild[msg.channel.name]:
+                    if match := list(findall(filter_str, msg.content)):
+                        self.hat_store[g_id]['hats'][this_guild[msg.channel.name][filter_str]].extend(match)
+            await bot.process_commands(msg)
 
     @commands.command(help='Use this command to interface with the hat pick system.\n'
                            'Usage: `$hat <subcommand> [-flags] [flag arg] <subcommand arg>`\n\n\n'
@@ -53,7 +63,7 @@ class Random(commands.Cog):
                            'Example: `$hat add -m Monster a Go-Go, Birdemic, Batman & Robin`',
                       brief='Interface with the hat pick system')
     async def hat(self, ctx, *, arg):
-        this_guild = self.hat_store[str(ctx.guild.id)]
+        this_guild = self.hat_store[str(ctx.guild.id)]['hats']
         arg_lst = arg.split()
         command = arg_lst.pop(0).lower()
 
@@ -74,7 +84,7 @@ class Random(commands.Cog):
             await ctx.send(f'**Error:** No hat with name *{hat_name}* found in this guild.')
             return
 
-        if command in ('c', 'choice'):
+        if command in ('c', 'choice', 'pick', 'choose', 'chose'):
             if not this_guild[hat_name]:
                 await ctx.send(f'**Error:** Hat with name *{hat_name}* is empty, no element can be chosen.')
                 return
@@ -98,15 +108,16 @@ class Random(commands.Cog):
 
         if command in ('p', 'pop'):
             if not this_guild[hat_name]:
-                await ctx.send(f'**Error:** Hat with name *{hat_name}* is empty, no element can be chosen.')
+                await ctx.send(f'**Error:** Hat with name *{hat_name}* is empty, no element can be removed.')
                 return
             hat_draw = this_guild[hat_name].pop(randint(0, len(this_guild[hat_name])-1))
-            await ctx.send(f'I have randomly selected **{hat_draw}** from the hat!')
+            await ctx.send(f'I have randomly removed **{hat_draw}** from the hat!')
             await self.store_json()
             return
 
         if command in ('v', 'view'):
-            await ctx.send(f'**Elements in {hat_name}**:\n{", ".join(this_guild[hat_name])}')
+            await ctx.send(f'**{len(this_guild[hat_name])} Elements in {hat_name}**:'
+                           f'\n{", ".join(this_guild[hat_name])}')
             return
 
         if not arg_lst:
@@ -114,19 +125,20 @@ class Random(commands.Cog):
                            'Please use `$help hat` for more usage information.')
             return
 
+        if 'c' in flags:
+            target_channel = arg_lst.pop(0).lower()
+            if not arg_lst:
+                await ctx.send('**Error:** You must include a filter string to use with this command.')
+                return
+            channel = list(filter(lambda x: x.name == target_channel, ctx.guild.text_channels))
+            if not channel:
+                await ctx.send(f'**Error:** Channel with name *{target_channel}* not found in this guild.')
+                return
+            channel = channel[0]
+        else:
+            channel = ctx.channel
+
         if command in ('i', 'import'):
-            if 'c' in flags:
-                target_channel = arg_lst.pop(0).lower()
-                if not arg_lst:
-                    await ctx.send('**Error:** You must include a filter string to use with this command.')
-                    return
-                channel = list(filter(lambda x: x.name == target_channel, ctx.guild.text_channels))
-                if not channel:
-                    await ctx.send(f'**Error:** Channel with name *{target_channel}* not found in this guild.')
-                    return
-                channel = channel[0]
-            else:
-                channel = ctx.channel
             filter_string = ' '.join(arg_lst).strip('\'"')
             matched_messages = []
             async for message in channel.history(limit=None):
@@ -136,6 +148,17 @@ class Random(commands.Cog):
             this_guild[hat_name].extend(matched_messages)
             await ctx.send(f'Added {len(matched_messages)} elements found in {channel.name} '
                            f'matching "{filter_string}" to *{hat_name}*.')
+            await self.store_json()
+            return
+
+        if command in ('w', 'watch'):
+            filter_string = ' '.join(arg_lst).strip('\'"')
+            filters = self.hat_store[str(ctx.guild.id)]['filters']
+            if channel.name not in filters:
+                filters[channel.name] = {}
+            filters[channel.name][filter_string] = hat_name
+            await ctx.send(f'Now listening to {channel.name} for elements matching "{filter_string}".\n'
+                           f'Adding elements to *{hat_name}*.')
             await self.store_json()
             return
 
