@@ -9,6 +9,8 @@ from random import choice, randint
 from re import findall
 import discord
 
+from msg_packager import package_message
+
 main_channel = int(getenv('GENERAL_CH_ID'))
 
 
@@ -116,8 +118,10 @@ class Random(commands.Cog):
             return
 
         if command in ('v', 'view'):
-            await ctx.send(f'**{len(this_guild[hat_name])} Elements in {hat_name}**:'
-                           f'\n{", ".join(this_guild[hat_name])}')
+            await ctx.send(f'**{len(this_guild[hat_name])} Elements in {hat_name}**:')
+            if this_guild[hat_name]:
+                for msg in package_message(", ".join(this_guild[hat_name])):
+                    await ctx.send(msg)
             return
 
         if not arg_lst:
