@@ -58,7 +58,7 @@ class Random(commands.Cog):
                            '**Pop**: Randomly chooses and removes one element from the *main* hat.\n\n'
                            '**View**: View all elements in the *main* hat\n\n'
                            '**Watch**: Listens to a text channel for elements matching a given filter string\n'
-                           'Example: `$hat watch "\S*www\.\S+\.com\S*"`'
+                           'Example: `$hat watch "\S*www\.\S+\.com\S*"`\n\n\n'
                            'This command has the following flags:\n\n'
                            '**-c**: Used to specify a channel other than than the context channel.\n'
                            'Example: `$hat import -c general "www.\S+.com"`\n\n'
