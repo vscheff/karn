@@ -1,10 +1,10 @@
 # Custom help command for BUSTER
 # Inititialized by ./bot.py and used to override the defualt help command
 
-from discord.ext import commands
+from discord.ext import commands as c
 
 
-class CustomHelpCommand(commands.HelpCommand):
+class CustomHelpCommand(c.HelpCommand):
     def __init__(self):
         super().__init__()
 
@@ -12,14 +12,17 @@ class CustomHelpCommand(commands.HelpCommand):
     # param mapping - a mapping of cogs to commands
     async def send_bot_help(self, mapping):
         cog_list = []
+        misc_commands = []
         for cog, commands in mapping.items():
-            # Skip LoopTasks and the help command itself
-            if not commands or not cog:
+            # Skip cogs that don't contain commands
+            if not commands:
                 continue
             # Only include this cog if it has at least one public command
             if command_list := self.get_command_list(commands):
-                cog_list.append(f'**{cog.qualified_name}**:\n{command_list}')
-
+                if cog:
+                    cog_list.append(f'**{cog.qualified_name}**:\n{command_list}')
+                else:
+                    cog_list.append(f'**Miscellaneous**:\n{command_list}')
         await self.get_destination().send('\n'.join(cog_list))
 
     # Called when user gives the $help {cog_name} command

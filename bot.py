@@ -15,9 +15,13 @@ if TOKEN is None or GUILD is None:
 
 # Local dependencies
 from cogs import add_cogs
+from Cogs.hat import hat_listener
 from help_command import CustomHelpCommand
 
 bot = commands.Bot(command_prefix='$', help_command=CustomHelpCommand(), intents=discord.Intents.all())
+
+# Add brief help text for the help command
+list(filter(lambda x: x.name == 'help', bot.commands))[0].brief = 'Shows this message'
 
 # Runs when bot has successfully logged in
 # Note: This can and will be called multiple times during the bot's up-times
@@ -34,6 +38,11 @@ async def on_ready():
         print(f'{bot.user} is connected to the following guild:\n'
               f'{guild.name} (ID: {guild.id})\n'
               f'Guild Members: {len(guild.members)}\n\n')
+
+@bot.event
+async def on_message(msg):
+    await hat_listener(msg, bot.user.id)
+    await bot.process_commands(msg)
 
 # Begin the bot's event loop
 bot.run(TOKEN)
