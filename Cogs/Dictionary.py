@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from discord.ext import commands, tasks
-from json import loads
+from json import loads, decoder
 from os import getenv
 from requests import get as get_req
 from re import sub
@@ -52,7 +52,11 @@ class Dictionary(commands.Cog):
             return
         url = f'https://api.wordnik.com/v4/words.json/wordOfTheDay?date={date.today()}&api_key={api_key}'
         response = get_req(url)
-        api_response = loads(response.text)
+        try:
+            api_response = loads(response.text)
+        except decoder.JSONDecodeError:
+            print(f"WotD Error! Bad API response: {response.text}")
+            return
         response_data = {}
         if response.status_code == 200:
             response_data['word'] = api_response['word']
@@ -75,3 +79,4 @@ class Dictionary(commands.Cog):
             self.word_of_the_day.cancel()
             return
         print('Loop successfully started!\n')
+    	

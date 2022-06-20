@@ -9,6 +9,7 @@ with open('./hat.json', 'r') as inFile:
     hat_store = load(inFile)
 
 def check_id(guild_id):
+    guild_id = str(guild_id)
     if guild_id not in hat_store:
         hat_store[guild_id] = {'hats': {'main': []}, 'filters': {}}
 
@@ -53,7 +54,7 @@ async def hat_listener(msg, bot_id):
                        'Example: `$hat add -m Monster a Go-Go, Birdemic, Batman & Robin`',
                   brief='Interface with the hat pick system')
 async def hat(ctx, *, arg):
-    check_id(str(ctx.guild.id))
+    check_id(ctx.guild.id)
     this_guild = hat_store[str(ctx.guild.id)]['hats']
     arg_lst = arg.split()
     command = arg_lst.pop(0).lower()
