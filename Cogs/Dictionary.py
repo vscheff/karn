@@ -55,7 +55,11 @@ class Dictionary(commands.Cog):
         try:
             api_response = loads(response.text)
         except decoder.JSONDecodeError:
-            print(f"WotD Error! Bad API response: {response.text}")
+            print(f"{current_time}\n"
+                  f"WotD Error: Bad API response!\n"
+                  f"URL: {url}\n"
+                  f"Response:\n"
+                  f"{response.text}")
             return
         response_data = {}
         if response.status_code == 200:
