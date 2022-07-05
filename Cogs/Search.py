@@ -20,7 +20,6 @@ class Search(commands.Cog):
         gis = GoogleImagesSearch(API_KEY, CX_KEY)
 
         search_params['q'] = arg
-        print(f"Search query set to: {search_params['q']}")
         gis.search(search_params=search_params)
         for image in gis.results():
             await ctx.send(image.url)
