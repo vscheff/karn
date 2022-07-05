@@ -5,16 +5,18 @@ from random import randint
 
 from msg_packager import package_message
 
-with open('./hat.json', 'r') as inFile:
+HAT_FILEPATH = './hat.json'
+
+with open(HAT_FILEPATH, 'r') as inFile:
     hat_store = load(inFile)
 
 def check_id(guild_id):
-    guild_id = str(guild_id)
+                            
     if guild_id not in hat_store:
         hat_store[guild_id] = {'hats': {'main': []}, 'filters': {}}
 
 def store_json():
-    with open('./hat.json', 'w') as outFile:
+    with open(HAT_FILEPATH, 'w') as outFile:
         dump(hat_store, outFile, indent=2)
 
 async def hat_listener(msg, bot_id):
@@ -54,7 +56,7 @@ async def hat_listener(msg, bot_id):
                        'Example: `$hat add -m Monster a Go-Go, Birdemic, Batman & Robin`',
                   brief='Interface with the hat pick system')
 async def hat(ctx, *, arg):
-    check_id(ctx.guild.id)
+    check_id(str(ctx.guild.id))
     this_guild = hat_store[str(ctx.guild.id)]['hats']
     arg_lst = arg.split()
     command = arg_lst.pop(0).lower()
@@ -110,7 +112,7 @@ async def hat(ctx, *, arg):
     if command in ('v', 'view'):
         await ctx.send(f'**{len(this_guild[hat_name])} Elements in {hat_name}**:')
         if this_guild[hat_name]:
-            await package_message("\n".join(this_guild[hat_name]), ctx)
+            await package_message('\n'.join(this_guild[hat_name]), ctx)
         return
 
     if not arg_lst:
@@ -121,7 +123,7 @@ async def hat(ctx, *, arg):
     if 'c' in flags:
         target_channel = arg_lst.pop(0).lower()
         if not arg_lst:
-            await ctx.send('**Error:** You must include a filter string to use with this command.')
+            await ctx.send('**Error:** You must include a channel name when using the -c flag.')
             return
         channel = list(filter(lambda x: x.name == target_channel, ctx.guild.text_channels))
         if not channel:
