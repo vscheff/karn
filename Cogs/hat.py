@@ -14,14 +14,15 @@ def check_id(guild_id):
                             
     if guild_id not in hat_store:
         hat_store[guild_id] = {'hats': {'main': []}, 'filters': {}}
+        store_json()
 
 def store_json():
     with open(HAT_FILEPATH, 'w') as outFile:
         dump(hat_store, outFile, indent=2)
 
 async def hat_listener(msg, bot_id):
-    check_id(msg.guild.id)
     g_id = str(msg.guild.id)
+    check_id(g_id)
     this_guild = hat_store[g_id]['filters']
     if msg.channel.name in this_guild and msg.author.id != bot_id:
         for filter_str in this_guild[msg.channel.name]:
