@@ -28,6 +28,7 @@ class Dictionary(commands.Cog):
         api_response = loads(response.text)
         if 'statusCode' in api_response:
             await ctx.send(f'{word} not found in the dictionary. Please check the spelling.')
+            return
         definitions = []
         def_num = 1
         for dic in api_response:
