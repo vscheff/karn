@@ -18,7 +18,6 @@ async def package_message(obj, ctx):
             await ctx.send(file=discord.File(FILEPATH))
             os.remove(FILEPATH)
         else:
-            print('Error occurred while generating QR code. Temp file not created/deleted.')
+            print('Error occurred while packaging message. Temp file not created/deleted.')
     else:
         await ctx.send(obj)
-

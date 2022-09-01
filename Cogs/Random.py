@@ -7,6 +7,9 @@ from randfacts import get_fact
 from random import choice, randint
 import discord
 
+from msg_packager import package_message
+
+MAX_ROLL = 2 ** 18 - 1
 main_channel = int(getenv('GENERAL_CH_ID'))
 
 
@@ -115,7 +118,10 @@ class Random(commands.Cog):
                            'For example, 1d20 rolls one 20-sided die.')
             return
         if quantity < 1 or size < 1:
-            await ctx.send('Please use only positive integers for dice quantity and number of sides')
+            await ctx.send('Please use only positive integers for dice quantity and number of sides.')
+            return
+        if quantity > MAX_ROLL or size > MAX_ROLL:
+            await ctx.send(f'Please only use integers smaller than {MAX_ROLL}.')
             return
         roll_list = []
         total = 0
@@ -124,4 +130,4 @@ class Random(commands.Cog):
             total += roll
             roll_list.append(f'Roll #{i+1}: {roll}')
         roll_list.append(f'**Total:** {total}')
-        await ctx.send('\n'.join(roll_list))
+        await package_message('\n'.join(roll_list), ctx)
