@@ -9,7 +9,7 @@ import discord
 
 from msg_packager import package_message
 
-MAX_ROLL = 2 ** 18 - 1
+MAX_ROLL = 2 ** 18
 main_channel = int(getenv('GENERAL_CH_ID'))
 
 
@@ -120,7 +120,7 @@ class Random(commands.Cog):
         if quantity < 1 or size < 1:
             await ctx.send('Please use only positive integers for dice quantity and number of sides.')
             return
-        if quantity > MAX_ROLL or size > MAX_ROLL:
+        if quantity >= MAX_ROLL or size >= MAX_ROLL:
             await ctx.send(f'Please only use integers smaller than {MAX_ROLL}.')
             return
         roll_list = []
