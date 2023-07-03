@@ -44,5 +44,13 @@ async def on_message(msg):
     await hat_listener(msg, bot.user.id)
     await bot.process_commands(msg)
 
+@bot.event
+async def on_command_error(ctx, error):
+    print(f"\nCommand error triggered\n"
+          f"\t Author: {ctx.author} (a.k.a {ctx.author.nick})\n"
+          f"\t  Guild: {ctx.guild}\n"
+          f"\tChannel: {ctx.message.channel}\n"
+          f"\tMessage: {ctx.message.content}\n")
+
 # Begin the bot's event loop
 bot.run(TOKEN)
