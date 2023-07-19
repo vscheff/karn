@@ -11,7 +11,7 @@ async def package_message(obj, ctx):
     elif isinstance(obj, dict):
         obj = ', '.join([str(i) for i in obj.items()])
 
-    if len(obj) > 4000:
+    if len(obj) > 2000:
         with open(FILEPATH, 'w') as msg_file:
             msg_file.write(obj)
         if os.path.exists(FILEPATH):

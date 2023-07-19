@@ -50,7 +50,8 @@ async def on_command_error(ctx, error):
           f"\t Author: {ctx.author} (a.k.a {ctx.author.nick})\n"
           f"\t  Guild: {ctx.guild}\n"
           f"\tChannel: {ctx.message.channel}\n"
-          f"\tMessage: {ctx.message.content}\n")
+          f"\tMessage: {ctx.message.content}\n"
+          f"Error:\n{error}")
 
 # Begin the bot's event loop
 bot.run(TOKEN)
