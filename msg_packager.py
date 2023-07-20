@@ -12,7 +12,7 @@ async def package_message(obj, ctx):
         obj = ', '.join([str(i) for i in obj.items()])
 
     if len(obj) > 2000:
-        with open(FILEPATH, 'w') as msg_file:
+        with open(FILEPATH, 'w', encoding='utf8') as msg_file:
             msg_file.write(obj)
         if os.path.exists(FILEPATH):
             await ctx.send(file=discord.File(FILEPATH))
