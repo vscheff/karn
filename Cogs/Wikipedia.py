@@ -1,8 +1,8 @@
 from copy import deepcopy
 from discord.ext import commands
-from random import randint
+from random import choice, randint
 from re import search
-from wikipedia import DisambiguationError, page, PageError, random, summary
+from wikipedia import DisambiguationError, page, PageError, random
 
 from msg_packager import package_message
 
@@ -41,28 +41,25 @@ class Wikipedia(commands.Cog):
                 try:
                     result = page(title)
                 except PageError:
-                    await ctx.send(f"Unable to find a Wikipedia article titled '{title}'. "
-                                   f"Please check the spelling and try again.")
-                    return
+                    return await ctx.send(f"Unable to find a Wikipedia article titled '{title}'. "
+                                          f"Please check the spelling and try again.")
         except DisambiguationError as e:
             if 'r' not in flags:
                 options = "\n* ".join(e.options)
-                await ctx.send(f"\"{title}\" may refer to:\n* {options}\n\n"
-                               f"Please repeat the search using one of the options listed above.")
-                return
-            result = page(e.options[randint(0, len(e.options) - 1)])
+                return await ctx.send(f"\"{title}\" may refer to:\n* {options}\n\n"
+                                      f"Please repeat the search using one of the options listed above.")
+
+            result = page(choice(e.options))
 
         if 'i' in flags:
             supported_images = []
 
             for image in result.images:
-                match = search(r"\.[a-zA-z\d]+\Z", image)
-                if match and match.group() in SUPPORTED_FILE_FORMATS:
+                if is_supported_filetype(image):
                     supported_images.append(image)
 
             if not supported_images:
-                await ctx.send(f"Zero supported images found in the article for {result.title}")
-                return
+                return await ctx.send(f"Zero supported images found in the article for {result.title}")
 
             await ctx.send(f"**{result.title}**")
 
@@ -78,17 +75,19 @@ class Wikipedia(commands.Cog):
                 img = None
                 break
             img = images.pop(randint(0, len(images) - 1))
-            match = search(r"\.[a-zA-z\d]+\Z", img)
-            if match and match.group() in SUPPORTED_FILE_FORMATS:
+            if is_supported_filetype(img):
                 break
 
         await ctx.send(f"**{result.title}**")
+
         if 'f' in flags:
             await package_message(result.content.replace(" () ", ' '), ctx)
         else:
-            await ctx.send(f"{result.summary[:2000].replace(' () ', ' ')}{'...'if len(result.summary) > 2000 else ''}")
+            await ctx.send(f"{result.summary[:1997].replace(' () ', ' ')}{'...'if len(result.summary) > 1997 else ''}")
+
         msg = await ctx.send(result.url)
         await msg.edit(suppress=True)
+
         if img:
             await ctx.send(img)
 
@@ -99,3 +98,7 @@ class Wikipedia(commands.Cog):
                            'Please use `$help wiki` for more information.')
         else:
             print(f'$wiki command failed with error:\n\n{error}')
+
+
+def is_supported_filetype(filename):
+    return (match := search(r"\.[a-zA-z\d]+\Z", filename)) and match.group() in SUPPORTED_FILE_FORMATS
