@@ -84,4 +84,3 @@ class Dictionary(commands.Cog):
             self.word_of_the_day.cancel()
             return
         print('Loop successfully started!\n')
-    	

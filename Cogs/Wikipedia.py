@@ -11,12 +11,14 @@ SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gi
 
 
 class Wikipedia(commands.Cog):
-    @commands.command(help="Returns the summary of a given Wikipedia article\nExample: `$wiki Thelema`\n\n\n"
+    @commands.command(help="Returns the summary of a given Wikipedia article\nExample: `$wiki Thelema`\n\n"
                            "This command has the following flags:\n"
                            "* **-f**: Used to retrieve the full text of the given article.\n"
                            "\tExample: `$wiki -f Jack Parsons`\n"
                            "* **-i**: Used to retrieve all images from the given article.\n"
                            "\tExample: `$wiki -i L. Ron Hubbard`\n"
+                           "\tOptionally, you may provide an integer sub-argument to limit the number of images sent.\n"
+                           "\tExample: `$wiki -i 3 L. Ron Hubbard` will only result in three images sent.\n"
                            "* **-r**: Used to retrieve a random Wikipedia article.\n"
                            "\tExample: `$wiki -r`",
                       brief="Returns the summary of a given Wikipedia article")
@@ -32,6 +34,8 @@ class Wikipedia(commands.Cog):
             else:
                 title.append(arg)
 
+        sub_arg = int(title.pop(0)) if 'i' in flags and title[0].isnumeric() else None
+
         title = random() if 'r' in flags else ' '.join(title)
 
         try:
@@ -41,7 +45,7 @@ class Wikipedia(commands.Cog):
                 try:
                     result = page(title)
                 except PageError:
-                    return await ctx.send(f"Unable to find a Wikipedia article titled '{title}'. "
+                    return await ctx.send(f"Unable to find a Wikipedia article titled \"{title}\". "
                                           f"Please check the spelling and try again.")
         except DisambiguationError as e:
             if 'r' not in flags:
@@ -61,10 +65,12 @@ class Wikipedia(commands.Cog):
             if not supported_images:
                 return await ctx.send(f"Zero supported images found in the article for {result.title}")
 
+            num_images = min(len(supported_images), sub_arg) if sub_arg else len(supported_images)
+
             await ctx.send(f"**{result.title}**")
 
-            for image in supported_images:
-                await ctx.send(image)
+            for _ in range(num_images):
+                await ctx.send(supported_images.pop(randint(0, len(supported_images) - 1)))
 
             return
 
