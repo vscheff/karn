@@ -8,20 +8,21 @@ import discord
 
 # env must be loaded before importing ./cogs.py
 load_dotenv()
-TOKEN = getenv('DISCORD_TOKEN')  # API token for the bot
-GUILD = getenv('DISCORD_GUILD')  # ID of desired guild for bot to interact with
+TOKEN = getenv("DISCORD_TOKEN")  # API token for the bot
+GUILD = getenv("DISCORD_GUILD")  # ID of desired guild for bot to interact with
 if TOKEN is None or GUILD is None:
-    exit('Environment file missing/corrupted. Halting now!')
+    exit("Environment file missing/corrupted. Halting now!")
 
 # Local dependencies
 from cogs import add_cogs
 from Cogs.hat import hat_listener
 from help_command import CustomHelpCommand
 
-bot = commands.Bot(command_prefix='$', help_command=CustomHelpCommand(), intents=discord.Intents.all())
+act = discord.Activity(type=discord.ActivityType.listening, name="$help")
+bot = commands.Bot(command_prefix='$', help_command=CustomHelpCommand(), intents=discord.Intents.all(), activity=act)
 
 # Add brief help text for the help command
-list(filter(lambda x: x.name == 'help', bot.commands))[0].brief = 'Shows this message'
+next(filter(lambda x: x.name == "help", bot.commands)).brief = "Shows this message"
 
 # Runs when bot has successfully logged in
 # Note: This can and will be called multiple times during the bot's up-times
@@ -34,10 +35,9 @@ async def on_ready():
     if not bot.cogs:
         add_cogs(bot, my_guild)
 
+    print(f"{bot.user} is connected to the following guild(s):")
     for guild in bot.guilds:
-        print(f'{bot.user} is connected to the following guild:\n'
-              f'{guild.name} (ID: {guild.id})\n'
-              f'Guild Members: {len(guild.members)}\n\n')
+        print(f"\n{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
 
 @bot.event
 async def on_message(msg):

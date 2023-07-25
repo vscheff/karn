@@ -66,7 +66,7 @@ class Random(commands.Cog):
                       brief='Returns a random number')
     async def number(self, ctx, lower: int, upper: int = None):
         if upper is None:
-                lower, upper = 1, lower
+            lower, upper = 1, lower
         await ctx.send(randint(lower, upper))
 
     # Called if $number encounters an unhandled exception
