@@ -4,7 +4,7 @@ from datetime import datetime
 from discord.ext import commands, tasks
 from os import getenv
 from randfacts import get_fact
-from random import choice, randint
+from random import choice, randint, shuffle
 import discord
 
 from msg_packager import package_message
@@ -100,6 +100,24 @@ class Random(commands.Cog):
                            'Please use `$help choice` for more information.')
         else:
             print(f'$choice command failed with error:\n\n{error}')
+
+    @commands.command(help='Returns a given list in a randomized order.\n'
+                           'The list can be of any size, with each item seperated by a comma\n'
+                           'Example: `$shuffle Cryzel Rosechu, Magi-Chan, Mewtwo, Sylvana`',
+                      brief='Returns a given list in a randomized order')
+    async def shuffle(self, ctx, *, arg):
+        lst = [item.strip() for item in arg.split(',') if item]
+        shuffle(lst)
+        await ctx.send(", ".join(lst))
+
+    @shuffle.error
+    async def shuffle_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send('You must include a comma-seperated list of items.\n'
+                           'Example: `$choice me, myself, I`\n\n'
+                           'Please use `$help shuffle` for more information.')
+        else:
+            print(f'shuffle command failed with error:\n\n{error}')
 
     # $roll command used to simulate the rolling of dice
     # param dice - string representing dice to be rolled in xDn format
