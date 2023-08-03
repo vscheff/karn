@@ -23,28 +23,37 @@ class Dictionary(commands.Cog):
                       brief="Returns several definitions for a given word")
     async def define(self, ctx, word: str):
         url = f"https://api.wordnik.com/v4/word.json/{word}/definitions?" \
-              f"limit=6&sourceDictionaries=all&includeTags=false&api_key={api_key}"
+              f"limit=16&sourceDictionaries=wiktionary&includeTags=false&api_key={api_key}"
         response = get_req(url)
         api_response = loads(response.text)
+
         if "statusCode" in api_response:
             await ctx.send(f"{word} not found in the dictionary. Please check the spelling.")
             return
-        definitions = []
-        def_num = 1
+
+        definitions = {}
+
         for dic in api_response:
             try:
                 definition = sub(r"<[^<>]+>", '', dic["text"])
             except KeyError:
                 continue
-            try:
-                part_of_speech = f" (*{dic['partOfSpeech']}*)"
-            except KeyError:
-                part_of_speech = ''
-            definitions.append(f"{def_num}. {definition}{part_of_speech}\n")
-            def_num += 1
-            if def_num > 3:
-                break
-        await ctx.send(''.join(definitions))
+
+            if dic["partOfSpeech"] in definitions:
+                definitions[dic["partOfSpeech"]].append(definition)
+            else:
+                definitions[dic["partOfSpeech"]] = [definition]
+
+        msg = []
+
+        for part_of_speech in definitions:
+            msg.append(f"\n\n{part_of_speech.capitalize()}")
+            def_num = 0
+            for definition in definitions[part_of_speech]:
+                def_num += 1
+                msg.append(f"\n    {def_num}. {definition}")
+
+        await ctx.send(f"**{word.capitalize()}**```{''.join(msg)}```")
 
     @define.error
     async def define_error(self, ctx, error):

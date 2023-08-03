@@ -35,9 +35,9 @@ async def on_ready():
     if not bot.cogs:
         add_cogs(bot, my_guild)
 
-    print(f"{bot.user} is connected to the following guild(s):")
+    print(f"{bot.user} is connected to the following guild(s):\n")
     for guild in bot.guilds:
-        print(f"\n{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
+        print(f"{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
 
 @bot.event
 async def on_message(msg):
@@ -51,7 +51,7 @@ async def on_command_error(ctx, error):
           f"\t  Guild: {ctx.guild}\n"
           f"\tChannel: {ctx.message.channel}\n"
           f"\tMessage: {ctx.message.content}\n"
-          f"Error:\n{error}")
+          f"Error:\n{error}\n")
 
 # Begin the bot's event loop
 bot.run(TOKEN)

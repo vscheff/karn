@@ -34,7 +34,7 @@ class Wikipedia(commands.Cog):
             else:
                 title.append(arg)
 
-        sub_arg = int(title.pop(0)) if 'i' in flags and title[0].isnumeric() else None
+        sub_arg = int(title.pop(0)) if 'i' in flags and title and title[0].isnumeric() else None
 
         title = random() if 'r' in flags else ' '.join(title)
 
@@ -100,10 +100,8 @@ class Wikipedia(commands.Cog):
     @wiki.error
     async def wiki_error(self, ctx, error):
         if isinstance(error, commands.errors.MissingRequiredArgument):
-            await ctx.send('You must include a Wikipedia page title with this command.'
-                           'Please use `$help wiki` for more information.')
-        else:
-            print(f'$wiki command failed with error:\n\n{error}')
+            await ctx.send("You must include a Wikipedia page title with this command."
+                           "Please use `$help wiki` for more information.")
 
 
 def is_supported_filetype(filename):
