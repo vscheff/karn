@@ -23,3 +23,10 @@ class Search(commands.Cog):
         gis.search(search_params=search_params)
         for image in gis.results():
             await ctx.send(image.url)
+
+    @image.error
+    async def weather_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send("You must include a search term with this command.\n"
+                           "Example: $image sonic\n\n"
+                           "Please use `$help image` for more information.")

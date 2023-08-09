@@ -49,4 +49,4 @@ class Weather(commands.Cog):
         if isinstance(error, commands.errors.MissingRequiredArgument):
             await ctx.send("You must include a city or zip code with this command.\n"
                            "Example: $weather kalamazoo\n\n"
-                           "Please use *$help weather* for more information.")
+                           "Please use `$help weather` for more information.")

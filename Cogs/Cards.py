@@ -30,3 +30,10 @@ class Cards(commands.Cog):
                     await ctx.send(f"**Price:** ${price}")
         else:
             await ctx.send(card_json["details"])
+
+    @card.error
+    async def weather_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send("You must include a card name or search query with this command.\n"
+                           "Example: $card nekusar\n\n"
+                           "Please use `$help card` for more information.")

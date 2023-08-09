@@ -36,7 +36,8 @@ class Utility(commands.Cog):
     async def qr_error(self, ctx, error):
         if isinstance(error, commands.errors.MissingRequiredArgument):
             await ctx.send("You must include a string of data with this command.\n"
-                           "Example: `$qr https://www.linux.org/`")
+                           "Example: `$qr https://www.linux.org/`"
+                           "Please use `$help qr` for more information.")
 
     # $ping command used to test bot readiness and latency
     @commands.command(help="Returns \"pong\" and the round-trip latency if the bot is online.",
