@@ -20,6 +20,10 @@ class Cards(commands.Cog):
         elif "type" in card_json:
             complete_url = f"{BASE_URL}cards/search?q={search_name}"
             card_json = get_req(complete_url).json()
+
+            if "status" in card_json:
+                return await ctx.send(card_json["details"])
+
             for card_data in card_json["data"]:
                 await ctx.send(card_data["image_uris"]["png"])
                 if price := card_data['prices']['usd']:
