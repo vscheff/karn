@@ -1,5 +1,7 @@
 from discord import File
 from discord.ext import commands
+from os import remove
+from os.path import exists
 from requests import get as get_req
 from PIL import Image
 
@@ -30,7 +32,12 @@ class Cards(commands.Cog):
             for card_data in card_json["data"]:
                 await send_card(ctx, card_data)
         else:
-            await ctx.send(card_json["details"])
+            return await ctx.send(card_json["details"])
+
+        if exists(OUTPUT_PNG):
+            remove(FACE_0)
+            remove(FACE_1)
+            remove(OUTPUT_PNG)
 
     @card.error
     async def weather_error(self, ctx, error):
@@ -44,14 +51,12 @@ async def send_card(ctx, card_json):
     if img_links := card_json.get("image_uris"):
         await ctx.send(img_links["png"])
     else:
-        link0 = card_json["card_faces"][0]["image_uris"]["png"]
-        link1 = card_json["card_faces"][1]["image_uris"]["png"]
-        merge_double_sided(link0, link1)
+        merge_double(card_json["card_faces"][0]["image_uris"]["png"], card_json["card_faces"][1]["image_uris"]["png"])
         await ctx.send(file=File(OUTPUT_PNG))
     if price := card_json['prices']['usd']:
         await ctx.send(f"**Price:** ${price}")
 
-def merge_double_sided(link0, link1):
+def merge_double(link0, link1):
     with open(FACE_0, "wb") as img_file:
         img_file.write(get_req(link0).content)
 
@@ -59,8 +64,7 @@ def merge_double_sided(link0, link1):
         img_file.write(get_req(link1).content)
 
     img0 = Image.open(FACE_0)
-    img1 = Image.open(FACE_1)
     output_img = Image.new("RGB", (img0.size[0] * 2, img0.size[1]))
     output_img.paste(img0)
-    output_img.paste(img1, (img0.size[0], 0))
+    output_img.paste(Image.open(FACE_1), (img0.size[0], 0))
     output_img.save(OUTPUT_PNG)
