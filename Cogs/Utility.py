@@ -6,7 +6,7 @@ import discord
 import os
 import qrcode
 
-from msg_packager import package_message
+from utils import package_message
 
 
 class Utility(commands.Cog):

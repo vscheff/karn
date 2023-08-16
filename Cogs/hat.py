@@ -3,7 +3,7 @@ from json import dump, load
 from re import findall
 from random import randint
 
-from msg_packager import package_message
+from utils import package_message
 
 HAT_FILEPATH = "./hat.json"
 

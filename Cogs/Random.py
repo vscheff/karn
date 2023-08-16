@@ -7,7 +7,7 @@ from randfacts import get_fact
 from random import choice, randint, shuffle
 import discord
 
-from msg_packager import package_message
+from utils import package_message
 
 MAX_ROLL = 2 ** 18
 main_channel = int(getenv("GENERAL_CH_ID"))

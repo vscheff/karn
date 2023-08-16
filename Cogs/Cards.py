@@ -53,6 +53,7 @@ async def send_card(ctx, card_json):
     else:
         merge_double(card_json["card_faces"][0]["image_uris"]["png"], card_json["card_faces"][1]["image_uris"]["png"])
         await ctx.send(file=File(OUTPUT_PNG))
+
     if price := card_json['prices']['usd']:
         await ctx.send(f"**Price:** ${price}")
 

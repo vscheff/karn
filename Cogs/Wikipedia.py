@@ -1,13 +1,9 @@
 from copy import deepcopy
 from discord.ext import commands
 from random import choice, randint
-from re import search
 from wikipedia import DisambiguationError, page, PageError, random
 
-from msg_packager import package_message
-
-
-SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
+from utils import get_flags, is_supported_filetype, package_message
 
 
 class Wikipedia(commands.Cog):
@@ -22,21 +18,12 @@ class Wikipedia(commands.Cog):
                            "* **-r**: Used to retrieve a random Wikipedia article.\n"
                            "\tExample: `$wiki -r`",
                       brief="Returns the summary of a given Wikipedia article")
-    async def wiki(self, ctx, *, args):
-        arg_list = args.split()
-        flags = []
-        title = []
+    async def wiki(self, ctx, *, arg):
+        flags, query = get_flags(arg)
 
-        while arg_list:
-            arg = arg_list.pop(0)
-            if arg[0] == '-':
-                flags.extend([i.lower() for i in arg[1:]])
-            else:
-                title.append(arg)
+        sub_arg = int(query.pop(0)) if 'i' in flags and query and query[0].isnumeric() else None
 
-        sub_arg = int(title.pop(0)) if 'i' in flags and title and title[0].isnumeric() else None
-
-        title = random() if 'r' in flags else ' '.join(title)
+        title = random() if 'r' in flags else ' '.join(query)
 
         try:
             try:
@@ -104,5 +91,4 @@ class Wikipedia(commands.Cog):
                            "Please use `$help wiki` for more information.")
 
 
-def is_supported_filetype(filename):
-    return (match := search(r"\.[a-zA-z\d]+\Z", filename)) and match.group() in SUPPORTED_FILE_FORMATS
+

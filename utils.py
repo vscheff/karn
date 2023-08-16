@@ -1,7 +1,28 @@
 import discord
 import os
+from re import search
+
 
 FILEPATH = './img/msg.txt'
+SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
+
+
+def get_flags(args):
+    arg_list = args.split()
+    flags = []
+    not_flags = []
+
+    while arg_list:
+        arg = arg_list.pop(0)
+        if arg[0] == '-':
+            flags.extend([i.lower() for i in arg[1:]])
+        else:
+            not_flags.append(arg)
+
+    return flags, not_flags
+
+def is_supported_filetype(filename):
+    return (match := search(r"\.[a-zA-z\d]+\Z", filename)) and match.group() in SUPPORTED_FILE_FORMATS
 
 async def package_message(obj, ctx):
     if isinstance(obj, (int, float)):

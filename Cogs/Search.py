@@ -1,32 +1,68 @@
-from discord.ext import commands
-from google_images_search import GoogleImagesSearch
-from os import getenv
+from bs4 import BeautifulSoup
+from discord.ext.commands import Cog, command, MissingRequiredArgument
+from json import dumps, loads
+from random import randint
+from requests import get
+from re import findall, sub
 
-API_KEY = getenv("GCS_DEVELOPER_KEY")
-CX_KEY = getenv("GCS_CX")
+from utils import get_flags, is_supported_filetype
 
-search_params = {
-    'q': '',
-    "num": 3,
-    "fileType": "jpg|gif|png",
-    "rights": "cc_publicdomain|cc_attribute|cc_sharealike|cc_noncommercial|cc_nonderived",
-    "safe": "off"
+
+BASE_URL = "https://www.google.com/search"
+HEADER = {
+    "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36"
 }
+DEFAULT_IMAGE_COUNT = 3
 
-class Search(commands.Cog):
-    @commands.command(help="Returns images relevant to a given keyword\nExample: `$image Grant MacDonald`",
-                      brief="Search the web for an image")
+
+class Search(Cog):
+    @command(help="Returns images relevant to a given keyword\nExample: `$image Grant MacDonald`\n\n"
+                  "This command has the following flags:\n"
+                  "* **-c**: Specify a number of images to return [default=3].\n"
+                  "\tExample: `$image -c 10 Margaery Tyrell`\n",
+             brief="Search the web for an image")
     async def image(self, ctx, *, arg):
-        gis = GoogleImagesSearch(API_KEY, CX_KEY)
+        flags, query = get_flags(arg)
 
-        search_params['q'] = arg
-        gis.search(search_params=search_params)
-        for image in gis.results():
-            await ctx.send(image.url)
+        sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
+
+        html = get("https://www.google.com/search", params={'q': query, "tbm": "isch"}, headers=HEADER)
+        soup = BeautifulSoup(html.text, "lxml")
+
+        all_script_tags = soup.select("script")
+        # # https://regex101.com/r/48UZhY/4
+        matched_images_data = "".join(findall(r"AF_initDataCallback\(([^<]+)\);", str(all_script_tags)))
+
+        # Must dumps before loads to avoid JSONDecodeError
+        matched_images_data_fix = dumps(matched_images_data)
+        matched_images_data_json = loads(matched_images_data_fix)
+
+        # https://regex101.com/r/VPz7f2/1
+        matched_data = findall(r"\"b-GRID_STATE0\"(.*)sideChannel:\s?{}}", matched_images_data_json)
+
+        # removing previously matched thumbnails for easier full resolution image matches.
+        removed_img = sub(r"\[\"(https://encrypted-tbn0\.gstatic\.com/images\?.*?)\",\d+,\d+]", '', str(matched_data))
+
+        # https://regex101.com/r/fXjfb1/4
+        # https://stackoverflow.com/a/19821774/15164646
+        matched_google_images = findall(r"[',],\[\"(https:|http.*?)\",\d+,\d+]", removed_img)
+
+        google_images = []
+        for img in matched_google_images:
+            google_images.append(bytes(bytes(img, "ascii").decode("unicode-escape"), "ascii").decode("unicode-escape"))
+
+        for _ in range(sub_arg if sub_arg else DEFAULT_IMAGE_COUNT):
+            img = google_images.pop(randint(0, len(google_images) - 1))
+            while not is_supported_filetype(img):
+                img = google_images.pop(randint(0, len(google_images) - 1))
+
+            await ctx.send(img)
 
     @image.error
-    async def weather_error(self, ctx, error):
-        if isinstance(error, commands.errors.MissingRequiredArgument):
+    async def image_error(self, ctx, error):
+        if isinstance(error, MissingRequiredArgument):
             await ctx.send("You must include a search term with this command.\n"
-                           "Example: $image sonic\n\n"
+                           "Example: `$image Natalie Dormer`\n\n"
                            "Please use `$help image` for more information.")
