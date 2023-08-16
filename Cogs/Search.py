@@ -25,10 +25,10 @@ class Search(Cog):
              brief="Search the web for an image")
     async def image(self, ctx, *, arg):
         flags, query = get_flags(arg)
-
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
 
-        html = get("https://www.google.com/search", params={'q': query, "tbm": "isch"}, headers=HEADER)
+        params = {'q': ' '.join(query), "hl": "en", "gl": "us", "tbm": "isch"}
+        html = get("https://www.google.com/search", params=params, headers=HEADER)
         soup = BeautifulSoup(html.text, "lxml")
 
         all_script_tags = soup.select("script")
