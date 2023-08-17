@@ -30,7 +30,7 @@ class DailyLoop(commands.Cog):
         if current_time.hour == 0:
             self.daily_sent = False
 
-        if self.daily_sent or randint(0, 23 - current_time.hour):
+        if self.daily_sent or randint(0, 23) > current_time.hour:
             return
 
         await choice(self.daily_funcs)()
