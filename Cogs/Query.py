@@ -130,7 +130,9 @@ class Query(Cog):
         flags, query = get_flags(arg)
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
 
-        params = {'q': ' '.join(query), "hl": "en", "gl": "us", "tbm": "isch"}
+        search_query = ' '.join(query)
+
+        params = {'q': search_query, "hl": "en", "gl": "us", "tbm": "isch"}
         html = get(GOOGLE_URL, params=params, headers=HEADER)
         soup = BeautifulSoup(html.text, "lxml")
 
@@ -150,6 +152,9 @@ class Query(Cog):
 
         # https://regex101.com/r/fXjfb1/4
         matched_google_images = findall(r"[',],\[\"(https:|http.*?)\",\d+,\d+]", removed_img)
+
+        if not matched_google_images:
+            return await ctx.send(f"No results found for \"{search_query}\".")
 
         for _ in range(sub_arg if sub_arg else DEFAULT_IMAGE_COUNT):
             img = matched_google_images.pop(randint(0, len(matched_google_images) - 1))
