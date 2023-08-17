@@ -19,7 +19,7 @@ class DailyLoop(commands.Cog):
         self.ch_general = None
 
         self.daily_sent = False
-        self.daily_funcs = (self.daily_card, self.daily_fact, self.daily_word)
+        self.daily_funcs = (self.daily_card, self.daily_fact, self.daily_wiki, self.daily_word)
 
         self.daily_loop.start()
 
