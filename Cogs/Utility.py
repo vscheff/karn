@@ -11,8 +11,7 @@ from utils import package_message
 
 class Utility(commands.Cog):
 
-    # attr      bot - our client
-    # attr inv_file - filename/path for storage of invite link QR image
+    # attr bot - our client
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 

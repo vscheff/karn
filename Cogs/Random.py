@@ -20,26 +20,6 @@ class Random(commands.Cog):
         self.guild = guild
         self.ch_general = None
 
-        self.daily_fact.start()
-
-    @tasks.loop(hours=1)
-    async def daily_fact(self):
-        current_time = datetime.now()
-        if current_time.hour != 13:
-            return
-        await self.ch_general.send(f"**The fact of the day is:**\n{get_fact(filter_enabled=False)}")
-
-    @daily_fact.before_loop
-    async def before_daily_fact(self):
-        await self.bot.wait_until_ready()
-        print("Starting Daily Fact hourly loop.")
-        self.ch_general = self.guild.get_channel(main_channel)
-        if self.ch_general is None:
-            print("WARNING: General channel not found. Loop not started.\n")
-            self.daily_fact.cancel()
-            return
-        print("Loop successfully started!\n")
-
     @commands.command(help="Returns a randomly selected fact",
                       brief="Returns a random fact")
     async def fact(self, ctx):
