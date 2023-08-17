@@ -22,7 +22,7 @@ WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 FACE_0 = "./img/face_0.png"
 FACE_1 = "./img/face_1.png"
 OUTPUT_PNG = "./img/output.png"
-SCRYFALL_URL = "https://api.scryfall.com/"
+SCRYFALL_URL = "https://api.scryfall.com/cards"
 
 # $image constants
 DEFAULT_IMAGE_COUNT = 1
@@ -38,18 +38,24 @@ WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?"
 
 
 class Query(Cog):
-    @command(help="Returns Scryfall data for a given MtG card",
+    @command(help="Returns Scryfall data for a given MtG card"
+                  f"This command has the following flags:\n"
+                  f"* **-r**: Returns a random MtG card.\n"
+                  f"\tExample: `$card -r`\n",
              brief="Returns data of an MtG card")
-    async def card(self, ctx, *, card_name):
-        search_name = '+'.join(card_name.split())
-        complete_url = f"{SCRYFALL_URL}cards/named?fuzzy={search_name}"
-        card_json = get(complete_url).json()
+    async def card(self, ctx, *, args):
+        flags, query = get_flags(args)
+        card_name = ' '.join(query)
+
+        if 'r' in flags:
+            card_json = get(f"{SCRYFALL_URL}/random").json()
+        else:
+            card_json = get(f"{SCRYFALL_URL}/named", params={"fuzzy": card_name}).json()
 
         if "status" not in card_json:
             await send_card(ctx, card_json)
         elif "type" in card_json:
-            complete_url = f"{SCRYFALL_URL}cards/search?q={search_name}"
-            card_json = get(complete_url).json()
+            card_json = get(f"{SCRYFALL_URL}/search", params={'q': card_name}).json()
 
             if "status" in card_json:
                 return await ctx.send(card_json["details"])
@@ -170,8 +176,8 @@ class Query(Cog):
                   "* **-r**: Used to retrieve a random Wikipedia article.\n"
                   "\tExample: `$wiki -r`",
              brief="Returns the summary of a given Wikipedia article")
-    async def wiki(self, ctx, *, arg):
-        flags, query = get_flags(arg)
+    async def wiki(self, ctx, *, args):
+        flags, query = get_flags(args)
 
         sub_arg = int(query.pop(0)) if 'i' in flags and query and query[0].isnumeric() else None
 

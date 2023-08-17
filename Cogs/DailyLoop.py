@@ -19,12 +19,14 @@ class DailyLoop(commands.Cog):
         self.ch_general = None
 
         self.daily_sent = False
-        self.daily_funcs = (self.word_of_the_day, self.daily_fact)
+        self.daily_funcs = (self.daily_card, self.daily_fact, self.daily_word)
 
         self.daily_loop.start()
 
     @tasks.loop(hours=1)
     async def daily_loop(self):
+        await self.daily_wiki()
+
         current_time = datetime.now()
 
         if current_time.hour == 0:
@@ -50,11 +52,19 @@ class DailyLoop(commands.Cog):
 
         print("Loop successfully started!\n")
 
+    async def daily_card(self):
+        await self.ch_general.send(f"__**The MtG card of the day is:**__")
+        await self.bot.get_command("card")(self.ch_general, args="-r")
+
     async def daily_fact(self):
-        await self.ch_general.send(f"**The fact of the day is:**\n")
+        await self.ch_general.send(f"__**The fact of the day is:**__")
         await self.bot.get_command("fact")(self.ch_general)
 
-    async def word_of_the_day(self):
+    async def daily_wiki(self):
+        await self.ch_general.send(f"__**The Wikipedia article of the day is:**__")
+        await self.bot.get_command("wiki")(self.ch_general, args="-r")
+
+    async def daily_word(self):
         url = f"https://api.wordnik.com/v4/words.json/wordOfTheDay?date={date.today()}&api_key={api_key}"
         response = get_req(url)
         try:
@@ -71,7 +81,7 @@ class DailyLoop(commands.Cog):
             for definition in api_response["definitions"]:
                 response_data["definition"] = sub(r"<[^<>]+>", '', definition["text"])
                 break
-            await self.ch_general.send(f"**The word of the day is:**\n"
+            await self.ch_general.send(f"__**The word of the day is:**__\n"
                                        f"*{api_response['word']}* - {response_data['definition']}")
         else:
             print(f"Error: Word of the Day Loop could not load response correctly.\n"
