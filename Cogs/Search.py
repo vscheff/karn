@@ -14,25 +14,25 @@ HEADER = {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36"
 }
-DEFAULT_IMAGE_COUNT = 3
+DEFAULT_IMAGE_COUNT = 1
 
 
 class Search(Cog):
-    @command(help="Returns images relevant to a given keyword\nExample: `$image Grant MacDonald`\n\n"
-                  "This command has the following flags:\n"
-                  "* **-c**: Specify a number of images to return [default=3].\n"
-                  "\tExample: `$image -c 10 Margaery Tyrell`\n",
+    @command(help=f"Returns images relevant to a given keyword\nExample: `$image Grant MacDonald`\n\n"
+                  f"This command has the following flags:\n"
+                  f"* **-c**: Specify a number of images to return [default={DEFAULT_IMAGE_COUNT}].\n"
+                  f"\tExample: `$image -c 10 Margaery Tyrell`\n",
              brief="Search the web for an image")
     async def image(self, ctx, *, arg):
         flags, query = get_flags(arg)
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
 
         params = {'q': ' '.join(query), "hl": "en", "gl": "us", "tbm": "isch"}
-        html = get("https://www.google.com/search", params=params, headers=HEADER)
+        html = get(BASE_URL, params=params, headers=HEADER)
         soup = BeautifulSoup(html.text, "lxml")
 
         all_script_tags = soup.select("script")
-        # # https://regex101.com/r/48UZhY/4
+        # https://regex101.com/r/48UZhY/4
         matched_images_data = "".join(findall(r"AF_initDataCallback\(([^<]+)\);", str(all_script_tags)))
 
         # Must dumps before loads to avoid JSONDecodeError
@@ -49,16 +49,12 @@ class Search(Cog):
         # https://stackoverflow.com/a/19821774/15164646
         matched_google_images = findall(r"[',],\[\"(https:|http.*?)\",\d+,\d+]", removed_img)
 
-        google_images = []
-        for img in matched_google_images:
-            google_images.append(bytes(bytes(img, "ascii").decode("unicode-escape"), "ascii").decode("unicode-escape"))
-
         for _ in range(sub_arg if sub_arg else DEFAULT_IMAGE_COUNT):
-            img = google_images.pop(randint(0, len(google_images) - 1))
+            img = matched_google_images.pop(randint(0, len(matched_google_images) - 1))
             while not is_supported_filetype(img):
-                img = google_images.pop(randint(0, len(google_images) - 1))
+                img = matched_google_images.pop(randint(0, len(matched_google_images) - 1))
 
-            await ctx.send(img)
+            await ctx.send(bytes(bytes(img, "ascii").decode("unicode-escape"), "ascii").decode("unicode-escape"))
 
     @image.error
     async def image_error(self, ctx, error):
