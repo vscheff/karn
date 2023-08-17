@@ -25,8 +25,6 @@ class DailyLoop(commands.Cog):
 
     @tasks.loop(hours=1)
     async def daily_loop(self):
-        await self.daily_wiki()
-
         current_time = datetime.now()
 
         if current_time.hour == 0:
