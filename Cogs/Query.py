@@ -12,17 +12,19 @@ from re import findall, sub
 from wikipedia import DisambiguationError, page, PageError, random
 
 from us_state_abbrev import abbrev_to_us_state as states
-from utils import get_flags, is_supported_filetype, package_message
+from utils import get_flags, is_supported_filetype, get_supported_filetype, package_message
 
-
-WEATHER_API_KEY = getenv("WEATHER_TOKEN")
-WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 
 # $card constants
 FACE_0 = "./img/face_0.png"
 FACE_1 = "./img/face_1.png"
 OUTPUT_PNG = "./img/output.png"
 SCRYFALL_URL = "https://api.scryfall.com/cards"
+
+# $define constants
+MAX_DEFINITIONS = 16
+WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
+WORDNIK_URL = "https://api.wordnik.com/v4/word.json/"
 
 # $image constants
 DEFAULT_IMAGE_COUNT = 1
@@ -34,6 +36,7 @@ HEADER = {
 }
 
 # $weather constants
+WEATHER_API_KEY = getenv("WEATHER_TOKEN")
 WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?"
 
 
@@ -77,21 +80,20 @@ class Query(Cog):
                            "Example: $card nekusar\n\n"
                            "Please use `$help card` for more information.")
 
-    @command(help="Returns several definitions for a given word\nExample: `$define love`",
-             brief="Returns several definitions for a given word")
+    @command(help="Returns definitions for a given word\nExample: `$define love`",
+             brief="Returns definitions for a given word")
     async def define(self, ctx, word: str):
-        url = f"https://api.wordnik.com/v4/word.json/{word}/definitions?" \
-              f"limit=16&sourceDictionaries=wiktionary&includeTags=false&api_key={WORDNIK_API_KEY}"
-        response = get(url)
-        api_response = loads(response.text)
+        params = {"limit": MAX_DEFINITIONS, "sourceDictionaries": "wiktionary",
+                  "includeTags": "false", "api_key": WORDNIK_API_KEY}
+        response = get(f"{WORDNIK_URL}{word}/definitions", params=params).json()
 
-        if "statusCode" in api_response:
+        if "statusCode" in response:
             await ctx.send(f"{word} not found in the dictionary. Please check the spelling.")
             return
 
         definitions = {}
 
-        for dic in api_response:
+        for dic in response:
             try:
                 definition = sub(r"<[^<>]+>", '', dic["text"])
             except KeyError:
@@ -132,20 +134,15 @@ class Query(Cog):
 
         search_query = ' '.join(query)
 
-        params = {'q': search_query, "hl": "en", "gl": "us", "tbm": "isch"}
-        html = get(GOOGLE_URL, params=params, headers=HEADER)
-        soup = BeautifulSoup(html.text, "lxml")
+        html = get(GOOGLE_URL, params={'q': search_query, "hl": "en", "gl": "us", "tbm": "isch"}, headers=HEADER)
 
-        all_script_tags = soup.select("script")
+        all_script_tags = BeautifulSoup(html.text, "lxml").select("script")
         # https://regex101.com/r/48UZhY/4
-        matched_images_data = "".join(findall(r"AF_initDataCallback\(([^<]+)\);", str(all_script_tags)))
+        matched_images_data = ''.join(findall(r"AF_initDataCallback\(([^<]+)\);", str(all_script_tags)))
 
         # Must dumps before loads to avoid JSONDecodeError
-        matched_images_data_fix = dumps(matched_images_data)
-        matched_images_data_json = loads(matched_images_data_fix)
-
         # https://regex101.com/r/VPz7f2/1
-        matched_data = findall(r"\"b-GRID_STATE0\"(.*)sideChannel:\s?{}}", matched_images_data_json)
+        matched_data = findall(r"\"b-GRID_STATE0\"(.*)sideChannel:\s?{}}", loads(dumps(matched_images_data)))
 
         # removing previously matched thumbnails for easier full resolution image matches.
         removed_img = sub(r"\[\"(https://encrypted-tbn0\.gstatic\.com/images\?.*?)\",\d+,\d+]", '', str(matched_data))
@@ -157,11 +154,10 @@ class Query(Cog):
             return await ctx.send(f"No results found for \"{search_query}\".")
 
         for _ in range(sub_arg if sub_arg else DEFAULT_IMAGE_COUNT):
-            img = matched_google_images.pop(randint(0, len(matched_google_images) - 1))
-            while not is_supported_filetype(img):
-                img = matched_google_images.pop(randint(0, len(matched_google_images) - 1))
-
-            await ctx.send(bytes(bytes(img, "ascii").decode("unicode-escape"), "ascii").decode("unicode-escape"))
+            if img := get_supported_filetype(matched_google_images):
+                await ctx.send(bytes(bytes(img, "ascii").decode("unicode-escape"), "ascii").decode("unicode-escape"))
+            else:
+                break
 
     @image.error
     async def image_error(self, ctx, error):
@@ -180,7 +176,7 @@ class Query(Cog):
                   "\tExample: `$wiki -i 3 L. Ron Hubbard` will only result in three images sent.\n"
                   "* **-r**: Used to retrieve a random Wikipedia article.\n"
                   "\tExample: `$wiki -r`",
-             brief="Returns the summary of a given Wikipedia article")
+             brief="Search for a Wikipedia article")
     async def wiki(self, ctx, *, args):
         flags, query = get_flags(args)
 
@@ -224,15 +220,7 @@ class Query(Cog):
 
             return
 
-        images = deepcopy(result.images)
-
-        while True:
-            if not images:
-                img = None
-                break
-            img = images.pop(randint(0, len(images) - 1))
-            if is_supported_filetype(img):
-                break
+        img = get_supported_filetype(deepcopy(result.images))
 
         await ctx.send(f"**{result.title}**")
 
@@ -254,14 +242,16 @@ class Query(Cog):
                            "Please use `$help wiki` for more information.")
 
     @command(help="Returns the current weather for a given city\n"
-                  "The city can be input as any of the following: "
+                  "The city can be input in any of the following formats: "
                   "kalamazoo; kalamazoo, mi; kalamazoo, michigan; 49006\n"
                   "Example: $weather 49078",
              brief="Returns the weather of a city")
     async def weather(self, ctx, *, city):
         city = [i.strip() for i in city.split(',') if i]
+        params = {"appid": WEATHER_API_KEY, "units": "imperial"}
+
         if city[0].isnumeric():
-            complete_url = f"{WEATHER_URL}zip={city[0]}&appid={WEATHER_API_KEY}&units=imperial"
+            params["zip"] = city[0]
         else:
             if len(city) == 1:
                 city = city[0]
@@ -269,23 +259,18 @@ class Query(Cog):
                 if len(city[1]) == 2:
                     city[1] = states[city[1].upper()]
                 city = f"{city[0]},{city[1]}"
-            complete_url = f"{WEATHER_URL}q={city}&appid={WEATHER_API_KEY}&units=imperial"
-        weather = get(complete_url).json()
+            params['q'] = city
+
+        weather = get(WEATHER_URL, params=params).json()
+
         if weather["cod"] != "404":
             main = weather["main"]
-            temperature = round(main["temp"])
-            feels_like = round(main["feels_like"])
-            pressure = round(main["pressure"] / 33.863886666667, 2)
-            humidity = main["humidity"]
-            visibility = round(weather["visibility"] / 1609)
-            description = weather["weather"][0]["description"]
-            wind = round(weather["wind"]["speed"])
-            await ctx.send(f"**Temperature:** {temperature}°F (*Feels Like* {feels_like}°)\n"
-                           f"**Wind:** {wind} mph\n"
-                           f"**Description:** {description}\n"
-                           f"**Pressure:** {pressure} in\n"
-                           f"**Humidity:** {humidity}%\n"
-                           f"**Visibility:** {visibility} mi")
+            await ctx.send(f"**Temperature:** {main['temp']:.0f}°F (*Feels Like* {main['feels_like']:.0f}°)\n"
+                           f"**Wind:** {weather['wind']['speed']:.0f} mph\n"
+                           f"**Description:** {weather['weather'][0]['description']}\n"
+                           f"**Pressure:** {main['pressure'] / 33.863886666667:.2f} in\n"
+                           f"**Humidity:** {main['humidity']}%\n"
+                           f"**Visibility:** {weather['visibility'] // 1609} mi")
         else:
             await ctx.send("City not found")
 

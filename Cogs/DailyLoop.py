@@ -3,12 +3,14 @@ from discord.ext import commands, tasks
 from json import loads, decoder
 from os import getenv
 from random import choice, randint
-from requests import get as get_req
+from requests import get
 from re import sub
 import discord
 
-api_key = getenv("WORDNIK_TOKEN")
+WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 MAIN_CHANNEL = int(getenv("GENERAL_CH_ID"))
+
+WORDNIK_URL = "https://api.wordnik.com/v4/words.json/wordOfTheDay"
 
 
 class DailyLoop(commands.Cog):
@@ -63,13 +65,11 @@ class DailyLoop(commands.Cog):
         await self.bot.get_command("wiki")(self.ch_general, args="-r")
 
     async def daily_word(self):
-        url = f"https://api.wordnik.com/v4/words.json/wordOfTheDay?date={date.today()}&api_key={api_key}"
-        response = get_req(url)
+        response = get(WORDNIK_URL, params={"date": date.today(), "api_key": WORDNIK_API_KEY})
         try:
             api_response = loads(response.text)
         except decoder.JSONDecodeError:
             print(f"WotD Error: Bad API response!\n"
-                  f"URL: {url}\n"
                   f"Response:\n"
                   f"{response.text}")
             return

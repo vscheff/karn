@@ -1,5 +1,6 @@
 import discord
 import os
+from random import randint
 from re import search
 
 
@@ -20,6 +21,16 @@ def get_flags(args):
             not_flags.append(arg)
 
     return flags, not_flags
+
+def get_supported_filetype(images):
+    while True:
+        if not images:
+            return None
+
+        img = images.pop(randint(0, len(images) - 1))
+
+        if is_supported_filetype(img):
+            return img
 
 def is_supported_filetype(filename):
     return (match := search(r"\.[a-zA-z\d]+\Z", filename)) and match.group() in SUPPORTED_FILE_FORMATS

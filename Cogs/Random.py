@@ -82,7 +82,7 @@ class Random(commands.Cog):
     @commands.command(help="Returns a given list in a randomized order.\n"
                            "The list can be of any size, with each item seperated by a comma\n"
                            "Example: `$shuffle Cryzel Rosechu, Magi-Chan, Mewtwo, Sylvana`",
-                      brief="Returns a given list in a randomized order")
+                      brief="Randomizes a given list")
     async def shuffle(self, ctx, *, arg):
         lst = [item.strip() for item in arg.split(',') if item]
         shuffle(lst)
