@@ -22,7 +22,8 @@ class Search(Cog):
                   f"This command has the following flags:\n"
                   f"* **-c**: Specify a number of images to return [default={DEFAULT_IMAGE_COUNT}].\n"
                   f"\tExample: `$image -c 10 Margaery Tyrell`\n",
-             brief="Search the web for an image")
+             brief="Search the web for an image",
+             aliases=["images", "search"])
     async def image(self, ctx, *, arg):
         flags, query = get_flags(arg)
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
