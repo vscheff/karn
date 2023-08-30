@@ -22,12 +22,12 @@ def get_flags(args):
 
     return flags, not_flags
 
-def get_supported_filetype(images):
+def get_supported_filetype(images, randomize=True):
     while True:
         if not images:
             return None
 
-        img = images.pop(randint(0, len(images) - 1))
+        img = images.pop(randint(0, len(images) - 1)) if randomize else images.pop(0)
 
         if is_supported_filetype(img):
             return img

@@ -51,14 +51,14 @@ class Query(Cog):
         card_name = ' '.join(query)
 
         if 'r' in flags:
-            card_json = get(f"{SCRYFALL_URL}/random").json()
+            card_json = get(f"{SCRYFALL_URL}/random", params={'q': "game:paper"}).json()
         else:
             card_json = get(f"{SCRYFALL_URL}/named", params={"fuzzy": card_name}).json()
 
         if "status" not in card_json:
             await send_card(ctx, card_json)
         elif "type" in card_json:
-            card_json = get(f"{SCRYFALL_URL}/search", params={'q': card_name}).json()
+            card_json = get(f"{SCRYFALL_URL}/search", params={'q': f"{card_name} game:paper"}).json()
 
             if "status" in card_json:
                 return await ctx.send(card_json["details"])
@@ -125,12 +125,15 @@ class Query(Cog):
     @command(help=f"Returns images relevant to a given keyword\nExample: `$image Grant MacDonald`\n\n"
                   f"This command has the following flags:\n"
                   f"* **-c**: Specify a number of images to return [default={DEFAULT_IMAGE_COUNT}].\n"
-                  f"\tExample: `$image -c 10 Margaery Tyrell`\n",
+                  f"\tExample: `$image -c 10 Margaery Tyrell`\n"
+                  f"* **-r**: Return the most relevant images from the search instead of randomly chosen images.\n"
+                  f"\tExample: `$image -r Cressida`",
              brief="Search the web for an image",
              aliases=["images", "search"])
     async def image(self, ctx, *, arg):
         flags, query = get_flags(arg)
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
+        randomize = 'r' not in flags
 
         search_query = ' '.join(query)
 
@@ -154,7 +157,7 @@ class Query(Cog):
             return await ctx.send(f"No results found for \"{search_query}\".")
 
         for _ in range(sub_arg if sub_arg else DEFAULT_IMAGE_COUNT):
-            if img := get_supported_filetype(matched_google_images):
+            if img := get_supported_filetype(matched_google_images, randomize):
                 await ctx.send(bytes(bytes(img, "ascii").decode("unicode-escape"), "ascii").decode("unicode-escape"))
             else:
                 break
