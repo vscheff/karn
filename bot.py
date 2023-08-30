@@ -33,7 +33,7 @@ async def on_ready():
     # Only add cogs if no cogs are currently present on the bot
     # This prevents the recurring CommandRegistrationError exception
     if not bot.cogs:
-        add_cogs(bot, my_guild)
+        await add_cogs(bot, my_guild)
 
     print(f"{bot.user} is connected to the following guild(s):\n")
     for guild in bot.guilds:
