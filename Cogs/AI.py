@@ -6,8 +6,7 @@ from random import randint
 from utils import package_message
 
 
-OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
-OPENAI_ORG = getenv("CHATGPT_ORG")
+MIN_MESSAGE_LEN = 4
 
 
 class AI(Cog):
@@ -37,7 +36,7 @@ class AI(Cog):
                            "Please use `$help chat` for more information.")
 
     async def send_reply(self, msg, bot_id):
-        if msg.author.id == bot_id:
+        if msg.author.id == bot_id or len(msg.content) < MIN_MESSAGE_LEN:
             return
 
         if "karn" in msg.content or "Karn" in msg.content:
