@@ -8,6 +8,9 @@ import qrcode
 
 from utils import package_message
 
+# Filename/path for temporary storage of QR image
+QR_FILEPATH = "./img/temp_qr.png"
+
 
 class Utility(commands.Cog):
 
@@ -20,13 +23,11 @@ class Utility(commands.Cog):
     @commands.command(help="Generate a QR code for input data\n`Example: $qr https://www.gnu.org/`",
                       brief="Generate a QR code")
     async def qr(self, ctx, *, arg):
-        # Filename/path for temporary storage of QR image
-        temp_store = "./img/temp_qr.png"
         img = make_qr(arg)
-        img.save(temp_store)
-        if os.path.exists(temp_store):
-            await ctx.send(file=discord.File(temp_store))
-            os.remove(temp_store)
+        img.save(QR_FILEPATH)
+        if os.path.exists(QR_FILEPATH):
+            await ctx.send(file=discord.File(QR_FILEPATH))
+            os.remove(QR_FILEPATH)
         else:
             print("Error occurred while generating QR code. Temp file not created/deleted.")
 
@@ -42,7 +43,7 @@ class Utility(commands.Cog):
     @commands.command(help="Returns \"pong\" and the round-trip latency if the bot is online.",
                       brief="Returns \"pong\" if the bot is online.")
     async def ping(self, ctx):
-        await ctx.send(f"pong (*{round(self.bot.latency * 1000)}ms*)")
+        await ctx.send(f"pong (*{self.bot.latency * 1000:.0f}ms*)")
 
     # $execute command used for ACE
     # param arg - all user input following the command-name
@@ -74,7 +75,7 @@ class Utility(commands.Cog):
     # param before - int representing the number of days, before which messages will be deleted
     # param  after - int representing the number of days, before which messages will NOT be deleted
     @commands.command(hidden=True,
-                      help="Delete all messages in a channel older than a give number of days.\n"
+                      help="Delete all messages in a channel older than a given number of days.\n"
                            "Example: `$purge 3`\n"
                            "That command will delete all messages older than 3 days.\n\n"
                            "Alternatively, you can include two integers to declare a range.\n"

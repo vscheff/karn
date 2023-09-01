@@ -20,7 +20,7 @@ class DailyLoop(commands.Cog):
         self.guild = guild
         self.ch_general = None
 
-        self.rand_hour = sample(range(1, 24), 1, counts=[12 - abs((12 - i)) for i in range(1, 24)])[0]
+        self.rand_hour = get_pseudo_rand_hour()
         self.daily_funcs = (self.daily_card, self.daily_fact, self.daily_wiki, self.daily_word)
 
         self.daily_loop.start()
@@ -29,13 +29,12 @@ class DailyLoop(commands.Cog):
     async def daily_loop(self):
         current_time = datetime.now()
 
-        if current_time.hour == 0:
-            self.rand_hour = sample(range(1, 24), 1, counts=[12 - abs((12 - i)) for i in range(1, 24)])[0]
-
         if current_time.hour != self.rand_hour:
             return
 
         await choice(self.daily_funcs)()
+
+        self.rand_hour = get_pseudo_rand_hour()
 
     @daily_loop.before_loop
     async def before_daily_loop(self):
@@ -82,3 +81,7 @@ class DailyLoop(commands.Cog):
         else:
             print(f"Error: Word of the Day Loop could not load response correctly.\n"
                   f"Status Code: {response.status_code}\n")
+
+
+def get_pseudo_rand_hour():
+    return sample(range(1, 24), 1, counts=[12 - abs((12 - i)) for i in range(1, 24)])[0]

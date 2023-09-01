@@ -35,13 +35,16 @@ async def on_ready():
     if not bot.cogs:
         await add_cogs(bot, my_guild)
 
-    print(f"{bot.user} is connected to the following guild(s):\n")
+    print(f"\n{bot.user} is connected to the following guild(s):\n")
     for guild in bot.guilds:
         print(f"{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
 
 @bot.event
 async def on_message(msg):
     await hat_listener(msg, bot.user.id)
+
+    await bot.get_cog("AI").send_reply(msg, bot.user.id)
+
     await bot.process_commands(msg)
 
 @bot.event

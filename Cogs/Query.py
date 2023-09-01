@@ -122,7 +122,8 @@ class Query(Cog):
                            "Example: `$define hate`\n\n"
                            "Please use `$help define` for more information.")
 
-    @command(help=f"Returns images relevant to a given keyword\nExample: `$image Grant MacDonald`\n\n"
+    @command(help=f"Returns images relevant to a given query\n"
+                  f"Example: `$image Grant MacDonald`\n\n"
                   f"This command has the following flags:\n"
                   f"* **-c**: Specify a number of images to return [default={DEFAULT_IMAGE_COUNT}].\n"
                   f"\tExample: `$image -c 10 Margaery Tyrell`\n"

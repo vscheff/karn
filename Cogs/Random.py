@@ -76,8 +76,6 @@ class Random(commands.Cog):
             await ctx.send("You must include a comma-seperated list of items.\n"
                            "Example: `$choice me, myself, I`\n\n"
                            "Please use `$help choice` for more information.")
-        else:
-            print(f"$choice command failed with error:\n\n{error}")
 
     @commands.command(help="Returns a given list in a randomized order.\n"
                            "The list can be of any size, with each item seperated by a comma\n"
@@ -108,8 +106,8 @@ class Random(commands.Cog):
             quantity, size = dice.lower().replace(' ', '').split('d')
             quantity, size = int(quantity), int(size)
         except ValueError:
-            await ctx.send("Please format your dice in the classic \"xDy\" style. "
-                           "For example, 1d20 rolls one 20-sided die.")
+            await ctx.send("Please format your dice in the classic \"XdY\" style. "
+                           "For example, 1d20 rolls *one* 20-sided die.")
             return
         if quantity < 1 or size < 1:
             await ctx.send("Please use only positive integers for dice quantity and number of sides.")
