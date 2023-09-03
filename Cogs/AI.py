@@ -1,6 +1,5 @@
 from discord import TextChannel
 from discord.ext.commands import Cog, command, MissingRequiredArgument
-from json import dump, load
 from mysql.connector import connection, errors
 import openai
 from os import getenv
@@ -10,10 +9,13 @@ from utils import package_message
 
 
 MIN_MESSAGE_LEN = 4
-MESSAGE_HISTORY_FILEPATH = "./msg_history.json"
 GENESIS_MESSAGE = {"role": "system",
                    "content": "You are a time-travelling golem named Karn. "
-                              "You are currently acting as an AI assistant for a Discord server."}
+                              "You are currently acting as an AI assistant for a Discord server. "
+                              "Message content from Discord will follow the format: \"Name: Message\" "
+                              "where \"Name\" is the name of the user who sent the message, "
+                              "and \"Message\" is the message that was sent."
+                              "Do not prefix your responses with your own name."}
 
 
 class AI(Cog):
@@ -33,20 +35,15 @@ class AI(Cog):
             print(f"ERROR: Database connection failed with error:\n{e}.")
             return
 
-        # try:
-        #     with open(MESSAGE_HISTORY_FILEPATH, 'r') as inFile:
-        #         self.messages = load(inFile)
-        # except FileNotFoundError:
-        #     self.messages = {}
-
         self.reply_chance = 1
 
     @command(help="Generates natural language or code from a given prompt",
              brief="Generates natural language",
              aliases=["chat", "promt"])
-    async def prompt(self, ctx, *, args):
+    async def prompt(self, ctx, *, args, author=None):
         cursor = self.conn.cursor()
         channel_id = ctx.id if isinstance(ctx, TextChannel) else ctx.channel.id
+        author = author if author else ctx.author.display_name
         cursor.execute(f"SELECT usr_role, content, id FROM Karn WHERE channel_id = {channel_id}")
         messages = [{"role": role, "content": content, "id": uuid} for role, content, uuid in cursor.fetchall()]
 
@@ -55,8 +52,8 @@ class AI(Cog):
             cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
             messages = [{key: val for key, val in GENESIS_MESSAGE.items()}]
 
-        messages.append({"role": "user", "content": args})
-        values = [channel_id, "user", args]
+        messages.append({"role": "user", "content": f"{author}: {args}"})
+        values = [channel_id, "user", f"{author}: {args}"]
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
 
         while True:
@@ -88,10 +85,10 @@ class AI(Cog):
             return
 
         if "karn" in msg.content.lower():
-            return await self.prompt(msg.channel, args=msg.content)
+            return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
         if randint(1, 100) <= self.reply_chance:
-            await self.prompt(msg.channel, args=msg.content)
+            await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
             self.reply_chance = 1
             return
 
