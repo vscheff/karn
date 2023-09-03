@@ -1,5 +1,6 @@
 __pycache__
 .idea
 .env
-hat.json
 *.swp
+hat.json
+msg_history.json
