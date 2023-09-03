@@ -14,7 +14,7 @@ GENESIS_MESSAGE = {"role": "system",
                               "You are currently acting as an AI assistant for a Discord server. "
                               "Message content from Discord will follow the format: \"Name: Message\" "
                               "where \"Name\" is the name of the user who sent the message, "
-                              "and \"Message\" is the message that was sent."
+                              "and \"Message\" is the message that was sent. "
                               "Do not prefix your responses with your own name."}
 
 
@@ -84,7 +84,12 @@ class AI(Cog):
         if msg.author.id == bot_id or len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
             return
 
-        if "karn" in msg.content.lower():
+        lowered_content = msg.content.lower()
+
+        if "karn" in lowered_content:
+            if "fuck off" in lowered_content:
+                return await msg.channel.send("I will fuck right off.")
+
             return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
         if randint(1, 100) <= self.reply_chance:
