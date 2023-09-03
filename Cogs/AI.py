@@ -31,7 +31,7 @@ class AI(Cog):
 
     @command(help="Generates natural language or code from a given prompt",
              brief="Generates natural language")
-    async def chat(self, ctx, *, args):
+    async def prompt(self, ctx, *, args):
         channel_id = str(ctx.id if isinstance(ctx, TextChannel) else ctx.channel.id)
 
         if channel_id not in self.messages:
@@ -54,22 +54,22 @@ class AI(Cog):
         with open(MESSAGE_HISTORY_FILEPATH, 'w') as outFile:
             dump(self.messages, outFile, indent=2)
 
-    @chat.error
-    async def chat_error(self, ctx, error):
+    @prompt.error
+    async def prompt_error(self, ctx, error):
         if isinstance(error, MissingRequiredArgument):
             await ctx.send("You must include a prompt with this command.\n"
-                           "Example: $chat tell me a joke\n\n"
-                           "Please use `$help chat` for more information.")
+                           "Example: $prompt tell me a joke\n\n"
+                           "Please use `$help prompt` for more information.")
 
     async def send_reply(self, msg, bot_id):
         if msg.author.id == bot_id or len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
             return
 
         if "karn" in msg.content.lower():
-            return await self.chat(msg.channel, args=msg.content)
+            return await self.prompt(msg.channel, args=msg.content)
 
         if randint(1, 100) <= self.reply_chance:
-            await self.chat(msg.channel, args=msg.content)
+            await self.prompt(msg.channel, args=msg.content)
             self.reply_chance = 1
             return
 
