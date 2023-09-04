@@ -8,6 +8,10 @@ from random import randint
 from utils import package_message
 
 
+SQL_CONN_PARAMS = {"user": getenv("SQL_USER"),
+                   "password": getenv("SQL_PASSWORD"),
+                   "host": "localhost",
+                   "database": "discord"}
 MIN_MESSAGE_LEN = 4
 GENESIS_MESSAGE = {"role": "system",
                    "content": "You are a time-travelling golem named Karn. "
@@ -15,7 +19,7 @@ GENESIS_MESSAGE = {"role": "system",
                               "Message content from Discord will follow the format: \"Name: Message\" "
                               "where \"Name\" is the name of the user who sent the message, "
                               "and \"Message\" is the message that was sent. "
-                              "Do not prefix your responses with your own name."}
+                              "Do not prefix your responses with anyone's name."}
 
 
 class AI(Cog):
@@ -24,24 +28,27 @@ class AI(Cog):
         openai.api_key = getenv("CHATGPT_TOKEN")
         openai.organization = getenv("CHATGPT_ORG")
 
-        conn_params = {"user": getenv("SQL_USER"),
-                       "password": getenv("SQL_PASSWORD"),
-                       "host": "localhost",
-                       "database": "discord"}
-
-        try:
-            self.conn = connection.MySQLConnection(**conn_params)
-        except errors.ProgrammingError as e:
-            print(f"ERROR: Database connection failed with error:\n{e}.")
-            return
+        self.conn = None
+        self.connect_to_sql_database()
 
         self.reply_chance = 1
+
+    def connect_to_sql_database(self):
+        try:
+            self.conn = connection.MySQLConnection(**SQL_CONN_PARAMS)
+        except errors.ProgrammingError as e:
+            print(f"ERROR: Database connection failed with error:\n{e}.")
 
     @command(help="Generates natural language or code from a given prompt",
              brief="Generates natural language",
              aliases=["chat", "promt"])
     async def prompt(self, ctx, *, args, author=None):
-        cursor = self.conn.cursor()
+        try:
+            cursor = self.conn.cursor()
+        except errors.OperationalError:
+            self.connect_to_sql_database()
+            cursor = self.conn.cursor()
+
         channel_id = ctx.id if isinstance(ctx, TextChannel) else ctx.channel.id
         author = author if author else ctx.author.display_name
         cursor.execute(f"SELECT usr_role, content, id FROM Karn WHERE channel_id = {channel_id}")
