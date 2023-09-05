@@ -11,7 +11,7 @@ from utils import package_message
 
 MAX_TOKENS = 4096
 MAX_MSG_LEN = 2 * MAX_TOKENS // 3
-STATIC_TOKENS = 5
+TOKENS_PER_MESSAGE = 3
 SQL_CONN_PARAMS = {"user": getenv("SQL_USER"),
                    "password": getenv("SQL_PASSWORD"),
                    "host": "localhost",
@@ -69,18 +69,11 @@ class AI(Cog):
         values = [channel_id, "user", f"{author}: {args}"]
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
 
-        context_str = '\n'.join([f"{i['role']}: {i['content']}" for i in messages])
-        encoding_len = len(self.encoding.encode(context_str)) + STATIC_TOKENS
-
-        while encoding_len > MAX_MSG_LEN:
-            for _ in range(2):
-                del_msg = messages.pop(1)
-                cursor.execute(f"DELETE FROM Karn WHERE id = '{del_msg['id']}'")
-            context_str = '\n'.join([f"{i['role']}: {i['content']}" for i in messages])
-            encoding_len = len(self.encoding.encode(context_str)) + STATIC_TOKENS
+        while (encoded_len := self.get_token_len(messages)) > MAX_MSG_LEN:
+            cursor.execute(f"DELETE FROM Karn WHERE id = '{messages.pop(1)['id']}'")
 
         context = [{"role": i["role"], "content": i["content"]} for i in messages]
-        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context, max_tokens=MAX_TOKENS-encoding_len)
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context, max_tokens=MAX_TOKENS-encoded_len)
 
         reply = chat.choices[0].message.content
         await package_message(reply, ctx)
@@ -95,6 +88,16 @@ class AI(Cog):
             await ctx.send("You must include a prompt with this command.\n"
                            "Example: $prompt tell me a joke\n\n"
                            "Please use `$help prompt` for more information.")
+
+    def get_token_len(self, messages):
+        num_tokens = 0
+        for msg in messages:
+            num_tokens += TOKENS_PER_MESSAGE
+            for key, val in msg.items():
+                num_tokens += len(self.encoding.encode(val))
+        num_tokens += 3
+
+        return num_tokens
 
     async def send_reply(self, msg, bot_id):
         if msg.author.id == bot_id or len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
