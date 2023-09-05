@@ -4,10 +4,14 @@ from mysql.connector import connection, errors
 import openai
 from os import getenv
 from random import randint
+from tiktoken import get_encoding
 
 from utils import package_message
 
 
+MAX_TOKENS = 4096
+MAX_MSG_LEN = 2 * MAX_TOKENS // 3
+STATIC_TOKENS = 5
 SQL_CONN_PARAMS = {"user": getenv("SQL_USER"),
                    "password": getenv("SQL_PASSWORD"),
                    "host": "localhost",
@@ -30,6 +34,8 @@ class AI(Cog):
 
         self.conn = None
         self.connect_to_sql_database()
+
+        self.encoding = get_encoding("cl100k_base")
 
         self.reply_chance = 1
 
@@ -63,16 +69,16 @@ class AI(Cog):
         values = [channel_id, "user", f"{author}: {args}"]
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
 
-        while True:
-            try:
-                context = [{key: val for key, val in i.items() if key != "id"} for i in messages]
-                chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context)
-            except openai.error.InvalidRequestError:
-                for _ in range(2):
-                    del_msg = messages.pop(1)
-                    cursor.execute(f"DELETE FROM Karn WHERE id = '{del_msg['id']}'")
-            else:
-                break
+        context_str = '\n'.join([f"{i['role']}: {i['content']}" for i in messages])
+
+        while len(self.encoding.encode(context_str)) > MAX_MSG_LEN:
+            for _ in range(2):
+                del_msg = messages.pop(1)
+                cursor.execute(f"DELETE FROM Karn WHERE id = '{del_msg['id']}'")
+            context_str = '\n'.join([f"{i['role']}: {i['content']}" for i in messages])
+
+        context = [{"role": i["role"], "content": i["content"]} for i in messages]
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context)
 
         reply = chat.choices[0].message.content
         await package_message(reply, ctx)
