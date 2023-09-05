@@ -68,8 +68,9 @@ class AI(Cog):
                 context = [{key: val for key, val in i.items() if key != "id"} for i in messages]
                 chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context)
             except openai.error.InvalidRequestError:
-                del_msg = messages.pop(1)
-                cursor.execute(f"DELETE FROM Karn WHERE id = '{del_msg['id']}'")
+                for _ in range(2):
+                    del_msg = messages.pop(1)
+                    cursor.execute(f"DELETE FROM Karn WHERE id = '{del_msg['id']}'")
             else:
                 break
 
