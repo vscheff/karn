@@ -70,15 +70,17 @@ class AI(Cog):
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
 
         context_str = '\n'.join([f"{i['role']}: {i['content']}" for i in messages])
+        encoding_len = len(self.encoding.encode(context_str)) + STATIC_TOKENS
 
-        while len(self.encoding.encode(context_str)) > MAX_MSG_LEN:
+        while encoding_len > MAX_MSG_LEN:
             for _ in range(2):
                 del_msg = messages.pop(1)
                 cursor.execute(f"DELETE FROM Karn WHERE id = '{del_msg['id']}'")
             context_str = '\n'.join([f"{i['role']}: {i['content']}" for i in messages])
+            encoding_len = len(self.encoding.encode(context_str)) + STATIC_TOKENS
 
         context = [{"role": i["role"], "content": i["content"]} for i in messages]
-        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context)
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context, max_tokens=MAX_TOKENS-encoding_len)
 
         reply = chat.choices[0].message.content
         await package_message(reply, ctx)
