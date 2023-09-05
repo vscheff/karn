@@ -4,7 +4,7 @@ from mysql.connector import connection, errors
 import openai
 from os import getenv
 from random import randint
-from tiktoken import get_encoding
+from tiktoken import encoding_for_model
 
 from utils import package_message
 
@@ -12,6 +12,8 @@ from utils import package_message
 MAX_TOKENS = 4096
 MAX_MSG_LEN = 2 * MAX_TOKENS // 3
 TOKENS_PER_MESSAGE = 3
+TOKENS_PER_REPLY = 3
+MODEL = "gpt-3.5-turbo"
 SQL_CONN_PARAMS = {"user": getenv("SQL_USER"),
                    "password": getenv("SQL_PASSWORD"),
                    "host": "localhost",
@@ -34,8 +36,6 @@ class AI(Cog):
 
         self.conn = None
         self.connect_to_sql_database()
-
-        self.encoding = get_encoding("cl100k_base")
 
         self.reply_chance = 1
 
@@ -69,11 +69,11 @@ class AI(Cog):
         values = [channel_id, "user", f"{author}: {args}"]
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
 
-        while (encoded_len := self.get_token_len(messages)) > MAX_MSG_LEN:
+        while (encoded_len := get_token_len(messages)) > MAX_MSG_LEN:
             cursor.execute(f"DELETE FROM Karn WHERE id = '{messages.pop(1)['id']}'")
 
         context = [{"role": i["role"], "content": i["content"]} for i in messages]
-        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context, max_tokens=MAX_TOKENS-encoded_len)
+        chat = openai.ChatCompletion.create(model=MODEL, messages=context, max_tokens=MAX_TOKENS-encoded_len)
 
         reply = chat.choices[0].message.content
         await package_message(reply, ctx)
@@ -89,15 +89,16 @@ class AI(Cog):
                            "Example: $prompt tell me a joke\n\n"
                            "Please use `$help prompt` for more information.")
 
-    def get_token_len(self, messages):
-        num_tokens = 0
-        for msg in messages:
-            num_tokens += TOKENS_PER_MESSAGE
-            for key, val in msg.items():
-                num_tokens += len(self.encoding.encode(val))
-        num_tokens += 3
+    @command(help="Clear all messages in the context history for this channel",
+             brief="Clear context history")
+    async def clear_context(self, ctx):
+        cursor = self.conn.cursor()
+        cursor.execute(f"DELETE FROM Karn WHERE channel_id = '{ctx.channel.id}'")
 
-        return num_tokens
+        await ctx.send(f"Deleted {cursor.rowcount} context messages from the database.")
+
+        self.conn.commit()
+        cursor.close()
 
     async def send_reply(self, msg, bot_id):
         if msg.author.id == bot_id or len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
@@ -117,3 +118,15 @@ class AI(Cog):
             return
 
         self.reply_chance += 1
+
+
+ENCODING = encoding_for_model(MODEL)
+
+def get_token_len(messages):
+    num_tokens = 0
+    for msg in messages:
+        num_tokens += TOKENS_PER_MESSAGE
+        for val in msg.values():
+            num_tokens += len(ENCODING.encode(val))
+
+    return num_tokens + TOKENS_PER_REPLY
