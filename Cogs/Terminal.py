@@ -76,7 +76,7 @@ class Terminal(Cog):
 
 async def send_line(msg, bot):
     if msg.author.bot:
-        return
+        return False
 
     if msg.content[0] == SEND_LINE_CHAR:
         file = msg.content[1:].strip().split(maxsplit=1)[0]
@@ -84,15 +84,18 @@ async def send_line(msg, bot):
         match = search(r"<#\d+>", msg.content)
         file = f"{bot.get_channel(int(match.group()[2:-1]))}{msg.content[match.span()[1]:]}"
     else:
-        return
+        return False
 
     if search(r"\W", file):
-        return await msg.channel.send(f"Invalid filename: `{file}`\nPlease only use word characters.")
+        await msg.channel.send(f"Invalid filename: `{file}`\nPlease only use word characters.")
+        return False
 
     try:
         with open(f"{FILE_ROOT_DIRECTORY}/{file}.txt", "r") as in_file:
             lines = in_file.readlines()
     except FileNotFoundError:
-        return
+        return False
 
     await msg.channel.send(choice(lines))
+
+    return True

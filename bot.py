@@ -44,9 +44,8 @@ async def on_ready():
 async def on_message(msg):
     await hat_listener(msg, bot.user.id)
 
-    await bot.get_cog("AI").send_reply(msg)
-
-    await send_line(msg, bot)
+    if not await send_line(msg, bot):
+        await bot.get_cog("AI").send_reply(msg)
 
     await bot.process_commands(msg)
 
