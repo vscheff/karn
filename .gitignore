@@ -4,4 +4,3 @@ __pycache__
 *.swp
 hat.json
 msg_history.json
-files/*
