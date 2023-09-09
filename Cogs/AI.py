@@ -1,16 +1,17 @@
-from discord import TextChannel
+from discord import TextChannel, VoiceChannel
 from discord.ext.commands import Cog, command, MissingRequiredArgument
 from mysql.connector import connection, errors
 import openai
 from os import getenv
-from random import randint
+from os.path import exists
+from random import choice, randint
 from tiktoken import encoding_for_model
 
 from utils import package_message
 
 
 MAX_TOKENS = 4096
-MAX_MSG_LEN = 2 * MAX_TOKENS // 3
+MAX_MSG_LEN = 3 * MAX_TOKENS // 4
 TOKENS_PER_MESSAGE = 3
 TOKENS_PER_REPLY = 3
 MODEL = "gpt-3.5-turbo"
@@ -26,6 +27,10 @@ GENESIS_MESSAGE = {"role": "system",
                               "where \"Name\" is the name of the user who sent the message, "
                               "and \"Message\" is the message that was sent. "
                               "Do not prefix your responses with anyone's name."}
+RUDE_MESSAGES_FILEPATH = "./files/rude.txt"
+RUDE_RESPONSE_FILEPATH = "./files/response.txt"
+DEFAULT_RUDE_MESSAGE = "shut up"
+DEFAULT_RUDE_RESPONSE = "I will leave, my apologies."
 
 
 class AI(Cog):
@@ -38,6 +43,18 @@ class AI(Cog):
         self.connect_to_sql_database()
 
         self.reply_chance = 1
+
+        try:
+            with open(RUDE_MESSAGES_FILEPATH, 'r') as in_file:
+                self.rude_messages = [i.strip().lower() for i in in_file.readlines()]
+        except FileNotFoundError:
+            self.rude_messages = [DEFAULT_RUDE_MESSAGE]
+            with open(RUDE_MESSAGES_FILEPATH, 'w') as out_file:
+                out_file.writelines(self.rude_messages)
+
+        if not exists(RUDE_RESPONSE_FILEPATH):
+            with open(RUDE_RESPONSE_FILEPATH, 'w') as out_file:
+                out_file.writelines(DEFAULT_RUDE_RESPONSE)
 
     def connect_to_sql_database(self):
         try:
@@ -55,7 +72,7 @@ class AI(Cog):
             self.connect_to_sql_database()
             cursor = self.conn.cursor()
 
-        channel_id = ctx.id if isinstance(ctx, TextChannel) else ctx.channel.id
+        channel_id = ctx.id if isinstance(ctx, (TextChannel, VoiceChannel)) else ctx.channel.id
         author = author if author else ctx.author.display_name
         cursor.execute(f"SELECT usr_role, content, id FROM Karn WHERE channel_id = {channel_id}")
         messages = [{"role": role, "content": content, "id": uuid} for role, content, uuid in cursor.fetchall()]
@@ -86,7 +103,7 @@ class AI(Cog):
     async def prompt_error(self, ctx, error):
         if isinstance(error, MissingRequiredArgument):
             await ctx.send("You must include a prompt with this command.\n"
-                           "Example: $prompt tell me a joke\n\n"
+                           "Example: `$prompt tell me a joke`\n\n"
                            "Please use `$help prompt` for more information.")
 
     @command(help="Clear all messages in the context history for this channel",
@@ -100,15 +117,15 @@ class AI(Cog):
         self.conn.commit()
         cursor.close()
 
-    async def send_reply(self, msg, bot_id):
-        if msg.author.id == bot_id or len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
+    async def send_reply(self, msg):
+        if msg.author.bot or len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
             return
 
         lowered_content = msg.content.lower()
 
         if "karn" in lowered_content:
-            if "fuck off" in lowered_content:
-                return await msg.channel.send("I will fuck right off.")
+            if any(i in lowered_content for i in self.rude_messages):
+                return await msg.channel.send(get_random_response())
 
             return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
@@ -130,3 +147,7 @@ def get_token_len(messages):
             num_tokens += len(ENCODING.encode(val))
 
     return num_tokens + TOKENS_PER_REPLY
+
+def get_random_response():
+    with open(RUDE_RESPONSE_FILEPATH, 'r') as in_file:
+        return choice(in_file.readlines())

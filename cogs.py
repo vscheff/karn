@@ -7,6 +7,7 @@ from Cogs.DailyLoop import DailyLoop
 from Cogs.hat import hat
 from Cogs.Query import Query
 from Cogs.Random import Random
+from Cogs.Terminal import Terminal
 from Cogs.Utility import Utility
 
 # Adds each cogs to the bot, this is called once the bot is ready for the first time
@@ -18,5 +19,6 @@ async def add_cogs(bot, guild):
     await bot.add_cog(Query())
     await bot.add_cog(Random(bot, guild))
     await bot.add_cog(Utility(bot))
+    await bot.add_cog(Terminal())
 
     bot.add_command(hat)

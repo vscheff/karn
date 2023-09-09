@@ -16,6 +16,7 @@ if TOKEN is None or GUILD is None:
 # Local dependencies
 from cogs import add_cogs
 from Cogs.hat import hat_listener
+from Cogs.Terminal import send_line
 from help_command import CustomHelpCommand
 
 act = discord.Activity(type=discord.ActivityType.listening, name="$help")
@@ -43,7 +44,9 @@ async def on_ready():
 async def on_message(msg):
     await hat_listener(msg, bot.user.id)
 
-    await bot.get_cog("AI").send_reply(msg, bot.user.id)
+    await bot.get_cog("AI").send_reply(msg)
+
+    await send_line(msg, bot)
 
     await bot.process_commands(msg)
 
