@@ -2,7 +2,7 @@ from discord import TextChannel, VoiceChannel
 from discord.ext.commands import Cog, command, MissingRequiredArgument
 from mysql.connector import connection, errors
 import openai
-from os import getenv
+from os import getenv, stat
 from os.path import exists
 from random import choice, randint
 from tiktoken import encoding_for_model
@@ -45,12 +45,13 @@ class AI(Cog):
         self.reply_chance = 1
 
         try:
-            with open(RUDE_MESSAGES_FILEPATH, 'r') as in_file:
-                self.rude_messages = [i.strip().lower() for i in in_file.readlines()]
+            self.get_rude_messages()
         except FileNotFoundError:
             self.rude_messages = [DEFAULT_RUDE_MESSAGE]
             with open(RUDE_MESSAGES_FILEPATH, 'w') as out_file:
                 out_file.writelines(self.rude_messages)
+
+        self.rude_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
 
         if not exists(RUDE_RESPONSE_FILEPATH):
             with open(RUDE_RESPONSE_FILEPATH, 'w') as out_file:
@@ -61,6 +62,10 @@ class AI(Cog):
             self.conn = connection.MySQLConnection(**SQL_CONN_PARAMS)
         except errors.ProgrammingError as e:
             print(f"ERROR: Database connection failed with error:\n{e}.")
+
+    def get_rude_messages(self):
+        with open(RUDE_MESSAGES_FILEPATH, 'r') as in_file:
+            self.rude_messages = [i.strip().lower() for i in in_file.readlines()]
 
     @command(help="Generates natural language or code from a given prompt",
              brief="Generates natural language",
@@ -124,6 +129,9 @@ class AI(Cog):
         lowered_content = msg.content.lower()
 
         if "karn" in lowered_content:
+            if stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns != self.rude_mtime:
+                self.get_rude_messages()
+
             if any(i in lowered_content for i in self.rude_messages):
                 return await msg.channel.send(get_random_response())
 
