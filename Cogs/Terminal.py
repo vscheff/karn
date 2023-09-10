@@ -1,4 +1,5 @@
 from discord.ext.commands import Cog, command, MissingRequiredArgument
+from os import listdir
 from random import choice
 from re import search
 
@@ -57,6 +58,12 @@ class Terminal(Cog):
 
         await ctx.send(f"No matches found in {file}")
 
+    @command(help="Lists the text files currently present in the directory",
+             brief="Lists present text files")
+    async def ls(self, ctx):
+        files = '\n'.join(i.replace(".txt", '') for i in listdir(FILE_ROOT_DIRECTORY))
+        await ctx.send(f"```{files}```")
+
     @command(help="Writes user input into a given text file\n"
                   "Example: `tee parody_bands Jon Von Jovi`",
              brief="Write to a file")
@@ -71,11 +78,11 @@ class Terminal(Cog):
         with open(f"{FILE_ROOT_DIRECTORY}/{file}.txt", "a") as out_file:
             out_file.write(f"{inp}\n")
 
-        await ctx.send(f"Successfully wrote a newline into `{file}.txt`")
+        await ctx.send(f"Successfully wrote line into `{file}`")
 
 
 async def send_line(msg, bot):
-    if msg.author.bot:
+    if msg.author.bot or not msg.content:
         return False
 
     if msg.content[0] == SEND_LINE_CHAR:
