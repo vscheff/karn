@@ -61,8 +61,8 @@ class Terminal(Cog):
     @command(help="Lists the text files currently present in the directory",
              brief="Lists present text files")
     async def ls(self, ctx):
-        files = '\n'.join(i.replace(".txt", '') for i in listdir(FILE_ROOT_DIRECTORY))
-        await ctx.send(f"```{files}```")
+        files = '\n'.join(i.replace(".txt", '') for i in listdir(FILE_ROOT_DIRECTORY) if i[0] != '.')
+        await ctx.send(f"```\n{files}\n```")
 
     @command(help="Writes user input into a given text file\n"
                   "Example: `tee parody_bands Jon Von Jovi`",
