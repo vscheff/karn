@@ -88,7 +88,8 @@ async def send_line(msg, bot):
     if msg.content[0] == SEND_LINE_CHAR:
         file = msg.content[1:].strip().split(maxsplit=1)[0]
     elif msg.content[0] == '<':
-        match = search(r"<#\d+>", msg.content)
+        if not (match := search(r"<#\d+>", msg.content)):
+            return False
         file = f"{bot.get_channel(int(match.group()[2:-1]))}{msg.content[match.span()[1]:]}"
     else:
         return False
