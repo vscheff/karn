@@ -119,7 +119,7 @@ class AI(Cog):
         desc = choice(self.descriptors)
         reply = chat.choices[0].message.content
         # https://regex101.com/r/ocYsH9/1
-        reply = sub(r"([aA]s) an* (virtual\s)*AI\s*(language model)*(assistant)*", r"\1 " + desc, reply)
+        reply = sub(r"([aA]s) an* (digital)*(virtual)*\s*AI\s*(language model)*(assistant)*", r"\1 " + desc, reply)
 
         await package_message(reply, ctx)
         values = [channel_id, "assistant", reply]
