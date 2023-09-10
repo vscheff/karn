@@ -5,6 +5,7 @@ import openai
 from os import getenv, stat
 from os.path import exists
 from random import choice, randint
+from re import sub
 from tiktoken import encoding_for_model
 
 from utils import package_message
@@ -29,8 +30,10 @@ GENESIS_MESSAGE = {"role": "system",
                               "Do not prefix your responses with anyone's name."}
 RUDE_MESSAGES_FILEPATH = "./files/rude.txt"
 RUDE_RESPONSE_FILEPATH = "./files/response.txt"
+AI_DESCRIPTOR_FILEPATH = "./files/descriptor.txt"
 DEFAULT_RUDE_MESSAGE = "shut up"
 DEFAULT_RUDE_RESPONSE = "I will leave, my apologies."
+DEFAULT_DESCRIPTOR = "your humble assistant"
 
 
 class AI(Cog):
@@ -49,13 +52,22 @@ class AI(Cog):
         except FileNotFoundError:
             self.rude_messages = [DEFAULT_RUDE_MESSAGE]
             with open(RUDE_MESSAGES_FILEPATH, 'w') as out_file:
-                out_file.writelines(self.rude_messages)
+                out_file.writelines(i + '\n' for i in self.rude_messages)
 
         self.rude_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
 
+        try:
+            self.get_descriptors()
+        except FileNotFoundError:
+            self.descriptors = [DEFAULT_DESCRIPTOR]
+            with open(AI_DESCRIPTOR_FILEPATH, 'w') as out_file:
+                out_file.writelines(i + '\n' for i in self.descriptors)
+
+        self.desc_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
+
         if not exists(RUDE_RESPONSE_FILEPATH):
             with open(RUDE_RESPONSE_FILEPATH, 'w') as out_file:
-                out_file.writelines(DEFAULT_RUDE_RESPONSE)
+                out_file.writelines(i + '\n' for i in [DEFAULT_RUDE_RESPONSE])
 
     def connect_to_sql_database(self):
         try:
@@ -66,6 +78,10 @@ class AI(Cog):
     def get_rude_messages(self):
         with open(RUDE_MESSAGES_FILEPATH, 'r') as in_file:
             self.rude_messages = [i.strip().lower() for i in in_file.readlines()]
+
+    def get_descriptors(self):
+        with open(AI_DESCRIPTOR_FILEPATH, 'r') as in_file:
+            self.descriptors = [i.strip() for i in in_file.readlines()]
 
     @command(help="Generates natural language or code from a given prompt",
              brief="Generates natural language",
@@ -97,7 +113,14 @@ class AI(Cog):
         context = [{"role": i["role"], "content": i["content"]} for i in messages]
         chat = openai.ChatCompletion.create(model=MODEL, messages=context, max_tokens=MAX_TOKENS-encoded_len)
 
+        if stat(AI_DESCRIPTOR_FILEPATH).st_mtime_ns != self.desc_mtime:
+            self.get_descriptors()
+
+        desc = choice(self.descriptors)
         reply = chat.choices[0].message.content
+        # https://regex101.com/r/ocYsH9/1
+        reply = sub(r"([aA]s) an* (virtual\s)*AI\s*(language model)*(assistant)*", r"\1 " + desc, reply)
+
         await package_message(reply, ctx)
         values = [channel_id, "assistant", reply]
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
