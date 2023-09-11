@@ -115,6 +115,7 @@ class AI(Cog):
 
         if stat(AI_DESCRIPTOR_FILEPATH).st_mtime_ns != self.desc_mtime:
             self.get_descriptors()
+            self.desc_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
 
         desc = choice(self.descriptors)
         reply = chat.choices[0].message.content
@@ -154,6 +155,7 @@ class AI(Cog):
         if "karn" in lowered_content:
             if stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns != self.rude_mtime:
                 self.get_rude_messages()
+                self.rude_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
 
             if any(i in lowered_content for i in self.rude_messages):
                 return await msg.channel.send(get_random_response())

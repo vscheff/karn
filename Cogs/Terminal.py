@@ -36,9 +36,9 @@ class Terminal(Cog):
                            "Example: `$cat jokes`\n\n"
                            "Please use `$help cat` for more information.")
 
-    @command(help="Returns the entire contents of a given text file\n"
-                  "Example: `cat parody_bands`",
-             brief="Read from a file")
+    @command(help="Return lines from a file that match a given pattern string\n"
+                  "Example: `grep parody_bands Von`",
+             brief="Search a file")
     async def grep(self, ctx, *, args):
         file, pattern = args.split(maxsplit=1)
 
