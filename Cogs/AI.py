@@ -5,7 +5,7 @@ import openai
 from os import getenv, stat
 from os.path import exists
 from random import choice, randint
-from re import sub
+from re import search, sub
 from tiktoken import encoding_for_model
 
 from utils import package_message
@@ -64,6 +64,13 @@ class AI(Cog):
             with open(RUDE_RESPONSE_FILEPATH, 'w') as out_file:
                 out_file.writelines(i + '\n' for i in [DEFAULT_RUDE_RESPONSE])
 
+    def get_cursor(self):
+        try:
+            return self.conn.cursor()
+        except OperationalError:
+            self.conn.reconnect()
+            return self.conn.cursor()
+
     def get_rude_messages(self):
         with open(RUDE_MESSAGES_FILEPATH, 'r') as in_file:
             self.rude_messages = [i.strip().lower() for i in in_file.readlines()]
@@ -76,12 +83,7 @@ class AI(Cog):
              brief="Generates natural language",
              aliases=["chat", "promt"])
     async def prompt(self, ctx, *, args, author=None):
-
-        try:
-            cursor = self.conn.cursor()
-        except OperationalError:
-            self.conn.reconnect()
-            cursor = self.conn.cursor()
+        cursor = self.get_cursor()
 
         channel_id = ctx.id if isinstance(ctx, (TextChannel, VoiceChannel)) else ctx.channel.id
         author = author if author else ctx.author.display_name
@@ -109,9 +111,9 @@ class AI(Cog):
 
         desc = choice(self.descriptors)
         reply = chat.choices[0].message.content
-        # https://regex101.com/r/OF8qy1/3
-        pattern = r"([aA]s)* an* (?:digital)*(?:virtual)*(?:golem)* *" \
-                  r"(?:(?:AI)|(?:digital))\s*(?:language model)*(?:assistant)*"
+        # https://regex101.com/r/OF8qy1/4
+        pattern = r"([aA]s)* an* (?:digital)*(?:virtual)*(?:time-traveling)* *" \
+                  r"(?:golem)* *(?:(?:AI)|(?:digital))\s*(?:language model)*(?:assistant)*"
         reply = sub(pattern, r"\1 " + desc, reply)
 
         await package_message(reply, ctx)
@@ -130,11 +132,7 @@ class AI(Cog):
     @command(help="Clear all messages in the context history for this channel",
              brief="Clear context history")
     async def clear_context(self, ctx):
-        try:
-            cursor = self.conn.cursor()
-        except OperationalError:
-            self.conn.reconnect()
-            cursor = self.conn.cursor()
+        cursor = self.get_cursor()
 
         cursor.execute(f"DELETE FROM Karn WHERE channel_id = '{ctx.channel.id}'")
 
@@ -147,12 +145,13 @@ class AI(Cog):
         if len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
             return
 
-        lowered_content = msg.content.lower()
-
-        if "karn" in lowered_content:
+        # https://regex101.com/r/qA25Ux/1
+        if search(r"[Kk]arn(?:\Z|[^+\-])", msg.content):
             if stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns != self.rude_mtime:
                 self.get_rude_messages()
                 self.rude_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
+
+            lowered_content = msg.content.lower()
 
             if any(i in lowered_content for i in self.rude_messages):
                 return await msg.channel.send(get_random_response())

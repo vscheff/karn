@@ -12,6 +12,13 @@ class Rating(Cog):
     def __init__(self, conn):
         self.conn = conn
 
+    def get_cursor(self):
+        try:
+            return self.conn.cursor()
+        except OperationalError:
+            self.conn.reconnect()
+            return self.conn.cursor()
+
     @command(help=f"Returns the least voted items\n\n"
                   f"Include an integer argument to specify the number of "
                   f"results to return (default={DEFAULT_RATING_COUNT})\n"
@@ -29,11 +36,7 @@ class Rating(Cog):
         await self.send_ratings(ctx, num, True)
 
     async def send_ratings(self, ctx, num, reverse):
-        try:
-            cursor = self.conn.cursor()
-        except OperationalError:
-            self.conn.reconnect()
-            cursor = self.conn.cursor()
+        cursor = self.get_cursor()
 
         cursor.execute("SELECT name, score FROM Rating WHERE guild_id = %s", [ctx.guild.id])
 
@@ -55,6 +58,24 @@ class Rating(Cog):
             await ctx.send("Bad argument, use only integers with this command.\n\n"
                            "Please use `$help top` for more information.")
 
+    @command(help="Show the score for a given item.\n"
+                  "Example: `$show linux`",
+             brief="Show the score for an item")
+    async def show(self, ctx, *, args):
+        if not args:
+            return await ctx.send("You must include an item with this command.\n\n"
+                                  "Please use `$help show` for more information.")
+
+        cursor = self.get_cursor()
+        cursor.execute("SELECT score FROM Rating WHERE name = %s AND guild_id = %s", [args, ctx.guild.id])
+
+        if not (result := cursor.fetchall()):
+            await ctx.send(f"No score exists for \"{args}\". Try using `--` or `++` to vote for this item first.")
+        else:
+            await ctx.send(f"*{args}* **[{result[0][0]}]**")
+
+        cursor.close()
+
     def rate_listener(self, msg):
         # https://regex101.com/r/s8gfoV/3
         matches = findall(r"(?:\([\w\s]+\)\+\+)|(?:[\w]+\+\+)|(?:\([\w\s]+\)\-\-)|(?:[\w]+\-\-)", msg.content)
@@ -62,8 +83,7 @@ class Rating(Cog):
         if not matches:
             return
 
-        self.conn.reconnect()
-        cursor = self.conn.cursor()
+        cursor = self.get_cursor()
 
         for match in matches:
             positive = match[-1] == '+'
