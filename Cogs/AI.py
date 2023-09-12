@@ -142,7 +142,7 @@ class AI(Cog):
         cursor.close()
 
     async def send_reply(self, msg):
-        if len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
+        if len(msg.content) < MIN_MESSAGE_LEN:
             return
 
         # https://regex101.com/r/qA25Ux/1

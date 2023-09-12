@@ -48,10 +48,11 @@ async def on_message(msg):
     if msg.author.bot or not msg.content:
         return
 
+    if msg.content[0] == bot.command_prefix:
+        return await bot.process_commands(msg)
+
     if not await send_line(msg, bot):
         await bot.get_cog("AI").send_reply(msg)
-
-    await bot.process_commands(msg)
 
     await hat_listener(msg)
     bot.get_cog("Rating").rate_listener(msg)
