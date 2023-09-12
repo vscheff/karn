@@ -109,8 +109,9 @@ class AI(Cog):
 
         desc = choice(self.descriptors)
         reply = chat.choices[0].message.content
-        # https://regex101.com/r/OF8qy1/2
-        pattern = r"([aA]s)* an* (?:digital)*(?:virtual)* *(?:(?:AI)|(?:digital))\s*(?:language model)*(?:assistant)*"
+        # https://regex101.com/r/OF8qy1/3
+        pattern = r"([aA]s)* an* (?:digital)*(?:virtual)*(?:golem)* *" \
+                  r"(?:(?:AI)|(?:digital))\s*(?:language model)*(?:assistant)*"
         reply = sub(pattern, r"\1 " + desc, reply)
 
         await package_message(reply, ctx)
