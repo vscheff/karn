@@ -61,7 +61,7 @@ class Terminal(Cog):
     @command(help="Lists the text files currently present in the directory",
              brief="Lists present text files")
     async def ls(self, ctx):
-        files = '\n'.join(i.replace(".txt", '') for i in listdir(FILE_ROOT_DIRECTORY) if i[0] != '.')
+        files = '\n'.join(i.replace(".txt", '') for i in sorted(listdir(FILE_ROOT_DIRECTORY)) if i[0] != '.')
         await ctx.send(f"```\n{files}\n```")
 
     @command(help="Writes user input into a given text file\n"
@@ -82,9 +82,6 @@ class Terminal(Cog):
 
 
 async def send_line(msg, bot):
-    if msg.author.bot or not msg.content:
-        return False
-
     if msg.content[0] == SEND_LINE_CHAR:
         file = msg.content[1:].strip().split(maxsplit=1)[0]
     elif msg.content[0] == '<':

@@ -1,6 +1,5 @@
 from discord import TextChannel, VoiceChannel
 from discord.ext.commands import Cog, command, MissingRequiredArgument
-from mysql.connector import connection, errors
 import openai
 from os import getenv, stat
 from os.path import exists
@@ -16,10 +15,6 @@ MAX_MSG_LEN = 3 * MAX_TOKENS // 4
 TOKENS_PER_MESSAGE = 3
 TOKENS_PER_REPLY = 3
 MODEL = "gpt-3.5-turbo"
-SQL_CONN_PARAMS = {"user": getenv("SQL_USER"),
-                   "password": getenv("SQL_PASSWORD"),
-                   "host": "localhost",
-                   "database": "discord"}
 MIN_MESSAGE_LEN = 4
 GENESIS_MESSAGE = {"role": "system",
                    "content": "You are a time-travelling golem named Karn. "
@@ -38,12 +33,11 @@ DEFAULT_DESCRIPTOR = "your humble assistant"
 
 class AI(Cog):
 
-    def __init__(self):
+    def __init__(self, conn):
         openai.api_key = getenv("CHATGPT_TOKEN")
         openai.organization = getenv("CHATGPT_ORG")
 
-        self.conn = None
-        self.connect_to_sql_database()
+        self.conn = conn
 
         self.reply_chance = 1
 
@@ -69,12 +63,6 @@ class AI(Cog):
             with open(RUDE_RESPONSE_FILEPATH, 'w') as out_file:
                 out_file.writelines(i + '\n' for i in [DEFAULT_RUDE_RESPONSE])
 
-    def connect_to_sql_database(self):
-        try:
-            self.conn = connection.MySQLConnection(**SQL_CONN_PARAMS)
-        except errors.ProgrammingError as e:
-            print(f"ERROR: Database connection failed with error:\n{e}.")
-
     def get_rude_messages(self):
         with open(RUDE_MESSAGES_FILEPATH, 'r') as in_file:
             self.rude_messages = [i.strip().lower() for i in in_file.readlines()]
@@ -87,11 +75,7 @@ class AI(Cog):
              brief="Generates natural language",
              aliases=["chat", "promt"])
     async def prompt(self, ctx, *, args, author=None):
-        try:
-            cursor = self.conn.cursor()
-        except errors.OperationalError:
-            self.connect_to_sql_database()
-            cursor = self.conn.cursor()
+        cursor = self.conn.cursor()
 
         channel_id = ctx.id if isinstance(ctx, (TextChannel, VoiceChannel)) else ctx.channel.id
         author = author if author else ctx.author.display_name
@@ -119,7 +103,7 @@ class AI(Cog):
 
         desc = choice(self.descriptors)
         reply = chat.choices[0].message.content
-        # https://regex101.com/r/ocYsH9/1
+        # https://regex101.com/r/OF8qy1/1
         reply = sub(r"([aA]s) an* (digital)*(virtual)*\s*AI\s*(language model)*(assistant)*", r"\1 " + desc, reply)
 
         await package_message(reply, ctx)
@@ -147,7 +131,7 @@ class AI(Cog):
         cursor.close()
 
     async def send_reply(self, msg):
-        if msg.author.bot or len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
+        if len(msg.content) < MIN_MESSAGE_LEN or msg.content[0] == '$':
             return
 
         lowered_content = msg.content.lower()

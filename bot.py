@@ -18,12 +18,15 @@ from cogs import add_cogs
 from Cogs.hat import hat_listener
 from Cogs.Terminal import send_line
 from help_command import CustomHelpCommand
+from sql import connect_to_sql_database
 
 act = discord.Activity(type=discord.ActivityType.listening, name="$help")
 bot = commands.Bot(command_prefix='$', help_command=CustomHelpCommand(), intents=discord.Intents.all(), activity=act)
 
 # Add brief help text for the help command
 next(filter(lambda x: x.name == "help", bot.commands)).brief = "Shows this message"
+
+sql_connection = connect_to_sql_database()
 
 # Runs when bot has successfully logged in
 # Note: This can and will be called multiple times during the bot's up-times
@@ -34,7 +37,7 @@ async def on_ready():
     # Only add cogs if no cogs are currently present on the bot
     # This prevents the recurring CommandRegistrationError exception
     if not bot.cogs:
-        await add_cogs(bot, my_guild)
+        await add_cogs(bot, my_guild, sql_connection)
 
     print(f"\n{bot.user} is connected to the following guild(s):\n")
     for guild in bot.guilds:
@@ -42,12 +45,16 @@ async def on_ready():
 
 @bot.event
 async def on_message(msg):
-    await hat_listener(msg, bot.user.id)
+    if msg.author.bot or not msg.content:
+        return
 
     if not await send_line(msg, bot):
         await bot.get_cog("AI").send_reply(msg)
 
     await bot.process_commands(msg)
+
+    await hat_listener(msg)
+    bot.get_cog("Rating").rate_listener(msg)
 
 @bot.event
 async def on_command_error(ctx, error):

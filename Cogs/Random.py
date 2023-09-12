@@ -1,13 +1,12 @@
 # Cog that holds all commands related to RNG
-
-from datetime import datetime
-from discord.ext import commands, tasks
+from discord.ext import commands
 from os import getenv
 from randfacts import get_fact
 from random import choice, randint, shuffle
 import discord
 
 from utils import package_message
+
 
 MAX_ROLL = 2 ** 18
 main_channel = int(getenv("GENERAL_CH_ID"))

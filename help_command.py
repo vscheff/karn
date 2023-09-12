@@ -35,7 +35,7 @@ class CustomHelpCommand(HelpCommand):
     async def send_command_help(self, command):
         if command.hidden and not self.context.author.guild_permissions.administrator:
             return
-        await self.get_destination().send(f"**{command.name}**:\n{command.help}")
+        await self.get_destination().send(f"# {command.name}\n{command.help}")
 
     def get_command_list(self, commands):
         if self.context.author.guild_permissions.administrator:

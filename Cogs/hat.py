@@ -20,11 +20,11 @@ def store_json():
     with open(HAT_FILEPATH, 'w') as outFile:
         dump(hat_store, outFile, indent=2)
 
-async def hat_listener(msg, bot_id):
+async def hat_listener(msg):
     g_id = str(msg.guild.id)
     check_id(g_id)
     this_guild = hat_store[g_id]["filters"]
-    if msg.channel.name in this_guild and msg.author.id != bot_id:
+    if msg.channel.name in this_guild:
         for filter_str in this_guild[msg.channel.name]:
             if match := list(findall(filter_str, msg.content)):
                 hat_store[g_id]["hats"][this_guild[msg.channel.name][filter_str]].extend(match)
