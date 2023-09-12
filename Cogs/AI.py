@@ -109,8 +109,9 @@ class AI(Cog):
 
         desc = choice(self.descriptors)
         reply = chat.choices[0].message.content
-        # https://regex101.com/r/OF8qy1/1
-        reply = sub(r"([aA]s) an* (digital)*(virtual)*\s*AI\s*(language model)*(assistant)*", r"\1 " + desc, reply)
+        # https://regex101.com/r/OF8qy1/2
+        pattern = r"([aA]s)* an* (?:digital)*(?:virtual)* *(?:(?:AI)|(?:digital))\s*(?:language model)*(?:assistant)*"
+        reply = sub(pattern, r"\1 " + desc, reply)
 
         await package_message(reply, ctx)
         values = [channel_id, "assistant", reply]
@@ -133,7 +134,7 @@ class AI(Cog):
         except OperationalError:
             self.conn.reconnect()
             cursor = self.conn.cursor()
-        
+
         cursor.execute(f"DELETE FROM Karn WHERE channel_id = '{ctx.channel.id}'")
 
         await ctx.send(f"Deleted {cursor.rowcount} context messages from the database.")
