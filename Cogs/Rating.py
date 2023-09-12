@@ -1,4 +1,5 @@
 from discord.ext.commands import Cog, command, errors
+from mysql.connector.errors import OperationalError
 from re import findall
 
 from utils import package_message
@@ -28,7 +29,12 @@ class Rating(Cog):
         await self.send_ratings(ctx, num, True)
 
     async def send_ratings(self, ctx, num, reverse):
-        cursor = self.conn.cursor()
+        try:
+            cursor = self.conn.cursor()
+        except OperationalError:
+            self.conn.reconnect()
+            cursor = self.conn.cursor()
+
         cursor.execute("SELECT name, score FROM Rating WHERE guild_id = %s", [ctx.guild.id])
 
         if not (results := sorted(cursor.fetchall(), key=lambda x: x[1], reverse=reverse)):
@@ -56,6 +62,7 @@ class Rating(Cog):
         if not matches:
             return
 
+        self.conn.reconnect()
         cursor = self.conn.cursor()
 
         for match in matches:

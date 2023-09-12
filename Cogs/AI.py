@@ -1,5 +1,6 @@
 from discord import TextChannel, VoiceChannel
 from discord.ext.commands import Cog, command, MissingRequiredArgument
+from mysql.connector.errors import OperationalError
 import openai
 from os import getenv, stat
 from os.path import exists
@@ -75,7 +76,12 @@ class AI(Cog):
              brief="Generates natural language",
              aliases=["chat", "promt"])
     async def prompt(self, ctx, *, args, author=None):
-        cursor = self.conn.cursor()
+
+        try:
+            cursor = self.conn.cursor()
+        except OperationalError:
+            self.conn.reconnect()
+            cursor = self.conn.cursor()
 
         channel_id = ctx.id if isinstance(ctx, (TextChannel, VoiceChannel)) else ctx.channel.id
         author = author if author else ctx.author.display_name
@@ -122,7 +128,12 @@ class AI(Cog):
     @command(help="Clear all messages in the context history for this channel",
              brief="Clear context history")
     async def clear_context(self, ctx):
-        cursor = self.conn.cursor()
+        try:
+            cursor = self.conn.cursor()
+        except OperationalError:
+            self.conn.reconnect()
+            cursor = self.conn.cursor()
+        
         cursor.execute(f"DELETE FROM Karn WHERE channel_id = '{ctx.channel.id}'")
 
         await ctx.send(f"Deleted {cursor.rowcount} context messages from the database.")
