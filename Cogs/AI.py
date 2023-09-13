@@ -122,6 +122,8 @@ class AI(Cog):
         self.conn.commit()
         cursor.close()
 
+        self.reply_chance = 1
+
     @prompt.error
     async def prompt_error(self, ctx, error):
         if isinstance(error, MissingRequiredArgument):
@@ -158,10 +160,11 @@ class AI(Cog):
 
             return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
-        if randint(1, 100) <= self.reply_chance:
-            await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
-            self.reply_chance = 1
-            return
+        # https://regex101.com/r/9eJZfe/1
+        pattern = r"\A(?:\([\w\s']+\)|[\w']+)(?:(?:--)|(?:\+\+))"
+
+        if randint(1, 100) <= self.reply_chance and not search(pattern, msg.content):
+            return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
         self.reply_chance += 1
 
