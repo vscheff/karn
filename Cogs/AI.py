@@ -161,9 +161,10 @@ class AI(Cog):
             return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
         # https://regex101.com/r/9eJZfe/1
-        pattern = r"\A(?:\([\w\s']+\)|[\w']+)(?:(?:--)|(?:\+\+))"
+        if search(r"\A(?:\([\w\s']+\)|[\w']+)(?:(?:--)|(?:\+\+))", msg.content):
+            return
 
-        if randint(1, 100) <= self.reply_chance and not search(pattern, msg.content):
+        if randint(1, 100) <= self.reply_chance:
             return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
         self.reply_chance += 1
