@@ -210,7 +210,8 @@ def get_token_len(msg):
 # Builds the context for a request to OpenAI for chat completion
 # param messages - list of dictionaries containing messages from the SQL database
 # param   cursor - cursor for the connection to the SQL database
-# return context - list of dictionaries containing messages with a total token length < `MAX_MSG_LEN`
+# return:
+#        context - list of dictionaries containing messages with a total token length < `MAX_MSG_LEN`
 #     num_tokens - number of tokens used by the context
 def build_context(messages, cursor):
     gen_msg = messages.pop(0)
@@ -219,8 +220,11 @@ def build_context(messages, cursor):
 
     context = [{"role": usr_msg["role"], "content": usr_msg["content"]}]
 
+    # Build the list of context messages
     while messages:
         msg = messages.pop()
+
+        # Break the loop if adding the next messages pushes us past the token limit
         if (encoding_len := TOKENS_PER_MESSAGE + get_token_len(msg)) + num_tokens > MAX_MSG_LEN:
             messages.append(msg)
             break
@@ -228,6 +232,7 @@ def build_context(messages, cursor):
         num_tokens += encoding_len
         context.append({"role": msg["role"], "content": msg["content"]})
 
+    # Delete any messages from the database that weren't used in building the context
     for msg in messages:
         cursor.execute("DELETE FROM Karn WHERE id = %s", [msg["id"]])
 
@@ -236,6 +241,7 @@ def build_context(messages, cursor):
 
     return context, num_tokens
 
+# Imports responses from the input file, and returns a random line from it
 def get_random_response():
     with open(RUDE_RESPONSE_FILEPATH, 'r') as in_file:
         return choice(in_file.readlines())
