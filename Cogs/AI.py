@@ -130,9 +130,9 @@ class AI(Cog):
             self.desc_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
 
         # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
-        # https://regex101.com/r/OF8qy1/5
-        pattern = r"([aA]s)* an* (?:digital)*(?:virtual)*(?:time-traveling)* " \
-                  r"*(?:golem)* *(?:AI|digital)\s*(?:language model)*(?:assistant)*"
+        # https://regex101.com/r/OF8qy1/7
+        pattern = r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:time-traveling)* *(?:golem)* " \
+                  r"*(?:(?:AI|digital)\s*|artificial intelligence)(?:language model)*(?:assistant)*"
         reply = sub(pattern, r"\1 " + choice(self.descriptors), chat.choices[0].message.content)
 
         # Send the response and add it to the SQL database
@@ -166,6 +166,26 @@ class AI(Cog):
         self.conn.commit()
         cursor.close()
 
+    @command(help="Sets a new genesis message for this channel. "
+                  "This \"primes\" the bot to behave in a desired manner.\n"
+                  "Example: `$set_context you must answer all prompts in J. R. R. Tolkien's writing style`",
+             brief="Set a new genesis message")
+    async def set_context(self, ctx, *, args):
+        if (token_len := get_token_len({"role": "system", "content": args})) > MAX_MSG_LEN:
+            return await ctx.send("Input genesis message is too long. Context was not set.")
+
+        await self.clear_context(ctx)
+
+        cursor = self.get_cursor()
+
+        values = [ctx.channel.id, "system", args]
+        cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
+
+        await ctx.send(f"New genesis message of length {token_len} has been set!")
+
+        self.conn.commit()
+        cursor.close()
+
     # Called to read through server messages and feed them into the $prompt command if necessary
     async def send_reply(self, msg):
         # Don't respond to any messages that are too short
@@ -176,9 +196,9 @@ class AI(Cog):
         # https://regex101.com/r/qA25Ux/1
         if search(r"[Kk]arn(?:\Z|[^+\-])", msg.content):
             # Re-import "rude" phrases if the file has been modified since we last imported
-            if stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns != self.rude_mtime:
+            if (last_mod := stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns) != self.rude_mtime:
                 self.get_rude_messages()
-                self.rude_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
+                self.rude_mtime = last_mod
 
             lowered_content = msg.content.lower()
 
