@@ -12,8 +12,12 @@ from tiktoken import encoding_for_model
 from utils import package_message
 
 
+openai.api_key = getenv("CHATGPT_TOKEN")
+openai.organization = getenv("CHATGPT_ORG")
+
 # Constants (set by OpenAI and the encoding they use)
 MODEL = "gpt-3.5-turbo"
+ENCODING = encoding_for_model(MODEL)
 MAX_TOKENS = 4096       # Maximum number of tokens for context and response from OpenAI
 TOKENS_PER_MESSAGE = 3  # Tokens required for each context message regardless of message length
 TOKENS_PER_REPLY = 3    # Tokens required for the response from OpenAI regardless of response length
@@ -46,9 +50,6 @@ class AI(Cog):
     #  attr   rude_mtime - last modification time of the "rude messages" file [ns]
     #  attr   desc_mtime - last modification time of the descriptors file [ns]
     def __init__(self, conn):
-        openai.api_key = getenv("CHATGPT_TOKEN")
-        openai.organization = getenv("CHATGPT_ORG")
-
         self.conn = conn
 
         self.reply_chance = 1
@@ -125,14 +126,14 @@ class AI(Cog):
         chat = openai.ChatCompletion.create(model=MODEL, messages=context, max_tokens=MAX_TOKENS-encoded_len)
 
         # Re-import self descriptors if the file has been modified since we last imported
-        if stat(AI_DESCRIPTOR_FILEPATH).st_mtime_ns != self.desc_mtime:
+        if (last_mod := stat(AI_DESCRIPTOR_FILEPATH).st_mtime_ns) != self.desc_mtime:
             self.get_descriptors()
-            self.desc_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
+            self.desc_mtime = last_mod
 
         # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
-        # https://regex101.com/r/OF8qy1/7
+        # https://regex101.com/r/OF8qy1/9
         pattern = r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:time-traveling)* *(?:golem)* " \
-                  r"*(?:(?:AI|digital)\s*|artificial intelligence)(?:language model)*(?:assistant)*"
+                  r"*(?:AI|digital|artificial intelligence)(?: language model)*(?: assistant)*(?: text-based model)*"
         reply = sub(pattern, r"\1 " + choice(self.descriptors), chat.choices[0].message.content)
 
         # Send the response and add it to the SQL database
@@ -166,11 +167,13 @@ class AI(Cog):
         self.conn.commit()
         cursor.close()
 
+    # $set_context command used to set the genesis message of a channel
     @command(help="Sets a new genesis message for this channel. "
                   "This \"primes\" the bot to behave in a desired manner.\n"
                   "Example: `$set_context you must answer all prompts in J. R. R. Tolkien's writing style`",
              brief="Set a new genesis message")
     async def set_context(self, ctx, *, args):
+        # Ensure the given genesis message doesn't require more tokens than `MAX_MSG_LEN`
         if (token_len := get_token_len({"role": "system", "content": args})) > MAX_MSG_LEN:
             return await ctx.send("Input genesis message is too long. Context was not set.")
 
@@ -220,12 +223,10 @@ class AI(Cog):
         self.reply_chance += 1
 
 
-ENCODING = encoding_for_model(MODEL)
-
 # Returns number of tokens for a given context message
 # param msg - dictionary containing the context message
 def get_token_len(msg):
-    return sum(len(ENCODING.encode(i)) for i in (msg["role"], msg["content"]))
+    return sum(len(ENCODING.encode(i)) for i in (msg["role"], msg["content"])) + TOKENS_PER_MESSAGE
 
 # Builds the context for a request to OpenAI for chat completion
 # param messages - list of dictionaries containing messages from the SQL database
@@ -236,7 +237,7 @@ def get_token_len(msg):
 def build_context(messages, cursor):
     gen_msg = messages.pop(0)
     usr_msg = messages.pop()
-    num_tokens = TOKENS_PER_REPLY + 2 * TOKENS_PER_MESSAGE + get_token_len(gen_msg) + get_token_len(usr_msg)
+    num_tokens = TOKENS_PER_REPLY + get_token_len(gen_msg) + get_token_len(usr_msg)
 
     context = [{"role": usr_msg["role"], "content": usr_msg["content"]}]
 
@@ -245,7 +246,7 @@ def build_context(messages, cursor):
         msg = messages.pop()
 
         # Break the loop if adding the next messages pushes us past the token limit
-        if (encoding_len := TOKENS_PER_MESSAGE + get_token_len(msg)) + num_tokens > MAX_MSG_LEN:
+        if (encoding_len := get_token_len(msg)) + num_tokens > MAX_MSG_LEN:
             messages.append(msg)
             break
 
