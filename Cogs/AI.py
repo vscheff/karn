@@ -9,7 +9,7 @@ from re import search, sub
 from tiktoken import encoding_for_model
 
 # Local dependencies
-from utils import package_message
+from utils import get_flags, package_message
 
 
 openai.api_key = getenv("CHATGPT_TOKEN")
@@ -131,9 +131,9 @@ class AI(Cog):
             self.desc_mtime = last_mod
 
         # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
-        # https://regex101.com/r/OF8qy1/9
+        # https://regex101.com/r/OF8qy1/10
         pattern = r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:time-traveling)* *(?:golem)* " \
-                  r"*(?:AI|digital|artificial intelligence)(?: language model)*(?: assistant)*(?: text-based model)*"
+                  r"*(?:AI|digital|artificial intelligence)(?: language)*(?: text-based)*(?: model)*(?: assistant)*"
         reply = sub(pattern, r"\1 " + choice(self.descriptors), chat.choices[0].message.content)
 
         # Send the response and add it to the SQL database
@@ -168,20 +168,27 @@ class AI(Cog):
         cursor.close()
 
     # $set_context command used to set the genesis message of a channel
-    @command(help="Sets a new genesis message for this channel. "
+    @command(help="Add additional context to the genesis message for this channel. "
                   "This \"primes\" the bot to behave in a desired manner.\n"
-                  "Example: `$set_context you must answer all prompts in J. R. R. Tolkien's writing style`",
+                  "Example: `$set_context you must answer all prompts in J. R. R. Tolkien's writing style`\n\n"
+                  "This command has the following flags:\n"
+                  "* **-o**: Overwrite the default genesis message for the bot."
+                  "\tExample: `$set_context -o You are a depressed and bored robot named Marvin the Paranoid Android`",
              brief="Set a new genesis message")
     async def set_context(self, ctx, *, args):
+        flags, msg = get_flags(args)
+        msg = " ".join(msg)
+        new_gen_msg = msg if 'o' in flags else f"{GENESIS_MESSAGE['content']} {msg}"
+
         # Ensure the given genesis message doesn't require more tokens than `MAX_MSG_LEN`
-        if (token_len := get_token_len({"role": "system", "content": args})) > MAX_MSG_LEN:
+        if (token_len := get_token_len({"role": "system", "content": new_gen_msg})) > MAX_MSG_LEN:
             return await ctx.send("Input genesis message is too long. Context was not set.")
 
         await self.clear_context(ctx)
 
         cursor = self.get_cursor()
 
-        values = [ctx.channel.id, "system", args]
+        values = [ctx.channel.id, "system", new_gen_msg]
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
 
         await ctx.send(f"New genesis message of length {token_len} has been set!")
