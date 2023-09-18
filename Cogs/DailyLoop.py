@@ -2,7 +2,7 @@ from datetime import datetime, date
 from discord.ext import commands, tasks
 from json import loads, decoder
 from os import getenv
-from random import choice, sample
+from random import randint, sample
 from requests import get
 from re import sub
 import discord
@@ -22,6 +22,7 @@ class DailyLoop(commands.Cog):
 
         self.rand_hour = get_pseudo_rand_hour()
         self.daily_funcs = (self.daily_card, self.daily_fact, self.daily_wiki, self.daily_word)
+        self.today_funcs = [i for i in self.daily_funcs]
 
         self.daily_loop.start()
 
@@ -29,10 +30,13 @@ class DailyLoop(commands.Cog):
     async def daily_loop(self):
         current_time = datetime.now()
 
+        if not current_time.hour:
+            self.today_funcs = [i for i in self.daily_funcs]
+
         if current_time.hour != self.rand_hour:
             return
 
-        await choice(self.daily_funcs)()
+        await self.today_funcs.pop(randint(0, len(self.today_funcs)))()
 
         self.rand_hour = get_pseudo_rand_hour()
 

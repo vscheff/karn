@@ -1,4 +1,5 @@
 import discord
+from mysql.connector.errors import OperationalError
 import os
 from random import randint
 from re import search
@@ -7,6 +8,14 @@ from re import search
 FILEPATH = './img/msg.txt'
 SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
 
+
+# Ensures the SQL database is still connected, and returns a cursor from that connection
+def get_cursor(conn):
+    try:
+        return conn.cursor()
+    except OperationalError:
+        conn.connect()
+        return conn.cursor()
 
 def get_flags(args):
     arg_list = args.split()
@@ -27,7 +36,7 @@ def get_supported_filetype(images, randomize=True):
         if not images:
             return None
 
-        img = images.pop(randint(0, len(images) - 1)) if randomize else images.pop(0)
+        img = images.pop(randint(0, len(images) - 1) if randomize else 0)
 
         if is_supported_filetype(img):
             return img

@@ -1,8 +1,7 @@
 from discord.ext.commands import Cog, command, errors
-from mysql.connector.errors import OperationalError
 from re import findall
 
-from utils import package_message
+from utils import get_cursor, package_message
 
 
 DEFAULT_RATING_COUNT = 5
@@ -11,13 +10,6 @@ DEFAULT_RATING_COUNT = 5
 class Rating(Cog):
     def __init__(self, conn):
         self.conn = conn
-
-    def get_cursor(self):
-        try:
-            return self.conn.cursor()
-        except OperationalError:
-            self.conn.reconnect()
-            return self.conn.cursor()
 
     @command(help=f"Returns the least voted items\n\n"
                   f"Include an integer argument to specify the number of "
@@ -36,7 +28,7 @@ class Rating(Cog):
         await self.send_ratings(ctx, num, True)
 
     async def send_ratings(self, ctx, num, reverse):
-        cursor = self.get_cursor()
+        cursor = get_cursor(self.conn)
 
         cursor.execute("SELECT name, score FROM Rating WHERE guild_id = %s", [ctx.guild.id])
 
@@ -66,7 +58,7 @@ class Rating(Cog):
             return await ctx.send("You must include an item with this command.\n\n"
                                   "Please use `$help show` for more information.")
 
-        cursor = self.get_cursor()
+        cursor = get_cursor(self.conn)
         cursor.execute("SELECT score FROM Rating WHERE name = %s AND guild_id = %s", [args, ctx.guild.id])
 
         if not (result := cursor.fetchall()):
@@ -77,13 +69,13 @@ class Rating(Cog):
         cursor.close()
 
     def rate_listener(self, msg):
-        # https://regex101.com/r/s8gfoV/3
-        matches = findall(r"(?:\([\w\s]+\)\+\+)|(?:[\w]+\+\+)|(?:\([\w\s]+\)\-\-)|(?:[\w]+\-\-)", msg.content)
+        # https://regex101.com/r/s8gfoV/5
+        matches = findall(r"\([\w\s']+\)(?:\+\+|--)|[\w]+(?:\+\+|--)", msg.content)
 
         if not matches:
             return
 
-        cursor = self.get_cursor()
+        cursor = get_cursor(self.conn)
 
         for match in matches:
             positive = match[-1] == '+'

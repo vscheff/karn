@@ -1,6 +1,5 @@
 from discord import TextChannel, VoiceChannel
 from discord.ext.commands import Cog, command, MissingRequiredArgument
-from mysql.connector.errors import OperationalError
 import openai
 from os import getenv, stat
 from os.path import exists
@@ -9,7 +8,7 @@ from re import search, sub
 from tiktoken import encoding_for_model
 
 # Local dependencies
-from utils import get_flags, package_message
+from utils import get_cursor, get_flags, package_message
 
 
 openai.api_key = getenv("CHATGPT_TOKEN")
@@ -23,6 +22,7 @@ TOKENS_PER_MESSAGE = 3  # Tokens required for each context message regardless of
 TOKENS_PER_REPLY = 3    # Tokens required for the response from OpenAI regardless of response length
 
 # Project specific constants
+REQUEST_TIMEOUT = 15                                    # Seconds to wait for response from OpenAI
 MIN_MESSAGE_LEN = 4                                     # Minimum message length bot will respond to
 MAX_MSG_LEN = 3 * MAX_TOKENS // 4                       # Maximum length context to send to OpenAI
 RUDE_MESSAGES_FILEPATH = "./files/rude.txt"             # File containing phrases the bot considers "rude"
@@ -79,14 +79,6 @@ class AI(Cog):
             with open(RUDE_RESPONSE_FILEPATH, 'w') as out_file:
                 out_file.writelines(i + '\n' for i in [DEFAULT_RUDE_RESPONSE])
 
-    # Ensures the SQL database is still connected, and returns a cursor from that connection
-    def get_cursor(self):
-        try:
-            return self.conn.cursor()
-        except OperationalError:
-            self.conn.reconnect()
-            return self.conn.cursor()
-
     # Import "rude" phrases from input file
     def get_rude_messages(self):
         with open(RUDE_MESSAGES_FILEPATH, 'r') as in_file:
@@ -104,7 +96,7 @@ class AI(Cog):
              brief="Generates natural language",
              aliases=["chat", "promt"])
     async def prompt(self, ctx, *, args, author=None):
-        cursor = self.get_cursor()
+        cursor = get_cursor(self.conn)
 
         channel_id = ctx.id if isinstance(ctx, (TextChannel, VoiceChannel)) else ctx.channel.id
         cursor.execute("SELECT usr_role, content, id FROM Karn WHERE channel_id = %s", [channel_id])
@@ -123,7 +115,8 @@ class AI(Cog):
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
 
         context, encoded_len = build_context(messages, cursor)
-        chat = openai.ChatCompletion.create(model=MODEL, messages=context, max_tokens=MAX_TOKENS-encoded_len)
+        kwargs = {"model": MODEL, "messages": context, "max_tokens": MAX_TOKENS-encoded_len, "timeout": REQUEST_TIMEOUT}
+        chat = openai.ChatCompletion.create(**kwargs)
 
         # Re-import self descriptors if the file has been modified since we last imported
         if (last_mod := stat(AI_DESCRIPTOR_FILEPATH).st_mtime_ns) != self.desc_mtime:
@@ -158,7 +151,7 @@ class AI(Cog):
     @command(help="Clear all messages in the context history for this channel",
              brief="Clear context history")
     async def clear_context(self, ctx):
-        cursor = self.get_cursor()
+        cursor = get_cursor(self.conn)
 
         cursor.execute("DELETE FROM Karn WHERE channel_id = %s", [ctx.channel.id])
 
@@ -186,7 +179,7 @@ class AI(Cog):
 
         await self.clear_context(ctx)
 
-        cursor = self.get_cursor()
+        cursor = get_cursor(self.conn)
 
         values = [ctx.channel.id, "system", new_gen_msg]
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
