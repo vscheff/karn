@@ -1,3 +1,4 @@
+from asyncio import to_thread
 from discord import TextChannel, VoiceChannel
 from discord.ext.commands import Cog, command, MissingRequiredArgument
 import openai
@@ -22,7 +23,6 @@ TOKENS_PER_MESSAGE = 3  # Tokens required for each context message regardless of
 TOKENS_PER_REPLY = 3    # Tokens required for the response from OpenAI regardless of response length
 
 # Project specific constants
-REQUEST_TIMEOUT = 15                                    # Seconds to wait for response from OpenAI
 MIN_MESSAGE_LEN = 4                                     # Minimum message length bot will respond to
 MAX_MSG_LEN = 3 * MAX_TOKENS // 4                       # Maximum length context to send to OpenAI
 RUDE_MESSAGES_FILEPATH = "./files/rude.txt"             # File containing phrases the bot considers "rude"
@@ -96,6 +96,8 @@ class AI(Cog):
              brief="Generates natural language",
              aliases=["chat", "promt"])
     async def prompt(self, ctx, *, args, author=None):
+        self.reply_chance = 1
+
         cursor = get_cursor(self.conn)
 
         channel_id = ctx.id if isinstance(ctx, (TextChannel, VoiceChannel)) else ctx.channel.id
@@ -115,8 +117,10 @@ class AI(Cog):
         cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
 
         context, encoded_len = build_context(messages, cursor)
-        kwargs = {"model": MODEL, "messages": context, "max_tokens": MAX_TOKENS-encoded_len, "timeout": REQUEST_TIMEOUT}
-        chat = openai.ChatCompletion.create(**kwargs)
+        kwargs = {"model": MODEL, "messages": context, "max_tokens": MAX_TOKENS-encoded_len}
+
+        # Make request in a separate thread to avoid blocking the heartbeat
+        chat = await to_thread(openai.ChatCompletion.create, **kwargs)
 
         # Re-import self descriptors if the file has been modified since we last imported
         if (last_mod := stat(AI_DESCRIPTOR_FILEPATH).st_mtime_ns) != self.desc_mtime:
@@ -136,8 +140,6 @@ class AI(Cog):
 
         self.conn.commit()
         cursor.close()
-
-        self.reply_chance = 1
 
     # Called if $prompt encounters an unhandled exception
     @prompt.error

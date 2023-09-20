@@ -23,7 +23,8 @@ class Rating(Cog):
                   f"Include an integer argument to specify the number of "
                   f"results to return (default={DEFAULT_RATING_COUNT})\n"
                   f"Example: `$top 3`",
-             brief="Show the top voted items")
+             brief="Show the top voted items",
+             aliases=["scores"])
     async def top(self, ctx, num=DEFAULT_RATING_COUNT):
         await self.send_ratings(ctx, num, True)
 
