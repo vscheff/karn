@@ -169,7 +169,8 @@ class AI(Cog):
                   "This command has the following flags:\n"
                   "* **-o**: Overwrite the default genesis message for the bot."
                   "\tExample: `$set_context -o You are a depressed and bored robot named Marvin the Paranoid Android`",
-             brief="Set a new genesis message")
+             brief="Set a new genesis message",
+             aliases=["context"])
     async def set_context(self, ctx, *, args):
         flags, msg = get_flags(args)
         msg = " ".join(msg)
