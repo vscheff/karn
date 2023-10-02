@@ -218,6 +218,13 @@ class AI(Cog):
         if search(r"\A(?:\([\w\s']+\)|[\w']+)(?:--|\+\+)", msg.content):
             return
 
+        # Don't respond to messages that contain a URL
+        # https://regex101.com/r/vFpIxB/1
+        if search(r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|"
+                  r"(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))",
+                  msg.content):
+            return
+
         # Random chance to respond to any given message
         if randint(1, 100) <= self.reply_chance:
             return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
