@@ -36,7 +36,7 @@ class DailyLoop(commands.Cog):
         if current_time.hour != self.rand_hour:
             return
 
-        await self.today_funcs.pop(randint(0, len(self.today_funcs)))()
+        await self.today_funcs.pop(randint(0, len(self.today_funcs) - 1))()
 
         self.rand_hour = get_pseudo_rand_hour()
 
