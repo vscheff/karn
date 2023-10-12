@@ -45,11 +45,13 @@ GENESIS_MESSAGE = {"role": "system",
 
 class AI(Cog):
 
+    # param          bot - our client
     # param         conn - connection to the SQL database
     #  attr reply_chance - chance the bot will respond to a message unprompted [%]
     #  attr   rude_mtime - last modification time of the "rude messages" file [ns]
     #  attr   desc_mtime - last modification time of the descriptors file [ns]
-    def __init__(self, conn):
+    def __init__(self, bot, conn):
+        self.bot = bot
         self.conn = conn
 
         self.reply_chance = 1
@@ -119,8 +121,9 @@ class AI(Cog):
         context, encoded_len = build_context(messages, cursor)
         kwargs = {"model": MODEL, "messages": context, "max_tokens": MAX_TOKENS-encoded_len}
 
-        # Make request in a separate thread to avoid blocking the heartbeat
-        chat = await to_thread(openai.ChatCompletion.create, **kwargs)
+        async with ctx.typing():
+            # Make request in a separate thread to avoid blocking the heartbeat
+            chat = await to_thread(openai.ChatCompletion.create, **kwargs)
 
         # Re-import self descriptors if the file has been modified since we last imported
         if (last_mod := stat(AI_DESCRIPTOR_FILEPATH).st_mtime_ns) != self.desc_mtime:
@@ -214,6 +217,11 @@ class AI(Cog):
 
             return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
+        # Don't respond to messages that are only a user tag
+        # https://regex101.com/r/acF54R/1
+        if search(r"^<@\d+>$", msg.content):
+            return
+
         # Don't respond to messages that contain only a voted item (i.e. "python++")
         # https://regex101.com/r/9eJZfe/2
         if search(r"\A(?:\([\w\s']+\)|[\w']+)(?:--|\+\+)", msg.content):
@@ -230,8 +238,9 @@ class AI(Cog):
         if randint(1, 100) <= self.reply_chance:
             return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
-        self.reply_chance += 1
-
+        # Random chance to increase likelihood of responses in the future
+        if not randint(0, self.reply_chance):
+            self.reply_chance += 1
 
 # Returns number of tokens for a given context message
 # param msg - dictionary containing the context message

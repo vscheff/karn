@@ -224,7 +224,10 @@ class Query(Cog):
 
             return
 
-        img = get_supported_filetype(deepcopy(result.images))
+        try:
+            img = get_supported_filetype(deepcopy(result.images))
+        except KeyError:
+            img = None
 
         await ctx.send(f"**{result.title}**")
 
