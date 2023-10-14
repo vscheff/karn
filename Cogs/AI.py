@@ -40,6 +40,8 @@ GENESIS_MESSAGE = {"role": "system",
                               "where \"Name\" is the name of the user who sent the message, "
                               "and \"Message\" is the message that was sent. "
                               "Do not prefix your responses with anyone's name."
+                              "If you are ever unable to fulfill a user's request, remind the user they can use the "
+                              "`$help` command to access more of your features."
                    }
 
 
@@ -131,8 +133,8 @@ class AI(Cog):
             self.desc_mtime = last_mod
 
         # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
-        # https://regex101.com/r/OF8qy1/10
-        pattern = r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:time-traveling)* *(?:golem)* " \
+        # https://regex101.com/r/oWjuWt/1
+        pattern = r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* *(?:golem)* " \
                   r"*(?:AI|digital|artificial intelligence)(?: language)*(?: text-based)*(?: model)*(?: assistant)*"
         reply = sub(pattern, r"\1 " + choice(self.descriptors), chat.choices[0].message.content)
 
@@ -170,7 +172,7 @@ class AI(Cog):
                   "This \"primes\" the bot to behave in a desired manner.\n"
                   "Example: `$set_context you must answer all prompts in J. R. R. Tolkien's writing style`\n\n"
                   "This command has the following flags:\n"
-                  "* **-o**: Overwrite the default genesis message for the bot."
+                  "* **-o**: Overwrite the default genesis message for the bot.\n"
                   "\tExample: `$set_context -o You are a depressed and bored robot named Marvin the Paranoid Android`",
              brief="Set a new genesis message",
              aliases=["context"])

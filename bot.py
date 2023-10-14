@@ -15,7 +15,6 @@ if TOKEN is None or GUILD is None:
 
 # Local dependencies
 from cogs import add_cogs
-from Cogs.hat import hat_listener
 from Cogs.Terminal import send_line
 from help_command import CustomHelpCommand
 from sql import connect_to_sql_database
@@ -54,7 +53,6 @@ async def on_message(msg):
     if not await send_line(msg, bot):
         await bot.get_cog("AI").send_reply(msg)
 
-    await hat_listener(msg)
     bot.get_cog("Rating").rate_listener(msg)
 
 @bot.event
