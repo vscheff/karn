@@ -1,5 +1,5 @@
 from discord.ext.commands import Cog, command, MissingRequiredArgument
-from random import choice, randint
+from random import randint
 
 from utils import get_cursor, get_flags
 
@@ -11,7 +11,8 @@ class Hat(Cog):
     def __init__(self, conn):
         self.conn = conn
 
-    @command(help="Add an item to the hat.\n\n"
+    @command(help="Add an item to the hat.\n"
+                  "Example: `$add The Room`\n\n"
                   "This command has the following flags:\n"
                   "* **-h**: Used to specify a hat other than the channel's default hat.\n"
                   "\tExample: `$add -h movies Troll 2`\n"
@@ -140,6 +141,54 @@ class Hat(Cog):
         self.conn.commit()
         cursor.close()
 
+    @command(help="Remove an item from the hat.\n"
+                  "Example: `$remove 3`\n"
+                  "To view the indexes for a hat, use the `$view` command.\n\n"
+                  "This command has the following flags:\n"
+                  "* **-h**: Used to specify a hat other than the channel's default hat.\n"
+                  "\tExample: `$remove -h movies 3`\n",
+             brief="Remove an item from the hat")
+    async def remove(self, ctx, *, args):
+        cursor = get_cursor(self.conn)
+        flags, arg = get_flags(args)
+        hat = get_hat(flags, arg, cursor, ctx.channel.id)
+
+        if not arg:
+            await ctx.send(f"You must include an index to remove. Use `$view` to see the indexes.")
+            cursor.close()
+            return
+
+        try:
+            index = int(arg[0])
+        except ValueError:
+            await ctx.send("Invalid argument, please only use integer values.\n"
+                           "Example: `$remove 3`\n\n"
+                           "Use`$help remove` for more information.")
+            cursor.close()
+            return
+
+        cursor.execute("SELECT item FROM Hat WHERE guild_id = %s AND hat_name = %s", [ctx.guild.id, hat])
+
+        if not (result := cursor.fetchall()):
+            await ctx.send(f"No items found in \"{hat}\". Try using the `$add` command first!")
+        elif index < 1 or index > len(result):
+            await ctx.send(f"Invalid index, please use an integer in the range [1, {len(result)}]")
+        else:
+            removed = result.pop(index - 1)
+            values = [ctx.guild.id, hat, removed[0]]
+            cursor.execute("DELETE FROM Hat WHERE guild_id = %s AND hat_name = %s AND item = %s", values)
+            await ctx.send(f"Successfully removed \"*{removed[0]}*\" from **{hat}**.")
+
+        self.conn.commit()
+        cursor.close()
+
+    @remove.error
+    async def remove_error(self, ctx, error):
+        if isinstance(error, MissingRequiredArgument):
+            await ctx.send("You must include an index to remove from the hat.\n"
+                           "Example: `$remove 3`\n\n"
+                           "Please use `$help remove` for more information.")
+
     @command(help="View all items in the hat.\n\n"
                   "To view a hat other than the channel's default hat, include it as an argument:\n"
                   "Example: `$view movies`",
@@ -155,11 +204,12 @@ class Hat(Cog):
             await ctx.send(f"No items found in \"{hat}\". Try using the `$add` command first!")
         else:
             await ctx.send(f"# {hat}")
-            await ctx.send("* " + "\n* ".join(i[0] for i in result))
+            await ctx.send('\n'.join(f"{i[1]}. {i[0][0]}" for i in zip(result, range(len(result)))))
 
         cursor.close()
 
-    @command(help="Set the default hat for this channel.",
+    @command(help="Set the default hat for this channel.\n"
+                  "Example: `$set_default movies`",
              brief="Set the default hat")
     async def set_default(self, ctx, hat=DEFAULT_HAT):
         cursor = get_cursor(self.conn)

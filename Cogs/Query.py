@@ -10,7 +10,7 @@ from random import choice, randint
 from requests import get
 from re import findall, sub
 from wikipedia import DisambiguationError, page, PageError, random
-from xkcd import getComic, getLatestComic, getRandomComic
+from xkcd import getComic, getLatestComic, getLatestComicNum, getRandomComic
 
 from us_state_abbrev import abbrev_to_us_state as states
 from utils import get_flags, is_supported_filetype, get_supported_filetype, package_message
@@ -310,8 +310,12 @@ class Query(Cog):
                 return await ctx.send("You must include a comic number with this command.\n"
                                       "Example: `$xkcd 327`\n\nPlease use `$help xkcd` for more information.")
 
-        await ctx.send(f"# {comic.getTitle()}")
-        await ctx.send(comic.getImageLink())
+        if comic.number == -1:
+            await ctx.send(f"Invalid comic number, please use an integer in the range [1, {getLatestComicNum()}].")
+            return
+
+        await ctx.send(f"# {comic.title}")
+        await ctx.send(comic.imageLink)
 
 async def send_card(ctx, card_json):
     if img_links := card_json.get("image_uris"):
