@@ -10,6 +10,7 @@ from random import choice, randint
 from requests import get
 from re import findall, sub
 from wikipedia import DisambiguationError, page, PageError, random
+from xkcd import getComic, getLatestComic, getRandomComic
 
 from us_state_abbrev import abbrev_to_us_state as states
 from utils import get_flags, is_supported_filetype, get_supported_filetype, package_message
@@ -288,6 +289,29 @@ class Query(Cog):
                            "Example: $weather kalamazoo\n\n"
                            "Please use `$help weather` for more information.")
 
+    @command(help="Returns the XKCD comic of a given comic number.\n\n"
+                  "This command has the following flags:\n"
+                  "* **-r**: Returns a random XKCD comic\n"
+                  "* **-l**: Returns the latest XKCD comic",
+             brief="Return an XKCD comic")
+    async def xkcd(self, ctx, args):
+        flags, arg = get_flags(args)
+
+        if 'r' in flags:
+            comic = getRandomComic()
+        elif 'l' in flags:
+            comic = getLatestComic()
+        else:
+            try:
+                comic = getComic(int(arg[0]))
+            except ValueError:
+                return await ctx.send("Invalid argument, please only input integer values for comic number.")
+            except IndexError:
+                return await ctx.send("You must include a comic number with this command.\n"
+                                      "Example: `$xkcd 327`\n\nPlease use `$help xkcd` for more information.")
+
+        await ctx.send(f"# {comic.getTitle()}")
+        await ctx.send(comic.getImageLink())
 
 async def send_card(ctx, card_json):
     if img_links := card_json.get("image_uris"):

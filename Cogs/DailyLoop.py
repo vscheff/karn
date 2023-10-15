@@ -21,7 +21,7 @@ class DailyLoop(commands.Cog):
         self.ch_general = None
 
         self.rand_hour = get_pseudo_rand_hour()
-        self.daily_funcs = (self.daily_card, self.daily_fact, self.daily_wiki, self.daily_word)
+        self.daily_funcs = (self.daily_card, self.daily_fact, self.daily_wiki, self.daily_word, self.daily_xkcd)
         self.today_funcs = [i for i in self.daily_funcs]
 
         self.daily_loop.start()
@@ -85,6 +85,10 @@ class DailyLoop(commands.Cog):
         else:
             print(f"Error: Word of the Day Loop could not load response correctly.\n"
                   f"Status Code: {response.status_code}\n")
+
+    async def daily_xkcd(self):
+        await self.ch_general.send(f"__**The xkcd comic of the day is:**__")
+        await self.bot.get_command("xkcd")(self.ch_general, args="-r")
 
 
 def get_pseudo_rand_hour():
