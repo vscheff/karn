@@ -45,8 +45,10 @@ class Hat(Cog):
                   "To clear a hat other than the channel's default hat, include it as an argument:\n"
                   "Example: `$clear movies`",
              brief="Clear all items from the hat")
-    async def clear(self, ctx, hat=DEFAULT_HAT):
+    async def clear(self, ctx, hat=None):
         cursor = get_cursor(self.conn)
+
+        hat = hat if hat else get_hat([], [], cursor, ctx.channel.id)
 
         cursor.execute("DELETE FROM Hat WHERE guild_id = %s AND hat_name = %s", [ctx.guild.id, hat])
 
@@ -142,14 +144,17 @@ class Hat(Cog):
                   "To view a hat other than the channel's default hat, include it as an argument:\n"
                   "Example: `$view movies`",
              brief="View all items from the hat")
-    async def view(self, ctx, hat=DEFAULT_HAT):
+    async def view(self, ctx, hat=None):
         cursor = get_cursor(self.conn)
+
+        hat = hat if hat else get_hat([], [], cursor, ctx.channel.id)
 
         cursor.execute("SELECT item FROM Hat WHERE guild_id = %s AND hat_name = %s", [ctx.guild.id, hat])
 
         if not (result := cursor.fetchall()):
             await ctx.send(f"No items found in \"{hat}\". Try using the `$add` command first!")
         else:
+            await ctx.send(f"# {hat}")
             await ctx.send("* " + "\n* ".join(i[0] for i in result))
 
         cursor.close()
