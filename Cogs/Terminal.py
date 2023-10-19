@@ -92,7 +92,6 @@ async def send_line(msg, bot):
         return False
 
     if search(r"\W", file):
-        await msg.channel.send(f"Invalid filename: `{file}`\nPlease only use word characters.")
         return False
 
     try:

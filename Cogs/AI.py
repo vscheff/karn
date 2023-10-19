@@ -5,7 +5,7 @@ import openai
 from os import getenv, stat
 from os.path import exists
 from random import choice, randint
-from re import search, sub
+from re import findall, search, sub
 from tiktoken import encoding_for_model
 
 # Local dependencies
@@ -114,6 +114,10 @@ class AI(Cog):
             cursor.execute("INSERT INTO Karn (channel_id, usr_role, content, id) VALUES (%s, %s, %s, UUID())", values)
             messages = [{key: val for key, val in GENESIS_MESSAGE.items()}]
 
+        # Replace any user tags with their display name
+        for match in findall(r"<@(\d+)>", args):
+            args = sub(fr"<@{match}>", self.bot.get_user(int(match)).display_name, args, count=1)
+
         # Add user's prompt into the SQL database
         author = author if author else ctx.author.display_name
         messages.append({"role": "user", "content": f"{author}: {args}"})
@@ -219,9 +223,9 @@ class AI(Cog):
 
             return await self.prompt(msg.channel, args=msg.content, author=msg.author.display_name)
 
-        # Don't respond to messages that are only a user tag
-        # https://regex101.com/r/acF54R/1
-        if search(r"^<@\d+>$", msg.content):
+        # Don't respond to messages that are only a user tag, contain @everybody, or contain @here
+        # https://regex101.com/r/acF54R/2
+        if search(r"^<@\d+>$|@everyone|@here", msg.content):
             return
 
         # Don't respond to messages that contain only a voted item (i.e. "python++")
