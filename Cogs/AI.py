@@ -128,8 +128,14 @@ class AI(Cog):
         kwargs = {"model": MODEL, "messages": context, "max_tokens": MAX_TOKENS-encoded_len}
 
         async with ctx.typing():
-            # Make request in a separate thread to avoid blocking the heartbeat
-            chat = await to_thread(openai.ChatCompletion.create, **kwargs)
+            try:
+                # Make request in a separate thread to avoid blocking the heartbeat
+                chat = await to_thread(openai.ChatCompletion.create, **kwargs)
+            except openai.error.APIError:
+                self.conn.rollback()
+                cursor.close()
+                await ctx.send("Sorry I am unable to assist currently. Please try again later.")
+                return
 
         # Re-import self descriptors if the file has been modified since we last imported
         if (last_mod := stat(AI_DESCRIPTOR_FILEPATH).st_mtime_ns) != self.desc_mtime:
