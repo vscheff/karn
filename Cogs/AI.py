@@ -180,7 +180,6 @@ class AI(Cog):
 
             num_tokens += encoding_len
             context.append(msg)
-            print(f"Message: {msg}\nNum Tokens = {num_tokens}")
 
         sys_msg.reverse()
         context.extend(sys_msg)
