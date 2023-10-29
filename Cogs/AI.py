@@ -217,7 +217,8 @@ class AI(Cog):
 
     @command(help="Add additional system context messages for this channel. "
                   "This can help get the bot to behave in a more specific manner."
-                  "Example: `$add_context You always talk about baseball, even if it doesn't fit the conversation.`")
+                  "Example: `$add_context You always talk about baseball, even if it doesn't fit the conversation.`",
+             brief="Add additional system context")
     async def add_context(self, ctx, *, args):
         if (token_len := get_token_len({"role": "system", "content": args})) > MAX_MSG_LEN:
             return await ctx.send("Input genesis message is too long. Context was not set.")
@@ -230,6 +231,62 @@ class AI(Cog):
 
         self.conn.commit()
         cursor.close()
+
+    @command(help="Toggle whether the bot should respond to your messages without being prompted. "
+                  "The bot will still respond if your message contain its name, or if you use the `$prompt` command."
+                  "This command has the following flags:\n"
+                  "* **-c**: Toggle whether the bot should respond to messages in the channel without being prompted.",
+             brief="Toggle unprompted responses")
+    async def ignore(self, ctx, *, args=''):
+        flags, args = get_flags(args)
+
+        if 'c' in flags:
+            return await self.ignore_channel(ctx)
+
+        cursor = get_cursor(self.conn)
+
+        respond = False
+
+        cursor.execute("SELECT respond FROM Users WHERE user_id = %s", [ctx.author.id])
+
+        if not (result := cursor.fetchall()):
+            cursor.execute("INSERT INTO Users (user_id, respond) VALUES (%s, %s)", [ctx.author.id, 0])
+        elif result[0][0]:
+            cursor.execute("UPDATE Users SET respond = 0 WHERE user_id = %s", [ctx.author.id])
+        else:
+            cursor.execute("UPDATE Users SET respond = 1 WHERE user_id = %s", [ctx.author.id])
+            respond = True
+
+        self.conn.commit()
+        cursor.close()
+
+        if respond:
+            await ctx.send("I will now occasionally respond your messages without being prompted.")
+        else:
+            await ctx.send("I will no longer respond to your messages without being prompted.")
+
+    async def ignore_channel(self, ctx):
+        cursor = get_cursor(self.conn)
+
+        respond = False
+
+        cursor.execute("SELECT respond FROM Channels WHERE channel_id = %s", [ctx.channel.id])
+
+        if not (result := cursor.fetchall()):
+            cursor.execute("INSERT INTO Channels (channel_id, respond) VALUES (%s, %s)", [ctx.channel.id, 0])
+        elif result[0][0]:
+            cursor.execute("UPDATE Channels SET respond = 0 WHERE channel_id = %s", [ctx.channel.id])
+        else:
+            cursor.execute("UPDATE Channels SET respond = 1 WHERE channel_id = %s", [ctx.channel.id])
+            respond = True
+
+        self.conn.commit()
+        cursor.close()
+
+        if respond:
+            await ctx.send("I will now occasionally respond to messages in this channel without being prompted.")
+        else:
+            await ctx.send("I will no longer respond to messages in the channel without being prompted.")
 
     # Called to read through server messages and feed them into the $prompt command if necessary
     async def send_reply(self, msg):
@@ -250,6 +307,22 @@ class AI(Cog):
                 return await msg.channel.send(get_random_response())
 
             return await self.prompt(msg.channel)
+
+        cursor = get_cursor(self.conn)
+
+        # Ignore users that don't want unprompted responses
+        cursor.execute("SELECT respond FROM Users WHERE user_id = %s", [msg.author.id])
+        if (result := cursor.fetchall()) and not result[0][0]:
+            cursor.close()
+            return
+
+        # Ignore channels that don't want unprompted responses
+        cursor.execute("SELECT respond FROM Channels WHERE channel_id = %s", [msg.channel.id])
+        if (result := cursor.fetchall()) and not result[0][0]:
+            cursor.close()
+            return
+
+        cursor.close()
 
         # Don't respond to messages that are only a user tag, contain @everybody, or contain @here
         # https://regex101.com/r/acF54R/2
