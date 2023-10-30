@@ -130,7 +130,6 @@ class AI(Cog):
                 # Make request in a separate thread to avoid blocking the heartbeat
                 chat = await to_thread(openai.ChatCompletion.create, **kwargs)
             except openai.error.APIError:
-                cursor.close()
                 await ctx.send("Sorry I am unable to assist currently. Please try again later.")
                 return
 
@@ -286,7 +285,7 @@ class AI(Cog):
         if respond:
             await ctx.send("I will now occasionally respond to messages in this channel without being prompted.")
         else:
-            await ctx.send("I will no longer respond to messages in the channel without being prompted.")
+            await ctx.send("I will no longer respond to messages in this channel without being prompted.")
 
     # Called to read through server messages and feed them into the $prompt command if necessary
     async def send_reply(self, msg):
