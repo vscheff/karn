@@ -129,7 +129,7 @@ class AI(Cog):
             try:
                 # Make request in a separate thread to avoid blocking the heartbeat
                 chat = await to_thread(openai.ChatCompletion.create, **kwargs)
-            except openai.error.APIError:
+            except (openai.error.APIError, openai.error.Timeout):
                 await ctx.send("Sorry I am unable to assist currently. Please try again later.")
                 return
 
