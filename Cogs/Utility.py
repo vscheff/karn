@@ -88,7 +88,7 @@ class Utility(commands.Cog):
         del_before = datetime.now() - timedelta(days=before)
         if after is None:
             await ctx.send(f"Deleting messages sent before **{del_before.isoformat(' ', 'minutes')}**")
-            deleted = await ctx.channel.purge(before=del_before)
+            deleted = await ctx.channel.purge(before=del_before, bulk=True)
         else:
             if after <= before:
                 await ctx.send("Bad argument, second given integer must be larger than the first.")
@@ -97,7 +97,7 @@ class Utility(commands.Cog):
             del_after = del_before - timedelta(days=after - before)
             await ctx.send(f"Deleting messages between **{del_after.isoformat(' ', 'minutes')}** "
                            f"and **{del_before.isoformat(' ', 'minutes')}**.")
-            deleted = await ctx.channel.purge(before=del_before, after=del_after)
+            deleted = await ctx.channel.purge(before=del_before, after=del_after, bulk=True)
         await ctx.send(f"Successfully deleted {len(deleted)} messages from this channel!")
 
     # Called if $purge encounters an unhandled exception
