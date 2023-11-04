@@ -129,8 +129,9 @@ class AI(Cog):
             try:
                 # Make request in a separate thread to avoid blocking the heartbeat
                 chat = await to_thread(openai.ChatCompletion.create, **kwargs)
-            except (openai.error.APIError, openai.error.Timeout):
+            except openai.OpenAIError as e:
                 await ctx.send("Sorry I am unable to assist currently. Please try again later.")
+                print(e)
                 return
 
         # Re-import self descriptors if the file has been modified since we last imported
@@ -140,9 +141,10 @@ class AI(Cog):
 
         # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
         # https://regex101.com/r/oWjuWt/1
-        pattern = r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* *(?:golem)* " \
-                  r"*(?:AI|digital|artificial intelligence)(?: language)*(?: text-based)*(?: model)*(?: assistant)*"
-        reply = sub(pattern, r"\1 " + choice(self.descriptors), chat.choices[0].message.content)
+        reply = sub(r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* *(?:golem)* "
+                    r"*(?:AI|digital|artificial intelligence)(?: language)*(?: text-based)*(?: model)*(?: assistant)*",
+                    r"\1 " + choice(self.descriptors),
+                    chat.choices[0].message.content)
 
         await package_message(reply, ctx)
 
@@ -158,8 +160,8 @@ class AI(Cog):
     # param channel -
     # param sys_msg -
     # return:
-    #        context - list of dictionaries containing messages with a total token length < `MAX_MSG_LEN`
-    #     num_tokens - number of tokens used by the context
+    #       context - list of dictionaries containing messages with a total token length < `MAX_MSG_LEN`
+    #    num_tokens - number of tokens used by the context
     async def build_context(self, channel, sys_msg):
         num_tokens = TOKENS_PER_REPLY + sum(get_token_len(msg) for msg in sys_msg)
         context = []
