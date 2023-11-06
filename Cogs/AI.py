@@ -131,7 +131,7 @@ class AI(Cog):
                 chat = await to_thread(openai.ChatCompletion.create, **kwargs)
             except openai.OpenAIError as e:
                 await ctx.send("Sorry I am unable to assist currently. Please try again later.")
-                print(e)
+                print(f"\nOpenAI request failed with error:\n{e}\n")
                 return
 
         # Re-import self descriptors if the file has been modified since we last imported
