@@ -14,12 +14,12 @@ from Cogs.Utility import Utility
 # Adds each cogs to the bot, this is called once the bot is ready for the first time
 # param   bot - commands.Bot object containing our client
 # param guild - discord.Guild object containing the target server
-async def add_cogs(bot, guild, conn):
+async def add_cogs(bot, conn):
     await bot.add_cog(AI(bot, conn))
-    await bot.add_cog(DailyLoop(bot, guild, conn))
+    await bot.add_cog(DailyLoop(bot, conn))
     await bot.add_cog(Hat(conn))
     await bot.add_cog(Query())
-    await bot.add_cog(Random(bot, guild))
+    await bot.add_cog(Random(bot))
     await bot.add_cog(Rating(conn))
     await bot.add_cog(Utility(bot))
     await bot.add_cog(Terminal())

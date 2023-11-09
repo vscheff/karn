@@ -13,9 +13,8 @@ MAX_ROLL = 2 ** 18
 
 class Random(commands.Cog):
 
-    def __init__(self, bot: commands.Bot, guild: discord.Guild):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.guild = guild
 
     @commands.command(help="Returns a randomly selected fact",
                       brief="Returns a random fact")

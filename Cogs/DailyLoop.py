@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands, tasks
 from json import loads, decoder
 from os import getenv
-from random import choice, randint, sample
+from random import choice, sample
 from requests import get
 from re import sub
 
@@ -22,9 +22,8 @@ DESC = {"card": "a Magic: The Gathering card",
 
 class DailyLoop(commands.Cog):
 
-    def __init__(self, bot: commands.Bot, guild: discord.Guild, conn):
+    def __init__(self, bot: commands.Bot, conn):
         self.bot = bot
-        self.guild = guild
         self.conn = conn
 
         self.daily_funcs = (self.daily_card, self.daily_fact, self.daily_wiki, self.daily_word, self.daily_xkcd)
@@ -126,12 +125,12 @@ class DailyLoop(commands.Cog):
             
         cursor.execute("SELECT daily_hour, channel_id, card, fact, wiki, word, xkcd FROM Channels")
 
-        for hour, chan_id, *categories in cursor.fetchall():
+        for hour, channel_id, *categories in cursor.fetchall():
             if hour != current_time.hour or not any(categories):
                 continue
 
             indexes = [i for i in range(len(categories)) if categories[i]]
-            await self.daily_funcs[choice(indexes)](self.guild.get_channel(chan_id))
+            await self.daily_funcs[choice(indexes)](self.bot.get_channel(channel_id))
 
         cursor.close()
 

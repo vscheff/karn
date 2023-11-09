@@ -9,8 +9,7 @@ import discord
 # env must be loaded before importing ./cogs.py
 load_dotenv()
 TOKEN = getenv("DISCORD_TOKEN")  # API token for the bot
-GUILD = getenv("DISCORD_GUILD")  # ID of desired guild for bot to interact with
-if TOKEN is None or GUILD is None:
+if TOKEN is None:
     exit("Environment file missing/corrupted. Halting now!")
 
 # Local dependencies
@@ -35,12 +34,10 @@ sql_connection = connect_to_sql_database()
 # Note: This can and will be called multiple times during the bot's up-times
 @bot.event
 async def on_ready():
-    my_guild = discord.utils.get(bot.guilds, name=GUILD)
-
     # Only add cogs if no cogs are currently present on the bot
     # This prevents the recurring CommandRegistrationError exception
     if not bot.cogs:
-        await add_cogs(bot, my_guild, sql_connection)
+        await add_cogs(bot, sql_connection)
 
     print(f"\n{bot.user} is connected to the following guild(s):\n")
     for guild in bot.guilds:
