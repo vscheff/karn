@@ -9,7 +9,6 @@ from utils import package_message
 
 
 MAX_ROLL = 2 ** 18
-main_channel = int(getenv("GENERAL_CH_ID"))
 
 
 class Random(commands.Cog):
@@ -17,7 +16,6 @@ class Random(commands.Cog):
     def __init__(self, bot: commands.Bot, guild: discord.Guild):
         self.bot = bot
         self.guild = guild
-        self.ch_general = None
 
     @commands.command(help="Returns a randomly selected fact",
                       brief="Returns a random fact")

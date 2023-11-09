@@ -2,5 +2,4 @@ __pycache__
 .idea
 .env
 *.swp
-hat.json
-msg_history.json
+.python-version

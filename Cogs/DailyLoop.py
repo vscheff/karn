@@ -3,14 +3,13 @@ import discord
 from discord.ext import commands, tasks
 from json import loads, decoder
 from os import getenv
-from random import randint, sample
+from random import choice, randint, sample
 from requests import get
 from re import sub
 
 from utils import get_cursor, get_flags
 
 WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
-MAIN_CHANNEL = int(getenv("GENERAL_CH_ID"))
 
 WORDNIK_URL = "https://api.wordnik.com/v4/words.json/wordOfTheDay"
 
@@ -28,11 +27,7 @@ class DailyLoop(commands.Cog):
         self.guild = guild
         self.conn = conn
 
-        self.ch_general = None
-
-        self.rand_hour = get_pseudo_rand_hour()
         self.daily_funcs = (self.daily_card, self.daily_fact, self.daily_wiki, self.daily_word, self.daily_xkcd)
-        self.today_funcs = [i for i in self.daily_funcs]
 
         self.daily_loop.start()
 
@@ -46,7 +41,7 @@ class DailyLoop(commands.Cog):
                            "Example: `$daily fact`\n\n"
                            "This command has the following flags:\n"
                            "* **-a**: Instructs the command to use all available categories\n"
-                           "\tExample: `$daily -a`"
+                           "\tExample: `$daily -a`\n"
                            "* **-d**: Stop sending messages from the given category\n"
                            "\tExample: `$daily -d word`\n"
                            "* **-l**: List the categories currently being sent to this channel\n"
@@ -117,43 +112,46 @@ class DailyLoop(commands.Cog):
     @tasks.loop(hours=1)
     async def daily_loop(self):
         current_time = datetime.now()
+        
+        cursor = get_cursor(self.conn)
 
         if not current_time.hour:
-            self.today_funcs = [i for i in self.daily_funcs]
+            cursor.execute("SELECT channel_id FROM Channels")
+            for channel, in cursor.fetchall():
+                val = [get_pseudo_rand_hour(), channel]
+                cursor.execute("UPDATE Channels SET daily_hour = %s WHERE channel_id = %s", val)
+            self.conn.commit()
+            cursor.close()
+            return 
+            
+        cursor.execute("SELECT daily_hour, channel_id, card, fact, wiki, word, xkcd FROM Channels")
 
-        if current_time.hour != self.rand_hour:
-            return
+        for hour, chan_id, *categories in cursor.fetchall():
+            if hour != current_time.hour or not any(categories):
+                continue
 
-        await self.today_funcs.pop(randint(0, len(self.today_funcs) - 1))()
+            indexes = [i for i in range(len(categories)) if categories[i]]
+            await self.daily_funcs[choice(indexes)](self.guild.get_channel(chan_id))
 
-        self.rand_hour = get_pseudo_rand_hour()
+        cursor.close()
 
     @daily_loop.before_loop
     async def before_daily_loop(self):
         await self.bot.wait_until_ready()
 
-        print("Starting daily loop...")
-        self.ch_general = self.guild.get_channel(MAIN_CHANNEL)
+    async def daily_card(self, channel):
+        await channel.send(f"__**The MtG card of the day is:**__")
+        await self.bot.get_command("card")(channel, args="-r")
 
-        if self.ch_general is None:
-            print("WARNING: General channel not found. Loop not started.")
-            return self.before_daily_loop.cancel()
+    async def daily_fact(self, channel):
+        await channel.send(f"__**The fact of the day is:**__")
+        await self.bot.get_command("fact")(channel)
 
-        print("Loop successfully started!\n")
+    async def daily_wiki(self, channel):
+        await channel.send(f"__**The Wikipedia article of the day is:**__")
+        await self.bot.get_command("wiki")(channel, args="-r")
 
-    async def daily_card(self):
-        await self.ch_general.send(f"__**The MtG card of the day is:**__")
-        await self.bot.get_command("card")(self.ch_general, args="-r")
-
-    async def daily_fact(self):
-        await self.ch_general.send(f"__**The fact of the day is:**__")
-        await self.bot.get_command("fact")(self.ch_general)
-
-    async def daily_wiki(self):
-        await self.ch_general.send(f"__**The Wikipedia article of the day is:**__")
-        await self.bot.get_command("wiki")(self.ch_general, args="-r")
-
-    async def daily_word(self):
+    async def daily_word(self, channel):
         response = get(WORDNIK_URL, params={"date": date.today(), "api_key": WORDNIK_API_KEY})
         try:
             api_response = loads(response.text)
@@ -168,15 +166,15 @@ class DailyLoop(commands.Cog):
             for definition in api_response["definitions"]:
                 response_data["definition"] = sub(r"<[^<>]+>", '', definition["text"])
                 break
-            await self.ch_general.send(f"__**The word of the day is:**__\n"
-                                       f"*{api_response['word']}* - {response_data['definition']}")
+            await channel.send(f"__**The word of the day is:**__\n"
+                               f"*{api_response['word']}* - {response_data['definition']}")
         else:
             print(f"Error: Word of the Day Loop could not load response correctly.\n"
                   f"Status Code: {response.status_code}\n")
 
-    async def daily_xkcd(self):
-        await self.ch_general.send(f"__**The xkcd comic of the day is:**__")
-        await self.bot.get_command("xkcd")(self.ch_general, args="-r")
+    async def daily_xkcd(self, channel):
+        await channel.send(f"__**The xkcd comic of the day is:**__")
+        await self.bot.get_command("xkcd")(channel, args="-r")
 
 
 def build_cat_str(categories):
