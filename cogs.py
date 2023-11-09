@@ -16,7 +16,7 @@ from Cogs.Utility import Utility
 # param guild - discord.Guild object containing the target server
 async def add_cogs(bot, guild, conn):
     await bot.add_cog(AI(bot, conn))
-    await bot.add_cog(DailyLoop(bot, guild))
+    await bot.add_cog(DailyLoop(bot, guild, conn))
     await bot.add_cog(Hat(conn))
     await bot.add_cog(Query())
     await bot.add_cog(Random(bot, guild))
