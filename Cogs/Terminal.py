@@ -1,5 +1,5 @@
 from discord.ext.commands import Cog, command, MissingRequiredArgument
-from os import listdir
+from os import listdir, remove
 from random import choice
 from re import search
 
@@ -63,6 +63,18 @@ class Terminal(Cog):
     async def ls(self, ctx):
         files = '\n'.join(i.replace(".txt", '') for i in sorted(listdir(FILE_ROOT_DIRECTORY)) if i[0] != '.')
         await ctx.send(f"```\n{files}\n```")
+
+    @command(help="Removes a text file from the directory",
+             brief="Remove a text file")
+    async def rm(self, ctx, filename):
+        filename = filename.lower()
+
+        try:
+            remove(f"{FILE_ROOT_DIRECTORY}/{filename}.txt")
+        except FileNotFoundError:
+            return await ctx.send(f"No file named {filename} found! Try using `$tee` first!")
+
+        await ctx.send(f"Successfully removed {filename}!")
 
     @command(help="Writes user input into a given text file\n"
                   "Example: `tee parody_bands Jon Von Jovi`",

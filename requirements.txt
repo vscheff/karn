@@ -1,0 +1,11 @@
+bs4
+discord
+mysql-connector-python
+openai == 0.28
+pillow
+python-dotenv
+qrcode
+randfacts
+tiktoken
+wikipedia
+xkcd

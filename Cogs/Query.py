@@ -316,6 +316,7 @@ class Query(Cog):
 
         await ctx.send(f"# {comic.title}")
         await ctx.send(comic.imageLink)
+        await ctx.send(comic.altText)
 
 async def send_card(ctx, card_json):
     if img_links := card_json.get("image_uris"):
