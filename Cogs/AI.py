@@ -1,5 +1,5 @@
 from asyncio import to_thread
-from discord import TextChannel, VoiceChannel
+from discord import TextChannel, Thread, VoiceChannel
 from discord.ext.commands import Cog, command, MissingRequiredArgument
 import openai
 from os import getenv, stat
@@ -40,7 +40,6 @@ GENESIS_MESSAGE = {"role": "system",
                               "Message content from Discord will follow the format: \"Name: Message\" "
                               "where \"Name\" is the name of the user who sent the message, "
                               "and \"Message\" is the message that was sent. "
-                              "Do not prefix your responses with anyone's name."
                               "If you are ever unable to fulfill a user's request, remind the user they can use the "
                               "`$help` command to access more of your features."
                    }
@@ -100,12 +99,12 @@ class AI(Cog):
     @command(help="Generates natural language or code from a given prompt",
              brief="Generates natural language",
              aliases=["chat", "promt"])
-    async def prompt(self, ctx):
+    async def prompt(self, ctx, unprompted=False):
         self.reply_chance = 1
 
         cursor = get_cursor(self.conn)
 
-        if isinstance(ctx, (TextChannel, VoiceChannel)):
+        if isinstance(ctx, (TextChannel, Thread, VoiceChannel)):
             channel = ctx
             channel_id = ctx.id
         else:
@@ -130,7 +129,8 @@ class AI(Cog):
                 # Make request in a separate thread to avoid blocking the heartbeat
                 chat = await to_thread(openai.ChatCompletion.create, **kwargs)
             except openai.OpenAIError as e:
-                await ctx.send("Sorry I am unable to assist currently. Please try again later.")
+                if not unprompted:
+                    await ctx.send("Sorry I am unable to assist currently. Please try again later.")
                 print(f"\nOpenAI request failed with error:\n{e}\n")
                 return
 
@@ -145,6 +145,10 @@ class AI(Cog):
                     r"*(?:AI|digital|artificial intelligence)(?: language)*(?: text-based)*(?: model)*(?: assistant)*",
                     r"\1 " + choice(self.descriptors),
                     chat.choices[0].message.content)
+        
+        # Ensure bot is not prefixing the reply with a name
+        # https://regex101.com/r/4vSz5X/1
+        reply = sub(r"\A\w+:\s", '', reply)
 
         await package_message(reply, ctx)
 
@@ -325,9 +329,9 @@ class AI(Cog):
 
         cursor.close()
 
-        # Don't respond to messages that are only a user tag, contain @everybody, or contain @here
-        # https://regex101.com/r/acF54R/2
-        if search(r"^<@\d+>$|@everyone|@here", msg.content):
+        # Don't respond to messages that only contain tags
+        # https://regex101.com/r/acF54R/3
+        if all(search(r"^<@&*\d+>$|@everyone|@here", word) for word in msg.content.split()):
             return
 
         # Don't respond to messages that contain only a voted item (i.e. "python++")
@@ -344,7 +348,7 @@ class AI(Cog):
 
         # Random chance to respond to any given message
         if randint(1, 100) <= self.reply_chance:
-            return await self.prompt(msg.channel)
+            return await self.prompt(msg.channel, unprompted=True)
 
         # Random chance to increase likelihood of responses in the future
         if not randint(0, self.reply_chance):
