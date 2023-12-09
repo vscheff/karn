@@ -18,12 +18,11 @@ from Cogs.Terminal import send_line
 from help_command import CustomHelpCommand
 from sql import connect_to_sql_database
 
-act = discord.Activity(type=discord.ActivityType.listening, name="$help")
 bot = commands.Bot(command_prefix='$',
                    case_insensitive=True,
                    help_command=CustomHelpCommand(),
                    intents=discord.Intents.all(),
-                   activity=act)
+                   activity=discord.Activity(type=discord.ActivityType.listening, name="$help"))
 
 # Add brief help text for the help command
 next(filter(lambda x: x.name == "help", bot.commands)).brief = "Shows this message"

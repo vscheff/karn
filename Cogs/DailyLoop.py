@@ -1,5 +1,4 @@
 from datetime import datetime, date
-import discord
 from discord.ext import commands, tasks
 from json import loads, decoder
 from os import getenv

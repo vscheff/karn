@@ -52,7 +52,8 @@ class Query(Cog):
         card_name = ' '.join(query)
 
         if 'r' in flags:
-            card_json = get(f"{SCRYFALL_URL}/random", params={'q': "game:paper"}).json()
+            card_json = get(f"{SCRYFALL_URL}/random", params={'q': "game:paper -stamp:acorn"})
+            card_json = card_json.json()
         else:
             card_json = get(f"{SCRYFALL_URL}/named", params={"fuzzy": card_name}).json()
 

@@ -99,7 +99,7 @@ class AI(Cog):
     @command(help="Generates natural language or code from a given prompt",
              brief="Generates natural language",
              aliases=["chat", "promt"])
-    async def prompt(self, ctx, unprompted=False):
+    async def prompt(self, ctx, **kwargs):
         self.reply_chance = 1
 
         cursor = get_cursor(self.conn)
@@ -121,15 +121,15 @@ class AI(Cog):
 
         context, encoded_len = await self.build_context(channel, sys_msg)
 
-        kwargs = {"model": MODEL, "messages": context, "max_tokens": MAX_TOKENS-encoded_len}
+        openai_kwargs = {"model": MODEL, "messages": context, "max_tokens": MAX_TOKENS-encoded_len}
 
         # Make the bot appear to be typing while waiting for the response from OpenAI
         async with ctx.typing():
             try:
                 # Make request in a separate thread to avoid blocking the heartbeat
-                chat = await to_thread(openai.ChatCompletion.create, **kwargs)
+                chat = await to_thread(openai.ChatCompletion.create, **openai_kwargs)
             except openai.OpenAIError as e:
-                if not unprompted:
+                if not kwargs.get("prompted", False):
                     await ctx.send("Sorry I am unable to assist currently. Please try again later.")
                 print(f"\nOpenAI request failed with error:\n{e}\n")
                 return
@@ -348,7 +348,7 @@ class AI(Cog):
 
         # Random chance to respond to any given message
         if randint(1, 100) <= self.reply_chance:
-            return await self.prompt(msg.channel, unprompted=True)
+            return await self.prompt(msg.channel, prompted=False)
 
         # Random chance to increase likelihood of responses in the future
         if not randint(0, self.reply_chance):
