@@ -141,8 +141,9 @@ class AI(Cog):
 
         # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
         # https://regex101.com/r/oWjuWt/2
-        reply = sub(r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* *(?:golem)* *(?:language model)* "
-                    r"*(?:AI|digital|artificial intelligence)(?: language)*(?: text-based)*(?: model)*(?: assistant)*",
+        reply = sub(r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* "
+                    r"*(?:golem)* *(?:language model)* *(?:AI|digital|artificial intelligence)"
+                    r"(?: language)*(?: text-based)*(?: model)*(?: assistant)*",
                     r"\1 " + choice(self.descriptors),
                     chat.choices[0].message.content)
         
@@ -312,6 +313,10 @@ class AI(Cog):
                 return await msg.channel.send(get_random_response())
 
             return await self.prompt(msg.channel)
+
+        # Don't respond to messages that are only one word
+        if len(msg.clean_content.split()) <= 1:
+            return
 
         cursor = get_cursor(self.conn)
 

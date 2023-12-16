@@ -295,7 +295,7 @@ class Query(Cog):
                   "* **-r**: Returns a random XKCD comic\n"
                   "* **-l**: Returns the latest XKCD comic",
              brief="Return an XKCD comic")
-    async def xkcd(self, ctx, args):
+    async def xkcd(self, ctx, args="-l"):
         flags, arg = get_flags(args)
 
         if 'r' in flags:
@@ -317,7 +317,7 @@ class Query(Cog):
 
         await ctx.send(f"# {comic.title}")
         await ctx.send(comic.imageLink)
-        await ctx.send(comic.altText)
+        await ctx.send(f"||*{comic.altText}*||")
 
 async def send_card(ctx, card_json):
     if img_links := card_json.get("image_uris"):
