@@ -1,6 +1,5 @@
 from asyncio import to_thread
-from discord import TextChannel, Thread, VoiceChannel
-from discord.ext.commands import Cog, command, MissingRequiredArgument
+from discord.ext.commands import Cog, command, Context, MissingRequiredArgument
 import openai
 from os import getenv, stat
 from os.path import exists
@@ -104,12 +103,12 @@ class AI(Cog):
 
         cursor = get_cursor(self.conn)
 
-        if isinstance(ctx, (TextChannel, Thread, VoiceChannel)):
-            channel = ctx
-            channel_id = ctx.id
-        else:
+        if isinstance(ctx, Context):
             channel = ctx.channel
             channel_id = ctx.channel.id
+        else:
+            channel = ctx
+            channel_id = ctx.id
 
         cursor.execute("SELECT content FROM Genesis WHERE channel_id = %s", [channel_id])
 
