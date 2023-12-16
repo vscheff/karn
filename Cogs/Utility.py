@@ -9,7 +9,7 @@ import qrcode
 from utils import package_message
 
 # Filename/path for temporary storage of QR image
-QR_FILEPATH = "./img/temp_qr.png"
+QR_FILEPATH = "./files/temp_qr.png"
 
 
 class Utility(commands.Cog):

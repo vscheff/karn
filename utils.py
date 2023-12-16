@@ -5,7 +5,7 @@ from random import randint
 from re import search
 
 
-FILEPATH = './img/msg.txt'
+FILEPATH = './files/msg.txt'
 SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
 
 

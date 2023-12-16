@@ -140,8 +140,8 @@ class AI(Cog):
             self.desc_mtime = last_mod
 
         # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
-        # https://regex101.com/r/oWjuWt/1
-        reply = sub(r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* *(?:golem)* "
+        # https://regex101.com/r/oWjuWt/2
+        reply = sub(r"([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* *(?:golem)* *(?:language model)* "
                     r"*(?:AI|digital|artificial intelligence)(?: language)*(?: text-based)*(?: model)*(?: assistant)*",
                     r"\1 " + choice(self.descriptors),
                     chat.choices[0].message.content)
