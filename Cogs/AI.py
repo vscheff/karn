@@ -26,10 +26,14 @@ MAX_CONTEXT_HISTORY = 256
 MIN_MESSAGE_LEN = 4                                     # Minimum message length bot will respond to
 MAX_MSG_LEN = 3 * MAX_TOKENS // 4                       # Maximum length context to send to OpenAI
 RUDE_MESSAGES_FILEPATH = "./files/rude.txt"             # File containing phrases the bot considers "rude"
-RUDE_RESPONSE_FILEPATH = "./files/response.txt"         # File containing responses to "rude" messages
+RUDE_RESPONSE_FILEPATH = "./files/respond_rude.txt"     # File containing responses to "rude" messages
+NICE_MESSAGES_FILEPATH = "./files/nice.txt"             # File containing phrases the bot considers "nice"
+NICE_RESPONSE_FILEPATH = "./files/respond_nice.txt"     # File containing responses to "nice" messages
 AI_DESCRIPTOR_FILEPATH = "./files/descriptor.txt"       # File containing alternate self-descriptors of the bot
 DEFAULT_RUDE_MESSAGE = "shut up"                        # Phrase to consider "rude" if file not found
 DEFAULT_RUDE_RESPONSE = "I will leave, my apologies."   # Response to "rude" messages if file not found
+DEFAULT_NICE_MESSAGE = "good job"                       # Phrase to consider "nice" if file not found
+DEFAULT_NICE_RESPONSE = "Thanks, I aim to please!"      # Response to "nice" messages if file not found
 DEFAULT_DESCRIPTOR = "your humble assistant"            # Self-descriptor to use if file not found
 
 # The default context message used to "prime" the language model in preparation for it to act as our AI assistant
@@ -67,6 +71,16 @@ class AI(Cog):
 
         self.rude_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
 
+        # Import "nice" phrases. If file not found, use default and create a file for future use
+        try:
+            self.get_nice_messages()
+        except FileNotFoundError:
+            self.nice_messages = [DEFAULT_NICE_MESSAGE]
+            with open(NICE_MESSAGES_FILEPATH, 'w') as out_file:
+                out_file.writelines(i + '\n' for i in self.nice_messages)
+
+        self.nice_mtime = stat(NICE_MESSAGES_FILEPATH).st_mtime_ns
+        
         # Import self descriptors. If file not found, use default and create a file for future use
         try:
             self.get_descriptors()
@@ -82,10 +96,20 @@ class AI(Cog):
             with open(RUDE_RESPONSE_FILEPATH, 'w') as out_file:
                 out_file.writelines(i + '\n' for i in [DEFAULT_RUDE_RESPONSE])
 
+        # If nice response file not found, create the file with default response
+        if not exists(NICE_RESPONSE_FILEPATH):
+            with open(NICE_RESPONSE_FILEPATH, 'w') as out_file:
+                out_file.writelines(i + '\n' for i in [DEFAULT_NICE_RESPONSE])
+
     # Import "rude" phrases from input file
     def get_rude_messages(self):
         with open(RUDE_MESSAGES_FILEPATH, 'r') as in_file:
             self.rude_messages = [i.strip().lower() for i in in_file.readlines()]
+
+    # Import "nice" phrases from input file
+    def get_nice_messages(self):
+        with open(NICE_MESSAGES_FILEPATH, 'r') as in_file:
+            self.nice_messages = [i.strip().lower() for i in in_file.readlines()]
 
     # Import self descriptors from input file
     def get_descriptors(self):
@@ -311,6 +335,15 @@ class AI(Cog):
             if any(i in msg.clean_content.lower() for i in self.rude_messages):
                 return await msg.channel.send(get_random_response())
 
+            # Re-import "nice" phrases if the file has been modified since we last imported
+            if (last_mod := stat(NICE_MESSAGES_FILEPATH).st_mtime_ns) != self.nice_mtime:
+                self.get_nice_messages()
+                self.nice_mtime = last_mod
+
+            # If the message contains a nice phrase, reply with a response to nice messages
+            if any(i in msg.clean_content.lower() for i in self.nice_messages):
+                return await msg.channel.send(get_random_response(False))
+            
             return await self.prompt(msg.channel)
 
         # Don't respond to messages that are only one word
@@ -364,6 +397,9 @@ def get_token_len(msg):
     return sum(len(ENCODING.encode(i)) for i in (msg["role"], msg["content"])) + TOKENS_PER_MESSAGE
 
 # Imports responses from the input file, and returns a random line from it
-def get_random_response():
-    with open(RUDE_RESPONSE_FILEPATH, 'r') as in_file:
+def get_random_response(rude=True):
+    filepath = RUDE_RESPONSE_FILEPATH if rude else NICE_RESPONSE_FILEPATH
+
+    with open(filepath, 'r') as in_file:
         return choice(in_file.readlines())
+
