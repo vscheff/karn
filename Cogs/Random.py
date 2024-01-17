@@ -5,7 +5,7 @@ from randfacts import get_fact
 from random import choice, randint, shuffle
 import discord
 
-from utils import package_message
+from utils import get_flags, package_message
 
 
 MAX_ROLL = 2 ** 18
@@ -94,28 +94,63 @@ class Random(commands.Cog):
     @commands.command(help="Rolls any number of n-sided dice in the classic \"xDn\" format\n"
                            "Where *x* is the quantity of dice being rolled, "
                            "and *n* is the number of sides on the die\n"
-                           "Example: `$roll 3d20`",
+                           "Example: `$roll 3d20`"
+                           "\n\nThis command has the following flags:\n"
+                           "* **-m**: Indicates your argument is a comma-seperated list of dice.\n"
+                           "\tExample: `$roll -m 4d20, 1d3, 2d10`",
                       brief="Rolls dice in the classic \"xDn\" format")
-    async def roll(self, ctx, dice):
-        try:
-            # Remove spaces from the input, and split it at the character "d", then cast to int
-            quantity, size = dice.lower().replace(' ', '').split('d')
-            quantity, size = int(quantity), int(size)
-        except ValueError:
-            await ctx.send("Please format your dice in the classic \"XdY\" style. "
-                           "For example, 1d20 rolls *one* 20-sided die.")
-            return
-        if quantity < 1 or size < 1:
-            await ctx.send("Please use only positive integers for dice quantity and number of sides.")
-            return
-        if quantity >= MAX_ROLL or size >= MAX_ROLL:
-            await ctx.send(f"Please only use integers smaller than {MAX_ROLL}.")
-            return
+    async def roll(self, ctx, *, args):
+        flags, query = get_flags(args, True)
+
+        if 'm' in flags:
+            query = [i.strip() for i in query.split(',')]
+        else:
+            query = [query]
+
+        dice = []
+
+        for die in query:
+            if die[0] in "Dd":
+                die = '1' + die
+
+            try:
+                # Remove spaces from the input, and split it at the character "d", then cast to int
+                quantity, size = [int(i) for i in die.lower().replace(' ', '').split('d')]
+            except ValueError:
+                await ctx.send("Please format your dice in the classic \"XdY\" style. "
+                               "For example, 1d20 rolls *one* 20-sided die.")
+                return
+
+            if quantity < 1 or size < 1:
+                await ctx.send("Please use only positive integers for dice quantity and number of sides.")
+                return
+            
+            if quantity >= MAX_ROLL or size >= MAX_ROLL:
+                await ctx.send(f"Please only use integers smaller than {MAX_ROLL}.")
+                return
+            
+            dice.append({"quantity": quantity, "size": size})
+           
+        if len(dice) == 1 and dice[0]["quantity"] == 1:
+            return await ctx.send(randint(1, dice[0]["size"]))
+
         roll_list = []
-        total = 0
-        for i in range(quantity):
-            roll = randint(1, size)
-            total += roll
-            roll_list.append(f"Roll #{i+1}: {roll}")
-        roll_list.append(f"**Total:** {total}")
+        grand_total = 0
+        
+        for die in dice:
+            roll_list.append(f"\n__Rolling **{die['quantity']}d{die['size']}**__:")
+            total = 0
+
+            for i in range(die["quantity"]):
+                roll = randint(1, die["size"])
+                total += roll
+                roll_list.append(f"Roll #{i+1}: {roll}")
+            
+            roll_list.append(f"**Total:** {total}")
+            grand_total += total
+
+        if len(dice) > 1:
+            roll_list.append(f"\n**Grand Total:** {grand_total}")
+
         await package_message('\n'.join(roll_list), ctx)
+

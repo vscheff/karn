@@ -43,7 +43,7 @@ WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?"
 
 class Query(Cog):
     @command(help="Returns Scryfall data for a given MtG card"
-                  f"This command has the following flags:\n"
+                  f"\n\nThis command has the following flags:\n"
                   f"* **-r**: Returns a random MtG card.\n"
                   f"\tExample: `$card -r`\n",
              brief="Returns data of an MtG card")

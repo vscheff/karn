@@ -17,7 +17,7 @@ def get_cursor(conn):
         conn.connect()
         return conn.cursor()
 
-def get_flags(args):
+def get_flags(args, join=False):
     arg_list = args.split()
     flags = []
     not_flags = []
@@ -28,6 +28,9 @@ def get_flags(args):
             flags.extend([i.lower() for i in arg[1:]])
         else:
             not_flags.append(arg)
+
+    if join:
+        not_flags = ' '.join(not_flags)
 
     return flags, not_flags
 
