@@ -1,4 +1,4 @@
-# Main starting file for BUSTER.
+# Main starting file for Karn
 # This file creates the Bot object, loads the cogs, and starts the event loop
 
 from discord.ext import commands

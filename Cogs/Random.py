@@ -86,18 +86,20 @@ class Random(commands.Cog):
     async def shuffle_error(self, ctx, error):
         if isinstance(error, commands.errors.MissingRequiredArgument):
             await ctx.send("You must include a comma-seperated list of items.\n"
-                           "Example: `$choice me, myself, I`\n\n"
+                           "Example: `$shuffle me, myself, I`\n\n"
                            "Please use `$help shuffle` for more information.")
 
     # $roll command used to simulate the rolling of dice
     # param dice - string representing dice to be rolled in xDn format
-    @commands.command(help="Rolls any number of n-sided dice in the classic \"xDn\" format\n"
+    @commands.command(help="Rolls any number of n-sided dice in the classic \"xDn\" format.\n"
                            "Where *x* is the quantity of dice being rolled, "
-                           "and *n* is the number of sides on the die\n"
-                           "Example: `$roll 3d20`"
-                           "\n\nThis command has the following flags:\n"
+                           "and *n* is the number of sides on the die.\n"
+                           "Example: `$roll 3d20`\n"
+                           "If rolling only one die, you may ommit the '1'.\n"
+                           "Example: `$roll d6`\n\n"
+                           "This command has the following flags:\n"
                            "* **-m**: Indicates your argument is a comma-seperated list of dice.\n"
-                           "\tExample: `$roll -m 4d20, 1d3, 2d10`",
+                           "\tExample: `$roll -m 4d20, d3, 6d9`",
                       brief="Rolls dice in the classic \"xDn\" format")
     async def roll(self, ctx, *, args):
         flags, query = get_flags(args, True)
@@ -114,8 +116,7 @@ class Random(commands.Cog):
                 die = '1' + die
 
             try:
-                # Remove spaces from the input, and split it at the character "d", then cast to int
-                quantity, size = [int(i) for i in die.lower().replace(' ', '').split('d')]
+                quantity, size = [int(i) for i in die.lower().split('d')]
             except ValueError:
                 await ctx.send("Please format your dice in the classic \"XdY\" style. "
                                "For example, 1d20 rolls *one* 20-sided die.")
@@ -153,4 +154,11 @@ class Random(commands.Cog):
             roll_list.append(f"\n**Grand Total:** {grand_total}")
 
         await package_message('\n'.join(roll_list), ctx)
+
+    @roll.error
+    async def roll_error(self, ctx, error):
+        if isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send("You must include a dice to roll.\n"
+                           "Example: `$roll 4d20`\n\n"
+                           "Please use `$help roll` for more information.")
 
