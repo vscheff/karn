@@ -49,9 +49,10 @@ async def on_message(msg):
 
     if msg.content[0] == bot.command_prefix:
         return await bot.process_commands(msg)
-
+    
     if not await send_line(msg, bot):
-        await bot.get_cog("AI").send_reply(msg)
+        if not await bot.get_cog("Games").wordle_listener(msg):
+            await bot.get_cog("AI").send_reply(msg)
 
     bot.get_cog("Rating").rate_listener(msg)
 

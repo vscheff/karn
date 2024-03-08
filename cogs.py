@@ -4,6 +4,7 @@
 # Local dependencies
 from Cogs.AI import AI
 from Cogs.DailyLoop import DailyLoop
+from Cogs.Games import Games
 from Cogs.Hat import Hat
 from Cogs.Query import Query
 from Cogs.Random import Random
@@ -17,6 +18,7 @@ from Cogs.Utility import Utility
 async def add_cogs(bot, conn):
     await bot.add_cog(AI(bot, conn))
     await bot.add_cog(DailyLoop(bot, conn))
+    await bot.add_cog(Games())
     await bot.add_cog(Hat(conn))
     await bot.add_cog(Query())
     await bot.add_cog(Random(bot))
