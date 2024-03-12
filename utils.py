@@ -1,7 +1,7 @@
+from asyncio import sleep
 import discord
 from ffmpeg import FFmpeg
 from gtts import gTTS
-from io import BytesIO
 from mysql.connector.errors import OperationalError
 import os
 from random import randint
@@ -10,7 +10,7 @@ from re import search
 
 FILEPATH = './files/msg.txt'
 SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
-
+TTS_TEMP_FILE = "./files/output.mp3"
 
 # Ensures the SQL database is still connected, and returns a cursor from that connection
 def get_cursor(conn):
@@ -69,11 +69,21 @@ async def package_message(obj, ctx):
     else:
         await ctx.send(obj)
 
-def text_to_speech(text, client):
-    byte_obj = BytesIO()
-    tts = gTTS(text, lang='en')
-    tts.write_to_fp(byte_obj)
-    tts.save("test.mp3")
-    ffmpeg = FFmpeg().input("test.mp3")
+async def send_tts_if_in_vc(bot, author, text):
+    for client in bot.voice_clients:
+        if client.channel == author.voice.channel:
+            await text_to_speech(text, client)
 
-    client.play(discord.FFmpegAudio(source=ffmpeg, args=[]))
+async def text_to_speech(text, client):
+    tts = gTTS(text, lang='en')
+    tts.save(TTS_TEMP_FILE)
+
+    while client.is_playing():
+        await sleep(1)
+
+    client.play(discord.FFmpegPCMAudio(executable="ffmpeg",  source=TTS_TEMP_FILE))
+
+    while client.is_playing():
+        await sleep(1)
+
+    os.remove(TTS_TEMP_FILE)

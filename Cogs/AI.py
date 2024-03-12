@@ -1,4 +1,5 @@
-from asyncio import to_thread
+from asyncio import sleep, to_thread
+from discord import ClientException
 from discord.ext.tasks import loop
 from discord.ext.commands import Cog, command, Context, MissingRequiredArgument
 import openai
@@ -9,7 +10,7 @@ from re import search, sub
 from tiktoken import encoding_for_model
 
 # Local dependencies
-from utils import get_cursor, get_flags, package_message, text_to_speech
+from utils import get_cursor, get_flags, package_message, send_tts_if_in_vc, text_to_speech
 
 
 openai.api_key = getenv("CHATGPT_TOKEN")
@@ -122,11 +123,13 @@ class AI(Cog):
     async def join(self, ctx):
         try:
             await ctx.author.voice.channel.connect()
+            
+            if not self.check_empty_channel.is_running():
+                self.check_empty_channel.start()
         except AttributeError:
             await ctx.send("You must currently be in a voice channel to use this command.")
-            return
-
-        self.check_empty_channel.start()
+        except ClientException:
+            await ctx.send("I'm already in your channel!")
 
     @command(help="Remove the bot from a voice channel",
              brief="Remove bot from a voice channel")
@@ -149,10 +152,23 @@ class AI(Cog):
     @command(help="Command the bot to say something in your voice channel",
              brief="Say something in a voice channel")
     async def say(self, ctx, *, args):
-        for client in self.bot.voice_clients:
-            if client.channel == ctx.author.voice.channel:
-                text_to_speech(' '.join(args), client)
-                return
+        if not ctx.author.voice:
+            await ctx.send("You must currently be in a voice channel to use this command.")
+            return
+
+        temp_join = False
+
+        if not ctx.message.guild.voice_client:
+            await self.join(ctx)
+            temp_join = True
+
+        await text_to_speech(args, ctx.message.guild.voice_client)
+
+        if temp_join:
+            while ctx.message.guild.voice_client.is_playing():
+                await sleep(1)
+
+            await self.leave(ctx)
 
     # $prompt command for users to submit prompts to the language model
     # param   args - will contain the prompt to send
@@ -168,9 +184,11 @@ class AI(Cog):
         if isinstance(ctx, Context):
             channel = ctx.channel
             channel_id = ctx.channel.id
+            author = ctx.message.author
         else:
             channel = ctx
             channel_id = ctx.id
+            author = kwargs.get("author")
 
         cursor.execute("SELECT content FROM Genesis WHERE channel_id = %s", [channel_id])
 
@@ -213,6 +231,8 @@ class AI(Cog):
         reply = sub(r"\A\w+:\s", '', reply)
 
         await package_message(reply, ctx)
+       
+        await send_tts_if_in_vc(self.bot, author, reply)
 
     # Called if $prompt encounters an unhandled exception
     @prompt.error
@@ -371,7 +391,10 @@ class AI(Cog):
 
             # If the message contains a rude phrase, reply with a response to rude messages
             if any(i in msg.clean_content.lower() for i in self.rude_messages):
-                return await msg.channel.send(get_random_response())
+                reply = get_random_response()
+                await msg.channel.send(reply)
+                await send_tts_if_in_vc(self.bot, msg.author, reply)
+                return
 
             # Re-import "nice" phrases if the file has been modified since we last imported
             if (last_mod := stat(NICE_MESSAGES_FILEPATH).st_mtime_ns) != self.nice_mtime:
@@ -380,9 +403,12 @@ class AI(Cog):
 
             # If the message contains a nice phrase, reply with a response to nice messages
             if any(i in msg.clean_content.lower() for i in self.nice_messages):
-                return await msg.channel.send(get_random_response(False))
-            
-            return await self.prompt(msg.channel)
+                reply = get_random_response(False)
+                await msg.channel.send(reply)
+                await send_tts_if_in_vc(self.bot, msg.author, reply)
+                return
+
+            return await self.prompt(msg.channel, author=msg.author)
 
         # Don't respond to messages that are only one word
         if len(msg.clean_content.split()) <= 1:
@@ -423,7 +449,7 @@ class AI(Cog):
 
         # Random chance to respond to any given message
         if randint(1, 100) <= self.reply_chance:
-            return await self.prompt(msg.channel, prompted=False)
+            return await self.prompt(msg.channel, author=msg.author, prompted=False)
 
         # Random chance to increase likelihood of responses in the future
         if not randint(0, self.reply_chance):
