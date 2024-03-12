@@ -1,12 +1,15 @@
 bs4
 discord
+gtts
 lxml
 mysql-connector-python
 openai == 0.28
 pillow
+PyNaCl
 python-dotenv
 qrcode
 randfacts
 tiktoken
 wikipedia
+wordle-python
 xkcd

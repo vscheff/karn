@@ -1,4 +1,7 @@
 import discord
+from ffmpeg import FFmpeg
+from gtts import gTTS
+from io import BytesIO
 from mysql.connector.errors import OperationalError
 import os
 from random import randint
@@ -65,3 +68,12 @@ async def package_message(obj, ctx):
             print('Error occurred while packaging message. Temp file not created/deleted.')
     else:
         await ctx.send(obj)
+
+def text_to_speech(text, client):
+    byte_obj = BytesIO()
+    tts = gTTS(text, lang='en')
+    tts.write_to_fp(byte_obj)
+    tts.save("test.mp3")
+    ffmpeg = FFmpeg().input("test.mp3")
+
+    client.play(discord.FFmpegAudio(source=ffmpeg, args=[]))

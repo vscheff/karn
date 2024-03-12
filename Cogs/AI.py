@@ -1,4 +1,5 @@
 from asyncio import to_thread
+from discord.ext.tasks import loop
 from discord.ext.commands import Cog, command, Context, MissingRequiredArgument
 import openai
 from os import getenv, stat
@@ -8,7 +9,7 @@ from re import search, sub
 from tiktoken import encoding_for_model
 
 # Local dependencies
-from utils import get_cursor, get_flags, package_message
+from utils import get_cursor, get_flags, package_message, text_to_speech
 
 
 openai.api_key = getenv("CHATGPT_TOKEN")
@@ -115,6 +116,43 @@ class AI(Cog):
     def get_descriptors(self):
         with open(AI_DESCRIPTOR_FILEPATH, 'r') as in_file:
             self.descriptors = [i.strip() for i in in_file.readlines()]
+
+    @command(help="Adds the bot to your current voice channel",
+             brief="Add bot to your voice channel")
+    async def join(self, ctx):
+        try:
+            await ctx.author.voice.channel.connect()
+        except AttributeError:
+            await ctx.send("You must currently be in a voice channel to use this command.")
+            return
+
+        self.check_empty_channel.start()
+
+    @command(help="Remove the bot from a voice channel",
+             brief="Remove bot from a voice channel")
+    async def leave(self, ctx):
+        try:
+            await ctx.message.guild.voice_client.disconnect()
+        except AttributeError:
+            await ctx.send("I am not currently in any voice channels. Try using `$join` first!")
+
+    @loop(seconds=20)
+    async def check_empty_channel(self):
+        if not self.bot.voice_clients:
+            self.check_empty_channel.stop()
+            return
+
+        for client in self.bot.voice_clients:
+            if len(client.channel.members) < 2:
+                await client.disconnect()
+
+    @command(help="Command the bot to say something in your voice channel",
+             brief="Say something in a voice channel")
+    async def say(self, ctx, *, args):
+        for client in self.bot.voice_clients:
+            if client.channel == ctx.author.voice.channel:
+                text_to_speech(' '.join(args), client)
+                return
 
     # $prompt command for users to submit prompts to the language model
     # param   args - will contain the prompt to send
@@ -402,4 +440,3 @@ def get_random_response(rude=True):
 
     with open(filepath, 'r') as in_file:
         return choice(in_file.readlines())
-
