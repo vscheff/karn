@@ -1,6 +1,5 @@
 from asyncio import sleep
 import discord
-from ffmpeg import FFmpeg
 from gtts import gTTS
 from mysql.connector.errors import OperationalError
 import os
