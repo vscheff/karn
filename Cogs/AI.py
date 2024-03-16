@@ -2,7 +2,7 @@ from asyncio import sleep, to_thread
 from discord import ClientException
 from discord.ext.tasks import loop
 from discord.ext.commands import Cog, command, Context, MissingRequiredArgument
-import openai
+from openai import APIError, OpenAI
 from os import getenv, stat
 from os.path import exists
 from random import choice, randint
@@ -13,8 +13,8 @@ from tiktoken import encoding_for_model
 from utils import get_cursor, get_flags, package_message, send_tts_if_in_vc, text_to_speech
 
 
-openai.api_key = getenv("CHATGPT_TOKEN")
-openai.organization = getenv("CHATGPT_ORG")
+OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
+OPENAI_ORGANIZATION = getenv("CHATGPT_ORG")
 
 # Constants (set by OpenAI and the encoding they use)
 MODEL = "gpt-3.5-turbo"
@@ -62,6 +62,8 @@ class AI(Cog):
         self.conn = conn
 
         self.reply_chance = 1
+        
+        self.client = OpenAI(api_key=OPENAI_API_KEY, organization=OPENAI_ORGANIZATION)
 
         # Import "rude" phrases. If file not found, use default and create a file for future use
         try:
@@ -206,8 +208,9 @@ class AI(Cog):
         async with ctx.typing():
             try:
                 # Make request in a separate thread to avoid blocking the heartbeat
-                chat = await to_thread(openai.ChatCompletion.create, **openai_kwargs)
-            except openai.OpenAIError as e:
+                #chat = await to_thread(self.client.completions.create, **openai_kwargs)
+                chat = self.client.chat.completions.create(**openai_kwargs)
+            except APIError as e:
                 if not kwargs.get("prompted", False):
                     await ctx.send("Sorry I am unable to assist currently. Please try again later.")
                 print(f"\nOpenAI request failed with error:\n{e}\n")

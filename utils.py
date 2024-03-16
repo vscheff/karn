@@ -2,10 +2,12 @@ from asyncio import sleep
 import discord
 from gtts import gTTS
 from mysql.connector.errors import OperationalError
+from openai import OpenAI
 import os
 from random import randint
 from re import search
 
+OPENAI_CLIENT = OpenAI(api_key=os.getenv("CHATGPT_TOKEN"), organization=os.getenv("CHATGPT_ORG"))
 
 FILEPATH = './files/msg.txt'
 SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
@@ -74,8 +76,8 @@ async def send_tts_if_in_vc(bot, author, text):
             await text_to_speech(text, client)
 
 async def text_to_speech(text, client):
-    tts = gTTS(text, lang='en')
-    tts.save(TTS_TEMP_FILE)
+    response = OPENAI_CLIENT.audio.speech.create(model="tts-1", voice="onyx", input=text)
+    response.stream_to_file(TTS_TEMP_FILE)
 
     while client.is_playing():
         await sleep(1)
