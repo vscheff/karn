@@ -3,7 +3,7 @@ discord
 gtts
 lxml
 mysql-connector-python
-openai == 0.28
+openai
 pillow
 PyNaCl
 python-dotenv
