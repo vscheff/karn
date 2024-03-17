@@ -2,7 +2,7 @@ from asyncio import sleep
 from discord import ClientException
 from discord.ext.tasks import loop
 from discord.ext.commands import Cog, command, Context, MissingRequiredArgument
-from openai import APIError, OpenAI
+from openai import APIError, AsyncOpenAI
 from os import getenv, stat
 from os.path import exists
 from random import choice, randint
@@ -17,7 +17,7 @@ OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
 OPENAI_ORGANIZATION = getenv("CHATGPT_ORG")
 
 # Constants (set by OpenAI and the encoding they use)
-MODEL = "gpt-3.5-turbo"
+MODEL = "gpt-4-turbo-preview"
 ENCODING = encoding_for_model(MODEL)
 MAX_TOKENS = 4096       # Maximum number of tokens for context and response from OpenAI
 TOKENS_PER_MESSAGE = 3  # Tokens required for each context message regardless of message length
@@ -63,7 +63,7 @@ class AI(Cog):
 
         self.reply_chance = 1
         
-        self.client = OpenAI(api_key=OPENAI_API_KEY, organization=OPENAI_ORGANIZATION)
+        self.client = AsyncOpenAI(api_key=OPENAI_API_KEY, organization=OPENAI_ORGANIZATION)
 
         # Import "rude" phrases. If file not found, use default and create a file for future use
         try:
@@ -207,7 +207,7 @@ class AI(Cog):
         # Make the bot appear to be typing while waiting for the response from OpenAI
         async with ctx.typing():
             try:
-                chat = self.client.chat.completions.create(**openai_kwargs)
+                chat = await self.client.chat.completions.create(**openai_kwargs)
             except APIError as e:
                 if not kwargs.get("prompted", False):
                     await ctx.send("Sorry I am unable to assist currently. Please try again later.")
