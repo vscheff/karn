@@ -1,4 +1,4 @@
-from asyncio import sleep, to_thread
+from asyncio import sleep
 from discord import ClientException
 from discord.ext.tasks import loop
 from discord.ext.commands import Cog, command, Context, MissingRequiredArgument
@@ -207,8 +207,6 @@ class AI(Cog):
         # Make the bot appear to be typing while waiting for the response from OpenAI
         async with ctx.typing():
             try:
-                # Make request in a separate thread to avoid blocking the heartbeat
-                #chat = await to_thread(self.client.completions.create, **openai_kwargs)
                 chat = self.client.chat.completions.create(**openai_kwargs)
             except APIError as e:
                 if not kwargs.get("prompted", False):
@@ -320,6 +318,21 @@ class AI(Cog):
         await ctx.send(f"New system context message of length {token_len} has been added!")
 
         self.conn.commit()
+        cursor.close()
+
+    @command(help="View the system context message(s) for this channel.",
+             brief="View system context messages")
+    async def view_context(self, ctx):
+        cursor = get_cursor(self.conn)
+
+        cursor.execute("SELECT content FROM Genesis WHERE channel_id = %s", [ctx.channel.id])
+
+        if not (result := cursor.fetchall()):
+            await ctx.send("No system context messages set for this channel. Try using `add_context` first!")
+        else:
+            response = "\n* ".join(i[0] for i in result)
+            await ctx.send(f"System context messages for this channel:\n* {response}")
+
         cursor.close()
 
     @command(help="Toggle whether the bot should respond to your messages without being prompted. "
