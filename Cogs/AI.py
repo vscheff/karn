@@ -17,7 +17,7 @@ OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
 OPENAI_ORGANIZATION = getenv("CHATGPT_ORG")
 
 # Constants (set by OpenAI and the encoding they use)
-MODEL = "gpt-4-turbo-preview"
+MODEL = "gpt-3.5-turbo"
 ENCODING = encoding_for_model(MODEL)
 MAX_TOKENS = 4096       # Maximum number of tokens for context and response from OpenAI
 TOKENS_PER_MESSAGE = 3  # Tokens required for each context message regardless of message length

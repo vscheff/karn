@@ -33,7 +33,8 @@ class Games(Cog):
             await ctx.send("New game of Wordle started. You have 6 attempts to correctly guess the word.\n"
                            "**Bold** letters are in the correct spot.\n"
                            "__Underlined__ letters are present in the word, but not in the correct spot.\n"
-                           "Other letters are not present in the word.\n")
+                           "Other letters are not present in the word.\n\n"
+                           "Simply type a word into chat to submit a guess!")
         else:
             await ctx.send(f"You have {6 - len(game.individual_guesses)} remaining guesses. Use the `-n` flag to start a new game.")
 
