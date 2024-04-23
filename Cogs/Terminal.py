@@ -3,7 +3,7 @@ from os import listdir, remove
 from random import choice
 from re import search
 
-from utils import package_message
+from utils import package_message, send_tts_if_in_vc
 
 
 FILE_ROOT_DIRECTORY = "./files"
@@ -112,6 +112,10 @@ async def send_line(msg, bot):
     except FileNotFoundError:
         return False
 
-    await msg.channel.send(choice(lines))
+    response = choice(lines)
+
+    await msg.channel.send(response)
+
+    await send_tts_if_in_vc(bot, msg.author, response)
 
     return True
