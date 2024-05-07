@@ -233,7 +233,7 @@ class Query(Cog):
 
         await ctx.send(f"**{result.title}**")
 
-        if 'f' in flags:
+        if 'f' in flags or not result.summary:
             await package_message(result.content.replace(" () ", ' '), ctx)
         else:
             await ctx.send(f"{result.summary[:1997].replace(' () ', ' ')}{'...'if len(result.summary) > 1997 else ''}")

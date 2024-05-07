@@ -88,7 +88,7 @@ class Hat(Cog):
                   "This command has the following flags:\n"
                   "* **-h**: Used to specify a hat other than the channel's default hat.\n"
                   "\tExample: `$pop -h movies`\n",
-             brief="Add an item to the hat")
+             brief="Pick and remove an item from the hat")
     async def pop(self, ctx, *, args=None):
         await self.choose(ctx, args, True)
 
