@@ -37,6 +37,7 @@ DEFAULT_RUDE_RESPONSE = "I will leave, my apologies."   # Response to "rude" mes
 DEFAULT_NICE_MESSAGE = "good job"                       # Phrase to consider "nice" if file not found
 DEFAULT_NICE_RESPONSE = "Thanks, I aim to please!"      # Response to "nice" messages if file not found
 DEFAULT_DESCRIPTOR = "your humble assistant"            # Self-descriptor to use if file not found
+REPLY_UPPER_LIMIT = 200                                 # Upper limit for unprompted reply chance
 
 # The default context message used to "prime" the language model in preparation for it to act as our AI assistant
 GENESIS_MESSAGE = {"role": "system",
@@ -464,7 +465,7 @@ class AI(Cog):
             return
 
         # Random chance to respond to any given message
-        if randint(1, 100) <= self.reply_chance:
+        if randint(1, REPLY_UPPER_LIMIT) <= self.reply_chance:
             return await self.prompt(msg.channel, author=msg.author, prompted=False)
 
         # Random chance to increase likelihood of responses in the future
