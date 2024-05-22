@@ -28,10 +28,24 @@ class Random(commands.Cog):
         await ctx.send(get_fact(only_unsafe=True))
 
     # $flip command sends either "heads" or "tails" in the channel
-    @commands.command(help="Returns either \"heads\" or \"tails\" via random selection.",
+    @commands.command(help="Returns either \"heads\" or \"tails\" via random selection.\n"
+                           "To flip multiple coins simultaneously, include an integer argument.\n"
+                           "Example: `$flip 3`",
                       brief="Returns either \"heads\" or \"tails\"")
-    async def flip(self, ctx):
-        await ctx.send(choice(("heads", "tails")))
+    async def flip(self, ctx, *, args=None):
+        if args is None:
+            return await ctx.send(choice(("heads", "tails")))
+
+        try:
+            num_flip = int(args)
+        except ValueError:
+            await ctx.send("Bad argument, use only integers with this command.\n"
+                           "Example: `$flip 3`")
+            return
+
+        result = ''.join(choice(("H","T")) for _ in range(num_flip))
+        
+        await ctx.send(f"{result}\nHeads = {result.count('H')}\nTails = {result.count('T')}")
 
     # $number command used to generate a random integer within a given range
     @commands.command(help="Returns a randomly chosen number between two given integers\n"
