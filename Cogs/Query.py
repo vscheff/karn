@@ -1,5 +1,5 @@
 from copy import deepcopy
-from discord import File
+from discord import Embed, File
 from discord.ext.commands import Cog, command, MissingRequiredArgument
 from duckduckgo_search import DDGS
 from os import getenv, remove
@@ -15,6 +15,8 @@ from us_state_abbrev import abbrev_to_us_state as states
 from utils import get_flags, is_supported_filetype, get_supported_filetype, package_message
 
 
+DEFAULT_RESULT_COUNT = 1
+
 # $card constants
 FACE_0 = "./img/face_0.png"
 FACE_1 = "./img/face_1.png"
@@ -25,15 +27,6 @@ SCRYFALL_URL = "https://api.scryfall.com/cards"
 MAX_DEFINITIONS = 16
 WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 WORDNIK_URL = "https://api.wordnik.com/v4/word.json/"
-
-# $image constants
-DEFAULT_IMAGE_COUNT = 1
-GOOGLE_URL = "https://www.google.com/search"
-HEADER = {
-    "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36"
-}
 
 # $weather constants
 WEATHER_API_KEY = getenv("WEATHER_TOKEN")
@@ -126,14 +119,14 @@ class Query(Cog):
     @command(help=f"Returns images relevant to a given query\n"
                   f"Example: `$image Grant MacDonald`\n\n"
                   f"This command has the following flags:\n"
-                  f"* **-c**: Specify a number of images to return [default={DEFAULT_IMAGE_COUNT}].\n"
+                  f"* **-c**: Specify a number of images to return [default={DEFAULT_RESULT_COUNT}].\n"
                   f"\tExample: `$image -c 10 Margaery Tyrell`\n"
                   f"* **-r**: Return randomly selected images from the search instead of the most relevant images.\n"
                   f"\tExample: `$image -r Cressida`",
              brief="Search the web for an image",
-             aliases=["images", "search"])
-    async def image(self, ctx, *, arg):
-        flags, query = get_flags(arg)
+             aliases=["images"])
+    async def image(self, ctx, *, args):
+        flags, query = get_flags(args)
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
         randomize = 'r' in flags
 
@@ -144,7 +137,7 @@ class Query(Cog):
 
         image_urls = [i["image"] for i in results]
 
-        for _ in range(sub_arg if sub_arg else DEFAULT_IMAGE_COUNT):
+        for _ in range(sub_arg if sub_arg else DEFAULT_RESULT_COUNT):
             if img := get_supported_filetype(image_urls, randomize):
                 await ctx.send(img)
             else:
@@ -156,6 +149,28 @@ class Query(Cog):
             await ctx.send("You must include a search term with this command.\n"
                            "Example: `$image Natalie Dormer`\n\n"
                            "Please use `$help image` for more information.")
+
+    @command(help=f"Search the web with a given query"
+                  f"Example: `$search Chris Chan`\n\n"
+                  f"This command has the following flags:\n"
+                  f"* **-c**: Specify a number of results to return [default={DEFAULT_RESULT_COUNT}].\n"
+                  f"\tExample: `search -c 10 Sam Hyde`\n",
+             brief="Search the web")
+    async def search(self, ctx, *, args):
+        flags, query = get_flags(args)
+        sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
+
+        search_query = ' '.join(query)
+
+        if not (results := DDGS().text(keywords=search_query, safesearch="off")):
+            return await ctx.send(f"No results found for \"{search_query}\".")
+
+        for result in results[:sub_arg if sub_arg else DEFAULT_RESULT_COUNT]:
+            embed = Embed(title=result["title"],
+                          url=result["href"],
+                          description=result["body"],
+                          color=randint(0, 0xFFFFFF))
+            await ctx.send(embed=embed)
 
     @command(help="Returns the summary of a given Wikipedia article\nExample: `$wiki Thelema`\n\n"
                   "This command has the following flags:\n"

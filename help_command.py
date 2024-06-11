@@ -1,7 +1,6 @@
-# Custom help command for BUSTER
-# Initialized by ./bot.py and used to override the default help command
-
 from discord.ext.commands import HelpCommand
+
+from utils import package_message
 
 
 class CustomHelpCommand(HelpCommand):
@@ -22,7 +21,7 @@ class CustomHelpCommand(HelpCommand):
                     cog_list.append(f"**{cog.qualified_name}**:\n{command_list}")
                 else:
                     cog_list.append(f"**Miscellaneous**:\n{command_list}")
-        await self.get_destination().send('\n'.join(cog_list))
+        await package_message('\n'.join(cog_list), self.get_destination())
 
     # Called when user gives the $help {cog_name} command
     # param cog - the cog that was requested for help
