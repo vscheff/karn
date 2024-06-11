@@ -1,5 +1,5 @@
-bs4
 discord
+duckduckgo-search
 gtts
 lxml
 mysql-connector-python
@@ -9,6 +9,7 @@ PyNaCl
 python-dotenv
 qrcode
 randfacts
+requests
 tiktoken
 wikipedia
 wordle-python

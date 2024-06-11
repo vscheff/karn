@@ -1,14 +1,13 @@
-from bs4 import BeautifulSoup
 from copy import deepcopy
 from discord import File
 from discord.ext.commands import Cog, command, MissingRequiredArgument
-from json import dumps, loads
+from duckduckgo_search import DDGS
 from os import getenv, remove
 from os.path import exists
 from PIL import Image
 from random import choice, randint
 from requests import get
-from re import findall, sub
+from re import sub
 from wikipedia import DisambiguationError, page, PageError, random
 from xkcd import getComic, getLatestComic, getLatestComicNum, getRandomComic
 
@@ -140,28 +139,14 @@ class Query(Cog):
 
         search_query = ' '.join(query)
 
-        html = get(GOOGLE_URL, params={'q': search_query, "hl": "en", "gl": "us", "tbm": "isch"}, headers=HEADER)
-
-        all_script_tags = BeautifulSoup(html.text, "lxml").select("script")
-        # https://regex101.com/r/48UZhY/4
-        matched_images_data = ''.join(findall(r"AF_initDataCallback\(([^<]+)\);", str(all_script_tags)))
-
-        # Must dumps before loads to avoid JSONDecodeError
-        # https://regex101.com/r/VPz7f2/1
-        matched_data = findall(r"\"b-GRID_STATE0\"(.*)sideChannel:\s?{}}", loads(dumps(matched_images_data)))
-
-        # removing previously matched thumbnails for easier full resolution image matches.
-        removed_img = sub(r"\[\"(https://encrypted-tbn0\.gstatic\.com/images\?.*?)\",\d+,\d+]", '', str(matched_data))
-
-        # https://regex101.com/r/fXjfb1/4
-        matched_google_images = findall(r"[',],\[\"(https:|http.*?)\",\d+,\d+]", removed_img)
-
-        if not matched_google_images:
+        if not (results := DDGS().images(keywords=search_query, safesearch="off")):
             return await ctx.send(f"No results found for \"{search_query}\".")
 
+        image_urls = [i["image"] for i in results]
+
         for _ in range(sub_arg if sub_arg else DEFAULT_IMAGE_COUNT):
-            if img := get_supported_filetype(matched_google_images, randomize):
-                await ctx.send(bytes(bytes(img, "ascii").decode("unicode-escape"), "ascii").decode("unicode-escape"))
+            if img := get_supported_filetype(image_urls, randomize):
+                await ctx.send(img)
             else:
                 break
 
