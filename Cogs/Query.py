@@ -179,12 +179,12 @@ class Query(Cog):
                            "Example: `$search Christine Weston Chandler`\n\n"
                            "Please use `$help search` for more information.")
 
-    @command(help=f"Search for videos with a given query"
+    @command(help=f"Search the web for videos with a given query"
                   f"Example: `$search Dizaster - Love Me Long Time`\n\n"
                   f"This command has the following flags:\n"
                   f"* **-c**: Specify a number of results to return [default={DEFAULT_RESULT_COUNT}].\n"
                   f"\tExample: `search -c 10 Fishtank`\n",
-             brief="Search for videos")
+             brief="Search the web for videos")
     async def video(self, ctx, *, args):
         flags, query = get_flags(args)
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None

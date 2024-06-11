@@ -112,8 +112,8 @@ class Utility(commands.Cog):
             await ctx.send("Bad argument, please only use integers with this command.\n")
 
     # $info command used to provide some info on this bot
-    @commands.command(help="Provides a brief synopsis of BUSTER, including a link to his Open Source code",
-                      brief="Provides a brief synopsis of BUSTER")
+    @commands.command(help="Provides a brief synopsis of Karn, including a link to his Open Source code",
+                      brief="Provides a brief synopsis of Karn")
     async def info(self, ctx):
         await ctx.send(f"Hello! I am Karn, your friendly Time-Travelling Golem!\n"
                        f"I was developed by NewBoard, and am hosted locally in Kalamazoo!\n"
