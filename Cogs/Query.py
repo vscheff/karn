@@ -172,6 +172,38 @@ class Query(Cog):
                           color=randint(0, 0xFFFFFF))
             await ctx.send(embed=embed)
 
+    @search.error
+    async def search_error(self, ctx, error):
+        if isinstance(error, MissingRequiredArgument):
+            await ctx.send("You must include a search term with this command.\n"
+                           "Example: `$search Christine Weston Chandler`\n\n"
+                           "Please use `$help search` for more information.")
+
+    @command(help=f"Search for videos with a given query"
+                  f"Example: `$search Dizaster - Love Me Long Time`\n\n"
+                  f"This command has the following flags:\n"
+                  f"* **-c**: Specify a number of results to return [default={DEFAULT_RESULT_COUNT}].\n"
+                  f"\tExample: `search -c 10 Fishtank`\n",
+             brief="Search for videos")
+    async def video(self, ctx, *, args):
+        flags, query = get_flags(args)
+        sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
+
+        search_query = ' '.join(query)
+
+        if not (results := DDGS().videos(keywords=search_query, safesearch="off")):
+            return await ctx.send(f"No results found for \"{search_query}\".")
+
+        for result in results[:sub_arg if sub_arg else DEFAULT_RESULT_COUNT]:
+            await ctx.send(result["content"])
+
+    @video.error
+    async def video_error(self, ctx, error):
+        if isinstance(error, MissingRequiredArgument):
+            await ctx.send("You must include a search term with this command.\n"
+                           "Example: `$video dracula flow`\n\n"
+                           "Please use `$help video` for more information.")
+
     @command(help="Returns the summary of a given Wikipedia article\nExample: `$wiki Thelema`\n\n"
                   "This command has the following flags:\n"
                   "* **-f**: Used to retrieve the full text of the given article.\n"
