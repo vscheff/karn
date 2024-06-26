@@ -53,7 +53,7 @@ class DailyLoop(commands.Cog):
                            "* **-l**: List the categories currently being sent to this channel\n"
                            "\tExample: `$daily -l`\n"
                            "* **-m**: Add multiple categories in a comma-seperated list.\n"
-                           "\tExample: `$daily fact, wiki, word, xkcd`",
+                           "\tExample: `$daily -m fact, wiki, word, xkcd`",
                       brief="Send daily messages to a channel")
     async def daily(self, ctx, *, args):
         flags, args = get_flags(args)
@@ -145,7 +145,7 @@ class DailyLoop(commands.Cog):
     async def before_daily_loop(self):
         await self.bot.wait_until_ready()
 
-    async def daily_calvin(self, channel)
+    async def daily_calvin(self, channel):
         await channel.send(f"__**The Calvin and Hobbes strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="calvinandhobbes")
 
@@ -157,11 +157,11 @@ class DailyLoop(commands.Cog):
         await channel.send(f"__**The fact of the day is:**__")
         await self.bot.get_command("fact")(channel)
 
-    async def daily_garfield(self, channel)
+    async def daily_garfield(self, channel):
         await channel.send(f"__**The Garfield strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="garfield")
 
-    async def daily_peanutes(self, channel)
+    async def daily_peanuts(self, channel):
         await channel.send(f"__**The Peanuts strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="peanuts")
 
