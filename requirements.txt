@@ -1,3 +1,4 @@
+comics
 discord
 duckduckgo-search
 gtts
