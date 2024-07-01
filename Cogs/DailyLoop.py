@@ -48,6 +48,8 @@ class DailyLoop(commands.Cog):
                            "This command has the following flags:\n"
                            "* **-a**: Instructs the command to use all available categories\n"
                            "\tExample: `$daily -a`\n"
+                           "* **-c**: Change options for a different given server\n"
+                           "\tExample: `$daily -c #general garfield`\n"
                            "* **-d**: Stop sending messages from the given category\n"
                            "\tExample: `$daily -d word`\n"
                            "* **-l**: List the categories currently being sent to this channel\n"
@@ -56,30 +58,39 @@ class DailyLoop(commands.Cog):
                            "\tExample: `$daily -m fact, wiki, word, xkcd`",
                       brief="Send daily messages to a channel")
     async def daily(self, ctx, *, args):
-        flags, args = get_flags(args)
-        args = ' '.join(args).lower()
+        flags, args = get_flags(args.lower())
+
+        if 'c' in flags:
+            channel_id = args[0].strip("<#>")
+            query = ' '.join(args[1:])
+        else:
+            channel_id = ctx.channel.id
+            query = ' '.join(args)
 
         if 'm' in flags:
-            categories = [i.strip() for i in args.split(',')]
+            categories = [i.strip() for i in query.split(',')]
         elif 'a' in flags:
             categories = list(DESC.keys())
         else:
-            categories = [args]
+            categories = [query]
 
         cursor = get_cursor(self.conn)
-        cursor.execute("SELECT calvin, card, fact, garfield, peanuts, wiki, word, xkcd FROM Channels WHERE channel_id = %s", [ctx.channel.id])
+        cursor.execute("SELECT calvin, card, fact, garfield, peanuts, wiki, word, xkcd "
+                       "FROM Channels "
+                       "WHERE channel_id = %s",
+                       [channel_id])
         result = cursor.fetchall()
 
         if 'l' in flags:
             cursor.close()
 
             if not result or not any(i for i in result[0]):
-                return await ctx.send("I am not currently sending any daily messages to this channel.")
+                return await ctx.send(f"I am not currently sending any daily messages to <#{channel_id}>.")
 
             keys = list(DESC.keys())
             sending = [keys[i] for i in range(len(DESC)) if result[0][i]]
 
-            return await ctx.send(f"I am currently sending {build_cat_str(sending)} to this channel each day.")
+            return await ctx.send(f"I am currently sending {build_cat_str(sending)} to <#{channel_id}> each day.")
 
         update = bool(result)
         value = int('d' not in flags)
@@ -91,7 +102,7 @@ class DailyLoop(commands.Cog):
                 continue
 
             valid_categories.append(category)
-            val = [value, ctx.channel.id]
+            val = [value, channel_id]
 
             if update:
                 cursor.execute(f"UPDATE Channels SET {category} = %s WHERE channel_id = %s", val)
@@ -101,9 +112,10 @@ class DailyLoop(commands.Cog):
 
         if valid_categories:
             if value:
-                await ctx.send(f"I will now begin sending {build_cat_str(valid_categories)} to this channel each day.")
+                await ctx.send(f"I will now begin sending {build_cat_str(valid_categories)} "
+                               f"to <#{channel_id}> each day.")
             else:
-                await ctx.send(f"I will no longer send {build_cat_str(valid_categories)} to this channel.")
+                await ctx.send(f"I will no longer send {build_cat_str(valid_categories)} to <#{channel_id}>.")
 
         self.conn.commit()
         cursor.close()
@@ -130,14 +142,18 @@ class DailyLoop(commands.Cog):
             cursor.close()
             return 
             
-        cursor.execute("SELECT daily_hour, channel_id, calvin, card, fact, garfield, peanuts, wiki, word, xkcd FROM Channels")
+        cursor.execute("SELECT daily_hour, channel_id, calvin, card, fact, garfield, peanuts, wiki, word, xkcd "
+                       "FROM Channels")
 
         for hour, channel_id, *categories in cursor.fetchall():
             if hour != current_time.hour or not any(categories):
                 continue
 
             indexes = [i for i in range(len(categories)) if categories[i]]
-            await self.daily_funcs[choice(indexes)](self.bot.get_channel(channel_id))
+            try:
+                await self.daily_funcs[choice(indexes)](self.bot.get_channel(channel_id))
+            except AttributeError:
+                print(f"Unable to send daily message to channel with id: {channel_id}")
 
         cursor.close()
 

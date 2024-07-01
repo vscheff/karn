@@ -3,6 +3,7 @@
 
 from discord.ext import commands
 from dotenv import load_dotenv
+from mysql.connector.errors import InterfaceError
 from os import getenv
 import discord
 
@@ -27,7 +28,11 @@ bot = commands.Bot(command_prefix='$',
 # Add brief help text for the help command
 next(filter(lambda x: x.name == "help", bot.commands)).brief = "Shows this message"
 
-sql_connection = connect_to_sql_database()
+try:
+    sql_connection = connect_to_sql_database()
+except InterfaceError:
+    exit("Database connection failed.\nPlease ensure your .env file is correct.")
+
 
 # Runs when bot has successfully logged in
 # Note: This can and will be called multiple times during the bot's up-times
@@ -42,6 +47,7 @@ async def on_ready():
     for guild in bot.guilds:
         print(f"{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
 
+
 @bot.event
 async def on_message(msg):
     if msg.author.bot or not msg.content:
@@ -55,6 +61,7 @@ async def on_message(msg):
             await bot.get_cog("AI").send_reply(msg)
 
     bot.get_cog("Rating").rate_listener(msg)
+
 
 @bot.event
 async def on_command_error(ctx, error):
