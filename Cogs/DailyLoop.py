@@ -94,6 +94,7 @@ class DailyLoop(commands.Cog):
 
         update = bool(result)
         value = int('d' not in flags)
+        val = [value, channel_id]
         valid_categories = []
 
         for category in categories:
@@ -102,7 +103,6 @@ class DailyLoop(commands.Cog):
                 continue
 
             valid_categories.append(category)
-            val = [value, channel_id]
 
             if update:
                 cursor.execute(f"UPDATE Channels SET {category} = %s WHERE channel_id = %s", val)
