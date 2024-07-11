@@ -1,7 +1,7 @@
 from discord.ext.commands import Cog, command, MissingRequiredArgument
 from random import randint
 
-from utils import get_cursor, get_flags
+from utils import get_cursor, get_flags, package_message
 
 
 DEFAULT_HAT = "main"
@@ -203,8 +203,8 @@ class Hat(Cog):
         if not (result := cursor.fetchall()):
             await ctx.send(f"No items found in \"{hat}\". Try using the `$add` command first!")
         else:
-            await ctx.send(f"# {hat}")
-            await ctx.send('\n'.join(f"{i[1]}. {i[0][0]}" for i in zip(result, range(len(result)))))
+            message = f"# {hat}\n" + '\n'.join(f"{i[1]}. {i[0][0]}" for i in zip(result, range(len(result))))
+            await package_message(message, ctx)
 
         cursor.close()
 
