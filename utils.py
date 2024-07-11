@@ -13,6 +13,8 @@ FILEPATH = './files/msg.txt'
 SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
 TTS_TEMP_FILE = "./files/output.mp3"
 
+MAX_MSG_LEN = 2000
+
 # Ensures the SQL database is still connected, and returns a cursor from that connection
 def get_cursor(conn):
     try:
@@ -51,7 +53,7 @@ def get_supported_filetype(images, randomize=True):
 def is_supported_filetype(filename):
     return (match := search(r"\.[a-zA-z\d]+\Z", filename)) and match.group() in SUPPORTED_FILE_FORMATS
 
-async def package_message(obj, ctx):
+async def package_message(obj, ctx, multi_send=False):
     if isinstance(obj, (int, float)):
         obj = str(obj)
     elif isinstance(obj, (list, set, tuple)):
@@ -59,16 +61,33 @@ async def package_message(obj, ctx):
     elif isinstance(obj, dict):
         obj = ', '.join([str(i) for i in obj.items()])
 
-    if len(obj) > 2000:
-        with open(FILEPATH, 'w', encoding='utf8') as msg_file:
-            msg_file.write(obj)
-        if os.path.exists(FILEPATH):
-            await ctx.send(file=discord.File(FILEPATH))
-            os.remove(FILEPATH)
-        else:
-            print('Error occurred while packaging message. Temp file not created/deleted.')
-    else:
+    if len(obj) <= MAX_MSG_LEN:
         await ctx.send(obj)
+
+        return
+
+    if multi_send:
+        i = 0
+        while i < len(obj):
+            end_index = i + MAX_MSG_LEN
+
+            if end_index <= len(obj):
+                end_index = obj[i:i + MAX_MSG_LEN].rfind('\n')
+                end_index = MAX_MSG_LEN if end_index == -1 else end_index
+
+            await ctx.send(obj[i:i + end_index])
+            i += end_index + 1
+
+        return
+
+    with open(FILEPATH, 'w', encoding='utf8') as msg_file:
+        msg_file.write(obj)
+    if os.path.exists(FILEPATH):
+        await ctx.send(file=discord.File(FILEPATH))
+        os.remove(FILEPATH)
+    else:
+        print('Error occurred while packaging message. Temp file not created/deleted.')
+
 
 async def send_tts_if_in_vc(bot, author, text):
     for client in bot.voice_clients:

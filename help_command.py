@@ -18,10 +18,11 @@ class CustomHelpCommand(HelpCommand):
             # Only include this cog if it has at least one public command
             if command_list := self.get_command_list(commands):
                 if cog:
-                    cog_list.append(f"**{cog.qualified_name}**:\n{command_list}")
+                    cog_list.append(f"# {cog.qualified_name}\n{command_list}")
                 else:
-                    cog_list.append(f"**Miscellaneous**:\n{command_list}")
-        await package_message('\n'.join(cog_list), self.get_destination())
+                    cog_list.append(f"# Miscellaneous\n{command_list}")
+
+        await package_message('\n'.join(cog_list), self.get_destination(), multi_send=True)
 
     # Called when user gives the $help {cog_name} command
     # param cog - the cog that was requested for help
@@ -38,5 +39,5 @@ class CustomHelpCommand(HelpCommand):
 
     def get_command_list(self, commands):
         if self.context.author.guild_permissions.administrator:
-            return '\n'.join(sorted([f"    *{i.name}* - {i.brief}" for i in commands]))
-        return '\n'.join(sorted([f"    *{i.name}* - {i.brief}" for i in commands if not i.hidden]))
+            return '* ' + "\n* ".join(sorted([f"*{i.name}* - {i.brief}" for i in commands]))
+        return '* ' + "\n* ".join(sorted([f"*{i.name}* - {i.brief}" for i in commands if not i.hidden]))
