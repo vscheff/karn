@@ -203,8 +203,8 @@ class Hat(Cog):
         if not (result := cursor.fetchall()):
             await ctx.send(f"No items found in \"{hat}\". Try using the `$add` command first!")
         else:
-            message = f"# {hat}\n" + '\n'.join(f"{i[1]}. {i[0][0]}" for i in zip(result, range(len(result))))
-            await package_message(message, ctx)
+            message = f"# {hat}\n" + '\n'.join(f"{i[1]}. {i[0][0]}" for i in zip(result, range(1, len(result) + 1)))
+            await package_message(message, ctx, multi_send=True)
 
         cursor.close()
 
