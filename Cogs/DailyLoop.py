@@ -12,7 +12,7 @@ WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 
 WORDNIK_URL = "https://api.wordnik.com/v4/words.json/wordOfTheDay"
 
-DESC = {"calvin": "a Cavlin & Hobbes comic",
+DESC = {"calvin": "a Calvin & Hobbes comic",
         "card": "a Magic: The Gathering card",
         "fact": "a fact of the day",
         "garfield": "a Garfield comic",

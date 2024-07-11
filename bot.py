@@ -65,8 +65,13 @@ async def on_message(msg):
 
 @bot.event
 async def on_command_error(ctx, error):
+    try:
+        author = f"{ctx.author} (a.k.a {ctx.author.nick})"
+    except AttributeError:
+        author = f"{ctx.author}"
+
     print(f"\nCommand error triggered\n"
-          f"\t Author: {ctx.author} (a.k.a {ctx.author.nick})\n"
+          f"\t Author: {author}\n"
           f"\t  Guild: {ctx.guild}\n"
           f"\tChannel: {ctx.message.channel}\n"
           f"\tMessage: {ctx.message.content}\n"
