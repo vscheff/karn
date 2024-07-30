@@ -210,9 +210,16 @@ class AI(Cog):
             try:
                 chat = await self.client.chat.completions.create(**openai_kwargs)
             except APIError as e:
-                if not kwargs.get("prompted", False):
+                if kwargs.get("prompted") is not False:
                     await ctx.send("Sorry I am unable to assist currently. Please try again later.")
                 print(f"\nOpenAI request failed with error:\n{e}\n")
+                return
+
+        # Prevent bot from sending unprompted messages that are not helpful
+        if kwargs.get("prompted") is False:
+            # https://regex101.com/r/8MiYow/1
+            if search(r"If you need any assistance or|[Ff]eel free to|If you have any|[Ll]et me know|I'm sorry, but I",
+                      chat.choices[0].message.content):
                 return
 
         # Re-import self descriptors if the file has been modified since we last imported
