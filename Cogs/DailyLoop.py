@@ -1,12 +1,16 @@
 from datetime import datetime, date
 from discord.ext import commands, tasks
 from json import loads, decoder
+from logging import basicConfig, getLogger, WARNING
 from os import getenv
 from random import choice, sample
 from requests import get
 from re import sub
 
 from utils import get_cursor, get_flags
+
+LOGGER = getLogger(__name__)
+basicConfig(filename="logs/DailyLoop.log", filemode='w', level=WARNING)
 
 WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 
@@ -40,7 +44,7 @@ class DailyLoop(commands.Cog):
                            "* *card*: Sends a random Magic: The Gathering card\n"
                            "* *fact*: Sends a random fact\n"
                            "* *garfield*: Sends a random Garfield comic\n"
-                           "* *peanuts*: Sends a random Peantus comic\n"
+                           "* *peanuts*: Sends a random Peanuts comic\n"
                            "* *wiki*: Sends a random Wikipedia article\n"
                            "* *word*: Sends a random word and its definition\n"
                            "* *xkcd*: Sends a random XKCD comic\n"
@@ -48,14 +52,16 @@ class DailyLoop(commands.Cog):
                            "This command has the following flags:\n"
                            "* **-a**: Instructs the command to use all available categories\n"
                            "\tExample: `$daily -a`\n"
-                           "* **-c**: Change options for a different given server\n"
+                           "* **-c**: Change options for a different given channel\n"
                            "\tExample: `$daily -c #general garfield`\n"
                            "* **-d**: Stop sending messages from the given category\n"
                            "\tExample: `$daily -d word`\n"
                            "* **-l**: List the categories currently being sent to this channel\n"
                            "\tExample: `$daily -l`\n"
                            "* **-m**: Add multiple categories in a comma-seperated list.\n"
-                           "\tExample: `$daily -m fact, wiki, word, xkcd`",
+                           "\tExample: `$daily -m fact, wiki, word, xkcd`\n"
+                           "* **-t**: Trigger the immediate retrieval of a daily item in this channel.\n"
+                           "\tExample: `$daily -t`",
                       brief="Send daily messages to a channel")
     async def daily(self, ctx, *, args):
         flags, args = get_flags(args.lower())
@@ -66,6 +72,10 @@ class DailyLoop(commands.Cog):
         else:
             channel_id = ctx.channel.id
             query = ' '.join(args)
+
+        if 't' in flags:
+            await self.daily_loop(triggered=True, channel_id=channel_id)
+            return
 
         if 'm' in flags:
             categories = [i.strip() for i in query.split(',')]
@@ -128,12 +138,12 @@ class DailyLoop(commands.Cog):
                            "Please use `$help daily` for more information.")
 
     @tasks.loop(hours=1)
-    async def daily_loop(self):
+    async def daily_loop(self, **kwargs):
         current_time = datetime.now()
-        
         cursor = get_cursor(self.conn)
+        triggered = kwargs.get("triggered", False)
 
-        if not current_time.hour:
+        if not (current_time.hour or triggered):
             cursor.execute("SELECT channel_id FROM Channels")
             for channel, in cursor.fetchall():
                 val = [get_pseudo_rand_hour(), channel]
@@ -144,6 +154,34 @@ class DailyLoop(commands.Cog):
             
         cursor.execute("SELECT daily_hour, channel_id, calvin, card, fact, garfield, peanuts, wiki, word, xkcd "
                        "FROM Channels")
+
+        if triggered:
+            if (output_channel := kwargs.get("channel_id")) is None:
+                raise AttributeError
+
+            channel = self.bot.get_channel(output_channel)
+
+            for hour, channel_id, *categories in cursor.fetchall():
+                if channel_id != output_channel:
+                    continue
+
+                if not any(categories):
+                    await channel.send("This channel is not current configured to receive any daily messages.\n"
+                                       "Try adding some categories to this channel first.\n"
+                                       "Please use `$help daily` for more information.")
+                    return
+
+                indexes = [i for i in range(len(categories)) if categories[i]]
+
+                await self.daily_funcs[choice(indexes)](channel)
+
+                return
+
+            await channel.send("This channel is not current configured to receive any daily messages.\n"
+                               "Try adding some categories to this channel first.\n"
+                               "Please use `$help daily` for more information.")
+
+            return
 
         for hour, channel_id, *categories in cursor.fetchall():
             if hour != current_time.hour or not any(categories):
@@ -162,30 +200,37 @@ class DailyLoop(commands.Cog):
         await self.bot.wait_until_ready()
 
     async def daily_calvin(self, channel):
+        LOGGER.warning(f"Calvin Called [{datetime.now()}]")
         await channel.send(f"__**The Calvin and Hobbes strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="calvinandhobbes")
 
     async def daily_card(self, channel):
+        LOGGER.warning(f"Card Called [{datetime.now()}]")
         await channel.send(f"__**The MtG card of the day is:**__")
         await self.bot.get_command("card")(channel, args="-r")
 
     async def daily_fact(self, channel):
+        LOGGER.warning(f"Fact Called [{datetime.now()}]")
         await channel.send(f"__**The fact of the day is:**__")
         await self.bot.get_command("fact")(channel)
 
     async def daily_garfield(self, channel):
+        LOGGER.warning(f"Garfield Called [{datetime.now()}]")
         await channel.send(f"__**The Garfield strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="garfield")
 
     async def daily_peanuts(self, channel):
+        LOGGER.warning(f"Peanuts Called [{datetime.now()}]")
         await channel.send(f"__**The Peanuts strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="peanuts")
 
     async def daily_wiki(self, channel):
+        LOGGER.warning(f"Wiki Called [{datetime.now()}]")
         await channel.send(f"__**The Wikipedia article of the day is:**__")
         await self.bot.get_command("wiki")(channel, args="-r")
 
     async def daily_word(self, channel):
+        LOGGER.warning(f"Word Called [{datetime.now()}]")
         response = get(WORDNIK_URL, params={"date": date.today(), "api_key": WORDNIK_API_KEY})
         try:
             api_response = loads(response.text)
@@ -207,6 +252,7 @@ class DailyLoop(commands.Cog):
                   f"Status Code: {response.status_code}\n")
 
     async def daily_xkcd(self, channel):
+        LOGGER.warning(f"XKCD Called [{datetime.now()}]")
         await channel.send(f"__**The xkcd comic of the day is:**__")
         await self.bot.get_command("xkcd")(channel, args="-r")
 
