@@ -263,8 +263,10 @@ class Query(Cog):
                 options = "\n* ".join(e.options)
                 return await ctx.send(f"\"{title}\" may refer to:\n* {options}\n\n"
                                       f"Please repeat the search using one of the options listed above.")
-
-            result = page(choice(e.options))
+            try:
+                result = page(choice(e.options))
+            except DisambiguationError:
+                return await self.wiki(ctx, args)
 
         if 'i' in flags:
             supported_images = []
