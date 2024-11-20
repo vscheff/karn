@@ -6,7 +6,7 @@ from openai import APIError, AsyncOpenAI
 from os import getenv, stat
 from os.path import exists
 from random import choice, randint
-from re import search, sub
+from re import IGNORECASE, search, sub
 from tiktoken import encoding_for_model
 
 # Local dependencies
@@ -413,8 +413,11 @@ class AI(Cog):
                 self.get_rude_messages()
                 self.rude_mtime = last_mod
 
+            clean_lower = msg.clean_content.lower()
+
             # If the message contains a rude phrase, reply with a response to rude messages
-            if any(i in msg.clean_content.lower() for i in self.rude_messages):
+            # https://regex101.com/r/isXc6g/1
+            if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE) for i in self.rude_messages):
                 reply = get_random_response()
                 await msg.channel.send(reply)
                 await send_tts_if_in_vc(self.bot, msg.author, reply)
@@ -426,7 +429,7 @@ class AI(Cog):
                 self.nice_mtime = last_mod
 
             # If the message contains a nice phrase, reply with a response to nice messages
-            if any(i in msg.clean_content.lower() for i in self.nice_messages):
+            if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE) for i in self.nice_messages):
                 reply = get_random_response(False)
                 await msg.channel.send(reply)
                 await send_tts_if_in_vc(self.bot, msg.author, reply)
