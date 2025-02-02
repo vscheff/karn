@@ -4,16 +4,23 @@ from gtts import gTTS
 from mysql.connector.errors import OperationalError
 from openai import OpenAI
 import os
-from random import randint
+from random import choices, randint
 from re import search
+from string import ascii_letters, digits
 
 OPENAI_CLIENT = OpenAI(api_key=os.getenv("CHATGPT_TOKEN"), organization=os.getenv("CHATGPT_ORG"))
 
 FILEPATH = './files/msg.txt'
 SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
-TTS_TEMP_FILE = "./files/output.mp3"
+TTS_TEMP_PATH = "./TEMP/"
+TTS_RAND_STR_LEN = 8
 
 MAX_MSG_LEN = 2000
+
+SUPPORTED_VOICES = ("alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer")
+SUPPORTED_SPEEDS = (0.25, 4.0)
+DEFAULT_TTS_VOICE = "onyx"
+DEFAULT_TTS_SPEED = 1.1
 
 # Ensures the SQL database is still connected, and returns a cursor from that connection
 def get_cursor(conn):
@@ -23,20 +30,27 @@ def get_cursor(conn):
         conn.connect()
         return conn.cursor()
 
-def get_flags(args, join=False):
+def get_flags(args, join=False, make_dic=False):
     arg_list = args.split()
     flags = []
     not_flags = []
+    flag_dic = {}
 
     while arg_list:
         arg = arg_list.pop(0)
         if arg[0] == '-':
-            flags.extend([i.lower() for i in arg[1:]])
+            if len(arg) == 2 and make_dic:
+                flag_dic[arg[1]] = arg_list.pop(0)
+            else:
+                flags.extend([i.lower() for i in arg[1:]])
         else:
             not_flags.append(arg)
 
     if join:
         not_flags = ' '.join(not_flags)
+
+    if make_dic:
+        return flag_dic, not_flags
 
     return flags, not_flags
 
@@ -94,8 +108,11 @@ async def send_tts_if_in_vc(bot, author, text):
         if client.channel == author.voice.channel:
             await text_to_speech(text, client)
 
-async def text_to_speech(text, client):
-    response = OPENAI_CLIENT.audio.speech.create(model="tts-1", voice="onyx", input=text)
+async def text_to_speech(text, client, voice=DEFAULT_TTS_VOICE, speed=DEFAULT_TTS_SPEED):
+    response = OPENAI_CLIENT.audio.speech.create(model="tts-1", input=text, voice=voice, speed=speed)
+    
+    TTS_TEMP_FILE = f"{TTS_TEMP_PATH}output_{''.join(choices(ascii_letters + digits, k=TTS_RAND_STR_LEN))}.mp3"
+
     response.stream_to_file(TTS_TEMP_FILE)
 
     while client.is_playing():

@@ -10,6 +10,7 @@ from re import IGNORECASE, search, sub
 from tiktoken import encoding_for_model
 
 # Local dependencies
+from utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES
 from utils import get_cursor, get_flags, package_message, send_tts_if_in_vc, text_to_speech
 
 
@@ -152,11 +153,35 @@ class AI(Cog):
             if len(client.channel.members) < 2:
                 await client.disconnect()
 
-    @command(help="Command the bot to say something in your voice channel",
+    @command(help=f"Command the bot to say something in your voice channel.\n"
+             f"Example: `$say Life is Mizzy`\n\n"
+             f"This command has the following flags:\n"
+             f"* **-s**: Specify the playback speed. Must be in range [0.25, 4.0].\n"
+             f"\tExample: `$say -s 1.33 Say this faster`\n"
+             f"* **-v**: Specify the voice to use. Supported voices include: {', '.join(SUPPORTED_VOICES)}.\n"
+             f"\tExample: `$say -v shimmer I sound.... different somehow`",
              brief="Say something in a voice channel")
     async def say(self, ctx, *, args):
         if not ctx.author.voice:
             await ctx.send("You must currently be in a voice channel to use this command.")
+            return
+
+        flags, not_flags = get_flags(args, join=True, make_dic=True)
+
+        voice = flags.get('v', DEFAULT_TTS_VOICE).lower()
+
+        if voice not in SUPPORTED_VOICES:
+            await ctx.send("The selected voice is not supported.\nPlease use `$help say` for a list of supported voices.")
+            return
+
+        try:
+            speed = float(flags.get('s', DEFAULT_TTS_SPEED))
+        except ValueError:
+            await ctx.send("You must use a real number in the range [0.25, 4.0] for speed.\nPlease use `$help say` for more information.")
+            return
+
+        if not SUPPORTED_SPEEDS[0] <= speed <= SUPPORTED_SPEEDS[1]:
+            await ctx.send("You must use a real number in the range [0.25, 4.0] for speed.\nPlease use `$help say` for more information.")
             return
 
         temp_join = False
@@ -165,7 +190,7 @@ class AI(Cog):
             await self.join(ctx)
             temp_join = True
 
-        await text_to_speech(args, ctx.message.guild.voice_client)
+        await text_to_speech(not_flags, ctx.message.guild.voice_client, voice=voice, speed=speed)
 
         if temp_join:
             while ctx.message.guild.voice_client.is_playing():
