@@ -159,7 +159,7 @@ class AI(Cog):
              f"* **-s**: Specify the playback speed. Must be in range [0.25, 4.0].\n"
              f"\tExample: `$say -s 1.33 Say this faster`\n"
              f"* **-v**: Specify the voice to use. Supported voices include: {', '.join(SUPPORTED_VOICES)}.\n"
-             f"\tExample: `$say -v shimmer I sound.... different somehow`",
+             f"\tExample: `$say -v shimmer I sound... different somehow`",
              brief="Say something in a voice channel")
     async def say(self, ctx, *, args):
         if not ctx.author.voice:

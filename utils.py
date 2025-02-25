@@ -20,7 +20,7 @@ MAX_MSG_LEN = 2000
 SUPPORTED_VOICES = ("alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer")
 SUPPORTED_SPEEDS = (0.25, 4.0)
 DEFAULT_TTS_VOICE = "onyx"
-DEFAULT_TTS_SPEED = 1.1
+DEFAULT_TTS_SPEED = 1.05
 
 # Ensures the SQL database is still connected, and returns a cursor from that connection
 def get_cursor(conn):
