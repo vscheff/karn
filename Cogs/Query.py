@@ -20,9 +20,9 @@ from utils import get_flags, is_supported_filetype, get_supported_filetype, pack
 DEFAULT_RESULT_COUNT = 1
 
 # $card constants
-FACE_0 = "./img/face_0.png"
-FACE_1 = "./img/face_1.png"
-OUTPUT_PNG = "./img/output.png"
+FACE_0 = "./TEMP/face_0.png"
+FACE_1 = "./TEMP/face_1.png"
+OUTPUT_PNG = "./TEMP/output.png"
 SCRYFALL_URL = "https://api.scryfall.com/cards"
 
 # $define constants
