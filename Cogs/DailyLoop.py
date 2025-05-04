@@ -139,6 +139,8 @@ class DailyLoop(commands.Cog):
 
     @tasks.loop(hours=1)
     async def daily_loop(self, **kwargs):
+        LOGGER.warning(f"Daily Loop Called [{datetime.now()}]")
+        
         current_time = datetime.now()
         cursor = get_cursor(self.conn)
         triggered = kwargs.get("triggered", False)
@@ -187,7 +189,9 @@ class DailyLoop(commands.Cog):
             if hour != current_time.hour or not any(categories):
                 continue
 
+            LOGGER.warning(f"Attempting to send daily message to {channel_id} [{datetime.now()}]")
             indexes = [i for i in range(len(categories)) if categories[i]]
+            
             try:
                 await self.daily_funcs[choice(indexes)](self.bot.get_channel(channel_id))
             except AttributeError:
