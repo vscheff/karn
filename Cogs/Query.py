@@ -1,5 +1,3 @@
-from comics import directory, search
-from comics.exceptions import InvalidEndpointError
 from copy import deepcopy
 from discord import Embed, File
 from discord.ext.commands import Cog, command, MissingRequiredArgument
@@ -75,31 +73,6 @@ class Query(Cog):
             await ctx.send("You must include a card name or search query with this command.\n"
                            "Example: `$card nekusar`\n\n"
                            "Please use `$help card` for more information.")
-
-    @command(help="Returns a random comic strip from a given Comic name.\n"
-                  "Example: `$comic Garfield`",
-             brief="Returns a random comic strip")
-    async def comic(self, ctx, *, args):
-        flags, query = get_flags(args, join=True)
-        
-        try:
-            comic = search(query).random_date()
-        except InvalidEndpointError:
-            if not (results := directory.search(query)):
-                await ctx.send(f"Unknown comic: {query}\nAvailable comics include:")
-                await package_message("* " + "\n* ".join(directory.listall()), ctx)
-                return
-            
-            comic = search(results[0]).random_date()
-
-        await ctx.send(comic.image_url)
-
-    @comic.error
-    async def comic_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
-            await ctx.send("You must include a comic name with this command.\n"
-                           "Example: `$comic Calvin and Hobbes`\n\n"
-                           "Please use `$help comic` for more information.")
 
     @command(help="Returns definitions for a given word\nExample: `$define love`",
              brief="Returns definitions for a given word")

@@ -16,11 +16,8 @@ WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 
 WORDNIK_URL = "https://api.wordnik.com/v4/words.json/wordOfTheDay"
 
-DESC = {"calvin": "a Calvin & Hobbes comic",
-        "card": "a Magic: The Gathering card",
+DESC = {"card": "a Magic: The Gathering card",
         "fact": "a fact of the day",
-        "garfield": "a Garfield comic",
-        "peanuts": "a Peanuts comic",
         "wiki": "a Wikipedia article",
         "word": "a word of the day",
         "xkcd": "an XKCD comic"}
@@ -32,19 +29,18 @@ class DailyLoop(commands.Cog):
         self.bot = bot
         self.conn = conn
 
-        self.daily_funcs = (self.daily_calvin, self.daily_card, self.daily_fact, 
-                            self.daily_garfield, self.daily_peanuts, self.daily_wiki, 
+        self.daily_funcs = (self.daily_card, self.daily_fact, 
+                            self.daily_wiki, 
                             self.daily_word, self.daily_xkcd)
 
+        LOGGER.warning(f"Daily Loop Started [{datetime.now()}]")
+        
         self.daily_loop.start()
 
     @commands.command(help="Have daily messages sent to this channel.\n"
                            "Message categories include:\n"
-                           "* *calvin*: Sends a random Calvin & Hobbes comic\n"
                            "* *card*: Sends a random Magic: The Gathering card\n"
                            "* *fact*: Sends a random fact\n"
-                           "* *garfield*: Sends a random Garfield comic\n"
-                           "* *peanuts*: Sends a random Peanuts comic\n"
                            "* *wiki*: Sends a random Wikipedia article\n"
                            "* *word*: Sends a random word and its definition\n"
                            "* *xkcd*: Sends a random XKCD comic\n"
@@ -85,7 +81,7 @@ class DailyLoop(commands.Cog):
             categories = [query]
 
         cursor = get_cursor(self.conn)
-        cursor.execute("SELECT calvin, card, fact, garfield, peanuts, wiki, word, xkcd "
+        cursor.execute("SELECT card, fact, wiki, word, xkcd "
                        "FROM Channels "
                        "WHERE channel_id = %s",
                        [channel_id])
@@ -154,7 +150,7 @@ class DailyLoop(commands.Cog):
             cursor.close()
             return 
             
-        cursor.execute("SELECT daily_hour, channel_id, calvin, card, fact, garfield, peanuts, wiki, word, xkcd "
+        cursor.execute("SELECT daily_hour, channel_id, card, fact, wiki, word, xkcd "
                        "FROM Channels")
 
         if triggered:
@@ -203,11 +199,6 @@ class DailyLoop(commands.Cog):
     async def before_daily_loop(self):
         await self.bot.wait_until_ready()
 
-    async def daily_calvin(self, channel):
-        LOGGER.warning(f"Calvin Called [{datetime.now()}]")
-        await channel.send(f"__**The Calvin and Hobbes strip of the day is:**__")
-        await self.bot.get_command("comic")(channel, args="calvinandhobbes")
-
     async def daily_card(self, channel):
         LOGGER.warning(f"Card Called [{datetime.now()}]")
         await channel.send(f"__**The MtG card of the day is:**__")
@@ -217,16 +208,6 @@ class DailyLoop(commands.Cog):
         LOGGER.warning(f"Fact Called [{datetime.now()}]")
         await channel.send(f"__**The fact of the day is:**__")
         await self.bot.get_command("fact")(channel)
-
-    async def daily_garfield(self, channel):
-        LOGGER.warning(f"Garfield Called [{datetime.now()}]")
-        await channel.send(f"__**The Garfield strip of the day is:**__")
-        await self.bot.get_command("comic")(channel, args="garfield")
-
-    async def daily_peanuts(self, channel):
-        LOGGER.warning(f"Peanuts Called [{datetime.now()}]")
-        await channel.send(f"__**The Peanuts strip of the day is:**__")
-        await self.bot.get_command("comic")(channel, args="peanuts")
 
     async def daily_wiki(self, channel):
         LOGGER.warning(f"Wiki Called [{datetime.now()}]")
