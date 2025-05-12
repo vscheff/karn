@@ -1,4 +1,4 @@
-comics
+comics >= 0.7.0
 discord
 duckduckgo-search
 gtts

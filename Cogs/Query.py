@@ -83,7 +83,7 @@ class Query(Cog):
         flags, query = get_flags(args, join=True)
         
         try:
-            comic = search(query).random_date()
+            comic = search(query, date="random")
         except InvalidEndpointError:
             if not (results := directory.search(query)):
                 await ctx.send(f"Unknown comic: {query}\nAvailable comics include:")
