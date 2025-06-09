@@ -6,7 +6,7 @@ from random import choice, sample
 from requests import get
 from re import sub
 
-from utils import get_cursor, get_flags
+from utils import get_cursor, get_flags, package_message
 from tips import TIP_LIST
 
 WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
@@ -222,7 +222,7 @@ class DailyLoop(commands.Cog):
 
     async def daily_tip(self, channel):
         await channel.send(f"__**The tip of the day is:**__")
-        await channel.send(choice(TIP_LIST))
+        await package_message(choice(TIP_LIST), channel, multi_send=True)
 
     async def daily_wiki(self, channel):
         await channel.send(f"__**The Wikipedia article of the day is:**__")
