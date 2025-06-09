@@ -152,7 +152,7 @@ class DailyLoop(commands.Cog):
             cursor.close()
             return 
             
-        cursor.execute("SELECT daily_hour, channel_id, calvin, card, fact, garfield, peanuts, wiki, word, xkcd "
+        cursor.execute("SELECT daily_hour, channel_id, calvin, card, fact, garfield, peanuts, tip, wiki, word, xkcd "
                        "FROM Channels")
 
         if triggered:
