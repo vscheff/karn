@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from asyncio import sleep
 from discord import ClientException
 from discord.ext.tasks import loop
@@ -1014,4 +1013,3 @@ def get_random_response(rude=True):
 
     with open(filepath, 'r') as in_file:
         return choice(in_file.readlines())
->>>>>>> 28e7a0b4c03da947d707b5abc26414eff4b2aaf1
