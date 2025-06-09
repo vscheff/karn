@@ -20,9 +20,9 @@ from utils import get_flags, is_supported_filetype, get_supported_filetype, pack
 DEFAULT_RESULT_COUNT = 1
 
 # $card constants
-FACE_0 = "./img/face_0.png"
-FACE_1 = "./img/face_1.png"
-OUTPUT_PNG = "./img/output.png"
+FACE_0 = "./TEMP/face_0.png"
+FACE_1 = "./TEMP/face_1.png"
+OUTPUT_PNG = "./TEMP/output.png"
 SCRYFALL_URL = "https://api.scryfall.com/cards"
 
 # $define constants
@@ -83,7 +83,7 @@ class Query(Cog):
         flags, query = get_flags(args, join=True)
         
         try:
-            comic = search(query).random_date()
+            comic = search(query, date="random")
         except InvalidEndpointError:
             if not (results := directory.search(query)):
                 await ctx.send(f"Unknown comic: {query}\nAvailable comics include:")
@@ -263,8 +263,10 @@ class Query(Cog):
                 options = "\n* ".join(e.options)
                 return await ctx.send(f"\"{title}\" may refer to:\n* {options}\n\n"
                                       f"Please repeat the search using one of the options listed above.")
-
-            result = page(choice(e.options))
+            try:
+                result = page(choice(e.options))
+            except DisambiguationError:
+                return await self.wiki(ctx, args)
 
         if 'i' in flags:
             supported_images = []
