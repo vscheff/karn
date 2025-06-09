@@ -1,6 +1,6 @@
 TIP_LIST = [
 "To view all available commands, use the `$help` command.",
-"Many of my commands feature command flags you can use to modify/extend the capabilities of a given command.",
+"Many of my commands feature command flags you can use to modify/extend the capabilities of a given command. To view all command flags for a given command use the `$help` command with the given command as an argument.\nExample: `$help daily`.",
 "Not sure what a command does? You can use the `$help` command to learn more about how a command works. Simply use a given command name as an argument with the `$help` command.\nExample: `$help daily` will show you how to use the `$daily` command.",
 "You can modify my system context to adjust my personality. Each channel has a unique system context message, which means you can adjust my personality differently for each channel.\nUse `$view_context` to view my current system context message for this channel.\nUse `$set_context` to overwrite my current system context message with a new one.\nUse `$add_context` to add additional content to my current system context message.",
 "Whenever you send a message that includes my name, I will generate and send a response using my LLM. If you would like to use the LLM to generate a response without using my name, you can use the `$prompt` command.",
