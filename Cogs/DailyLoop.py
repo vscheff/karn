@@ -7,6 +7,7 @@ from requests import get
 from re import sub
 
 from utils import get_cursor, get_flags
+from tips import TIP_LIST
 
 WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 
@@ -17,6 +18,7 @@ DESC = {"calvin": "a Calvin & Hobbes comic",
         "fact": "a fact of the day",
         "garfield": "a Garfield comic",
         "peanuts": "a Peanuts comic",
+        "tip": "a tip for using Karn",
         "wiki": "a Wikipedia article",
         "word": "a word of the day",
         "xkcd": "an XKCD comic"}
@@ -29,8 +31,8 @@ class DailyLoop(commands.Cog):
         self.conn = conn
 
         self.daily_funcs = (self.daily_calvin, self.daily_card, self.daily_fact, 
-                            self.daily_garfield, self.daily_peanuts, self.daily_wiki, 
-                            self.daily_word, self.daily_xkcd)
+                            self.daily_garfield, self.daily_peanuts, self.daily_tip,
+                            self.daily_wiki, self.daily_word, self.daily_xkcd)
 
         self.daily_loop.start()
 
@@ -41,6 +43,7 @@ class DailyLoop(commands.Cog):
                            "* *fact*: Sends a random fact\n"
                            "* *garfield*: Sends a random Garfield comic\n"
                            "* *peanuts*: Sends a random Peantus comic\n"
+                           "* *tip*: Sends a tip for using Karn\n"
                            "* *wiki*: Sends a random Wikipedia article\n"
                            "* *word*: Sends a random word and its definition\n"
                            "* *xkcd*: Sends a random XKCD comic\n"
@@ -75,7 +78,7 @@ class DailyLoop(commands.Cog):
             categories = [query]
 
         cursor = get_cursor(self.conn)
-        cursor.execute("SELECT calvin, card, fact, garfield, peanuts, wiki, word, xkcd "
+        cursor.execute("SELECT calvin, card, fact, garfield, peanuts, tip, wiki, word, xkcd "
                        "FROM Channels "
                        "WHERE channel_id = %s",
                        [channel_id])
@@ -180,6 +183,10 @@ class DailyLoop(commands.Cog):
     async def daily_peanuts(self, channel):
         await channel.send(f"__**The Peanuts strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="peanuts")
+
+    async def daily_tip(self, channel):
+        await channel.send(f"__**The tip of the day is:**__")
+        await channel.send(choice(TIP_LIST))
 
     async def daily_wiki(self, channel):
         await channel.send(f"__**The Wikipedia article of the day is:**__")
