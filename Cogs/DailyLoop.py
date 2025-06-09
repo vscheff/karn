@@ -1,7 +1,6 @@
 from datetime import datetime, date
 from discord.ext import commands, tasks
 from json import loads, decoder
-from logging import basicConfig, getLogger, WARNING
 from os import getenv
 from random import choice, sample
 from requests import get
@@ -9,9 +8,6 @@ from re import sub
 
 from utils import get_cursor, get_flags
 from tips import TIP_LIST
-
-LOGGER = getLogger(__name__)
-basicConfig(filename="logs/DailyLoop.log", filemode='w', level=WARNING)
 
 WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 
@@ -46,12 +42,9 @@ class DailyLoop(commands.Cog):
                            "* *card*: Sends a random Magic: The Gathering card\n"
                            "* *fact*: Sends a random fact\n"
                            "* *garfield*: Sends a random Garfield comic\n"
-<<<<<<< HEAD
                            "* *peanuts*: Sends a random Peantus comic\n"
                            "* *tip*: Sends a tip for using Karn\n"
-=======
                            "* *peanuts*: Sends a random Peanuts comic\n"
->>>>>>> 28e7a0b4c03da947d707b5abc26414eff4b2aaf1
                            "* *wiki*: Sends a random Wikipedia article\n"
                            "* *word*: Sends a random word and its definition\n"
                            "* *xkcd*: Sends a random XKCD comic\n"
@@ -146,8 +139,6 @@ class DailyLoop(commands.Cog):
 
     @tasks.loop(hours=1)
     async def daily_loop(self, **kwargs):
-        LOGGER.warning(f"Daily Loop Called [{datetime.now()}]")
-        
         current_time = datetime.now()
         cursor = get_cursor(self.conn)
         triggered = kwargs.get("triggered", False)
@@ -196,7 +187,6 @@ class DailyLoop(commands.Cog):
             if hour != current_time.hour or not any(categories):
                 continue
 
-            LOGGER.warning(f"Attempting to send daily message to {channel_id} [{datetime.now()}]")
             indexes = [i for i in range(len(categories)) if categories[i]]
             
             try:
@@ -211,27 +201,22 @@ class DailyLoop(commands.Cog):
         await self.bot.wait_until_ready()
 
     async def daily_calvin(self, channel):
-        LOGGER.warning(f"Calvin Called [{datetime.now()}]")
         await channel.send(f"__**The Calvin and Hobbes strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="calvinandhobbes")
 
     async def daily_card(self, channel):
-        LOGGER.warning(f"Card Called [{datetime.now()}]")
         await channel.send(f"__**The MtG card of the day is:**__")
         await self.bot.get_command("card")(channel, args="-r")
 
     async def daily_fact(self, channel):
-        LOGGER.warning(f"Fact Called [{datetime.now()}]")
         await channel.send(f"__**The fact of the day is:**__")
         await self.bot.get_command("fact")(channel)
 
     async def daily_garfield(self, channel):
-        LOGGER.warning(f"Garfield Called [{datetime.now()}]")
         await channel.send(f"__**The Garfield strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="garfield")
 
     async def daily_peanuts(self, channel):
-        LOGGER.warning(f"Peanuts Called [{datetime.now()}]")
         await channel.send(f"__**The Peanuts strip of the day is:**__")
         await self.bot.get_command("comic")(channel, args="peanuts")
 
@@ -240,12 +225,10 @@ class DailyLoop(commands.Cog):
         await channel.send(choice(TIP_LIST))
 
     async def daily_wiki(self, channel):
-        LOGGER.warning(f"Wiki Called [{datetime.now()}]")
         await channel.send(f"__**The Wikipedia article of the day is:**__")
         await self.bot.get_command("wiki")(channel, args="-r")
 
     async def daily_word(self, channel):
-        LOGGER.warning(f"Word Called [{datetime.now()}]")
         response = get(WORDNIK_URL, params={"date": date.today(), "api_key": WORDNIK_API_KEY})
         try:
             api_response = loads(response.text)
@@ -267,7 +250,6 @@ class DailyLoop(commands.Cog):
                   f"Status Code: {response.status_code}\n")
 
     async def daily_xkcd(self, channel):
-        LOGGER.warning(f"XKCD Called [{datetime.now()}]")
         await channel.send(f"__**The xkcd comic of the day is:**__")
         await self.bot.get_command("xkcd")(channel, args="-r")
 
