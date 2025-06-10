@@ -18,14 +18,10 @@ class Random(commands.Cog):
 
     @commands.command(help="Returns a randomly selected fact",
                       brief="Returns a random fact")
-    async def fact(self, ctx):
-        await ctx.send(get_fact(filter_enabled=False))
+    async def fact(self, ctx, *, args=None):
+        flags, = get_flags(args) if args is not None else [],
 
-    @commands.command(help="Returns a randomly selected NSFW fact",
-                      brief="Returns a random NSFW fact",
-                      aliases=["nsfwfact", "nsfw_fact"])
-    async def fact_nsfw(self, ctx):
-        await ctx.send(get_fact(only_unsafe=True))
+        await ctx.send(get_fact(filter_enabled=False, only_unsafe='c' in flags))
 
     # $flip command sends either "heads" or "tails" in the channel
     @commands.command(help="Returns either \"heads\" or \"tails\" via random selection.\n"
