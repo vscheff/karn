@@ -16,10 +16,13 @@ class Random(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(help="Returns a randomly selected fact",
+    @commands.command(help="Returns a randomly selected facti\n\n"
+                           "This command has the following flags:\n"
+                           "* **-n**: Returns only not safe for work facts"
+                           "\tExample: `$fact -n`",
                       brief="Returns a random fact")
     async def fact(self, ctx, *, args=None):
-        flags, = get_flags(args) if args is not None else [],
+        flags, = get_flags(args.lower()) if args is not None else [],
 
         await ctx.send(get_fact(filter_enabled=False, only_unsafe='c' in flags))
 
