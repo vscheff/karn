@@ -51,4 +51,5 @@ TIP_LIST = [
 "I have a small chance to reply to most messages sent in the server, even if you didn't request me to do so directly. Though, if I determine my generated response isn't helpful, I will not send it. So, you may sometimes see me typing a message that is never sent."
 "Daily messages configured with the `$daily` command are sent at a weighted-random time in the day. Messages are most likely to be sent around noon, but can be sent anytime from 01:00-23:59.",
 "Have a feature request for me? Contact my developer, Vertical Bar, to request implementation of additional features.",
+"I can generate images from a given prompt with the `$generate` command.\nExample: `$generate Donald Trump as a Minecraft mob`",
 ]
