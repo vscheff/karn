@@ -7,6 +7,7 @@ from os import getenv, stat
 from os.path import exists
 from random import choice, randint
 from re import IGNORECASE, search, sub
+from requests import get, post
 from tiktoken import encoding_for_model
 
 
@@ -17,6 +18,10 @@ from utils import get_cursor, get_flags, package_message, send_tts_if_in_vc, tex
 
 OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
 OPENAI_ORGANIZATION = getenv("CHATGPT_ORG")
+LEONARDO_API_KEY = getenv("LEONARDO_TOKEN")
+
+DEFAULT_LEONARDO_MODEL = "b2614463-296c-462a-9586-aafdb8f00e36"
+LEONARDO_URL = "https://cloud.leonardo.ai/api/rest/v1/generations"
 
 # Constants (set by OpenAI and the encoding they use)
 MODEL = "gpt-3.5-turbo"
@@ -120,6 +125,42 @@ class AI(Cog):
     def get_descriptors(self):
         with open(AI_DESCRIPTOR_FILEPATH, 'r') as in_file:
             self.descriptors = [i.strip() for i in in_file.readlines()]
+
+    @command(help="Generate an image from a given prompt",
+            brief="Generate an image",
+            aliases=["gen"])
+    async def generate(self, ctx, *, args):
+        msg = await ctx.send("Generating your image...")
+
+            
+        headers = {
+            'accept': 'application/json',
+            'authorization': f'Bearer {LEONARDO_API_KEY}',
+            'content-type': 'application/json',
+        }
+
+        json_data = {
+            'alchemy': False,
+            "enhancePrompt": True,
+            'modelId': DEFAULT_LEONARDO_MODEL,
+            'num_images': 1,
+            "presetStyle": "DYNAMIC",
+            'prompt': args,
+        }
+
+        response = post(LEONARDO_URL, headers=headers, json=json_data).json()
+
+        url = f"{LEONARDO_URL}/{response['sdGenerationJob']['generationId']}"
+        
+        generated_images = []
+
+        while not generated_images:
+            await sleep(3)
+            get_response = get(url, headers=headers).json()
+            generated_images = get_response["generations_by_pk"]["generated_images"]
+        
+        await msg.delete()
+        await ctx.send(generated_images[0]["url"])
 
     @command(help="Adds the bot to your current voice channel",
              brief="Add bot to your voice channel")
