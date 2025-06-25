@@ -49,7 +49,8 @@ TIP_LIST = [
 "Stuck in a game of `$wordle`? Use the command `$world -q` to quit an ongoing game.",
 "Am I still acting too much like myself after using the `$set_context` command? By default, the command will simply add on to my default system context message. You can completely overwrite my system context message by using the `-o` command flag.",
 "I have a small chance to reply to most messages sent in the server, even if you didn't request me to do so directly. Though, if I determine my generated response isn't helpful, I will not send it. So, you may sometimes see me typing a message that is never sent."
-"Daily messages configured with the `$daily` command are sent at a weighted-random time in the day. Messages are most likely to be sent around noon, but can be sent anytime from 01:00-23:59.",
+"Daily messages configured with the `$daily` command are sent at a weighted-random time in the day. Messages are more likely to be sent at times closer to noon Eastern Time, but can be sent anytime from 01:00-23:59.",
 "Have a feature request for me? Contact my developer, Vertical Bar, to request implementation of additional features.",
 "I can generate images from a given prompt with the `$generate` command.\nExample: `$generate Donald Trump as a Minecraft mob`",
+"When using my `$generate` command I will \"enhance\" your prompt by default, adding additional context to help deliver the best image possible. To generate an image just using your raw prompt, use the `-p` command flag.\nExample: `$generate -p a chicken riding a cat`",
 ]

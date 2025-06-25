@@ -30,17 +30,18 @@ def get_cursor(conn):
         conn.connect()
         return conn.cursor()
 
-def get_flags(args, join=False, make_dic=False):
+def get_flags(args, join=False, make_dic=False, no_args=None):
     arg_list = args.split()
     flags = []
     not_flags = []
     flag_dic = {}
+    no_args = [] if no_args is None else no_args
 
     while arg_list:
         arg = arg_list.pop(0)
         if arg[0] == '-':
             if len(arg) == 2 and make_dic:
-                flag_dic[arg[1]] = arg_list.pop(0)
+                flag_dic[arg[1]] = None if arg[1] in no_args else arg_list.pop(0)
             else:
                 flags.extend([i.lower() for i in arg[1:]])
         else:

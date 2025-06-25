@@ -126,41 +126,63 @@ class AI(Cog):
         with open(AI_DESCRIPTOR_FILEPATH, 'r') as in_file:
             self.descriptors = [i.strip() for i in in_file.readlines()]
 
-    @command(help="Generate an image from a given prompt",
+    @command(help="Generate an image from a given prompt\n"
+                  "Example: `$generate a presidential election in minecraft`\n\n"
+                  "This command has the following flags:\n"
+                  "* **-c**: Specify the number of images to generate. Must be in range [1, 8].\n"
+                  "\tExample: `$generate -c 3 two cat scientists discovering a new element`\n"
+                  "* **-p**: Use the raw prompt text for generation without any prompt help.\n"
+                  "\tExample: `$generate -p a hand with seven fingers`",
             brief="Generate an image",
             aliases=["gen"])
     async def generate(self, ctx, *, args):
-        msg = await ctx.send("Generating your image...")
+        flags, prompt = get_flags(args, join=True, make_dic=True, no_args=['p'])
 
-            
+        try:
+            num_images = int(flags.get('c', 1))
+        except ValueError:
+            return await ctx.send("Invalid argument given for number of images. "
+                                  "Please use a valid integer. Use `$help generate` for more information.")
+
+        if not 1 <= num_images <= 8:
+            return await ctx.send("Invalid argument given for number of images. "
+                                  "Must be in range [1, 8]. Use `$help generate` for more information.")
+
+        msg = await ctx.send(f"Generating your image{'' if num_images == 1 else 's'}...")
+        
         headers = {
             'accept': 'application/json',
             'authorization': f'Bearer {LEONARDO_API_KEY}',
             'content-type': 'application/json',
         }
-
         json_data = {
-            'alchemy': False,
-            "enhancePrompt": True,
+            "enhancePrompt": 'p' not in flags,
             'modelId': DEFAULT_LEONARDO_MODEL,
-            'num_images': 1,
+            'num_images': num_images,
             "presetStyle": "DYNAMIC",
-            'prompt': args,
+            'prompt': prompt,
         }
 
-        response = post(LEONARDO_URL, headers=headers, json=json_data).json()
+        async with ctx.typing():
+            response = post(LEONARDO_URL, headers=headers, json=json_data).json()
+            
+            if "error" in response:
+                await msg.delete()
+                return await ctx.send("Unable to generate that image. Try modifying your prompt.")
 
-        url = f"{LEONARDO_URL}/{response['sdGenerationJob']['generationId']}"
-        
-        generated_images = []
+            url = f"{LEONARDO_URL}/{response['sdGenerationJob']['generationId']}"
+            
+            generated_images = []
 
-        while not generated_images:
-            await sleep(3)
-            get_response = get(url, headers=headers).json()
-            generated_images = get_response["generations_by_pk"]["generated_images"]
+            while len(generated_images) < num_images:
+                await sleep(3)
+                get_response = get(url, headers=headers).json()
+                generated_images = get_response["generations_by_pk"]["generated_images"]
         
         await msg.delete()
-        await ctx.send(generated_images[0]["url"])
+        
+        for i in range(num_images):
+            await ctx.send(generated_images[i]["url"])
 
     @command(help="Adds the bot to your current voice channel",
              brief="Add bot to your voice channel")
