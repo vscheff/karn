@@ -53,4 +53,5 @@ TIP_LIST = [
 "Have a feature request for me? Contact my developer, Vertical Bar, to request implementation of additional features.",
 "I can generate images from a given prompt with the `$generate` command.\nExample: `$generate Donald Trump as a Minecraft mob`",
 "When using my `$generate` command I will \"enhance\" your prompt by default, adding additional context to help deliver the best image possible. To generate an image just using your raw prompt, use the `-p` command flag.\nExample: `$generate -p a chicken riding a cat`",
+"By using the `-f` flag with the `$prompt` command, I will generate responses in the style of a given file. Use the `$ls` command to view available files.\nFor example using the command `$prompt -f Dracula` will return a quote in the style of lines found in the file \"Dracula\".",
 ]

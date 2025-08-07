@@ -12,6 +12,7 @@ from tiktoken import encoding_for_model
 
 
 # Local dependencies
+from global_vars import FILE_ROOT_DIRECTORY
 from utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES
 from utils import get_cursor, get_flags, package_message, send_tts_if_in_vc, text_to_speech
 
@@ -268,8 +269,8 @@ class AI(Cog):
     async def prompt(self, ctx, **kwargs):
         self.reply_chance = 1
 
-        cursor = get_cursor(self.conn)
-
+        flags, not_flags = get_flags(ctx.message.clean_content)
+        
         if isinstance(ctx, Context):
             channel = ctx.channel
             channel_id = ctx.channel.id
@@ -279,15 +280,23 @@ class AI(Cog):
             channel_id = ctx.id
             author = kwargs.get("author")
 
-        cursor.execute("SELECT content FROM Genesis WHERE channel_id = %s", [channel_id])
+        if 'f' in flags:
+            try:
+                context, encoded_len = self.build_context_from_file(not_flags[1])
+            except FileNotFoundError:
+                return await ctx.send("Input file not found. Use `$ls` to view available input files.")
+        else:
+            cursor = get_cursor(self.conn)
 
-        sys_msg = [{"role": "system", "content": content[0]} for content in cursor.fetchall()]
-        if not sys_msg:
-            sys_msg = [{key: val for key, val in GENESIS_MESSAGE.items()}]
+            cursor.execute("SELECT content FROM Genesis WHERE channel_id = %s", [channel_id])
 
-        cursor.close()
+            sys_msg = [{"role": "system", "content": content[0]} for content in cursor.fetchall()]
+            if not sys_msg:
+                sys_msg = [{key: val for key, val in GENESIS_MESSAGE.items()}]
 
-        context, encoded_len = await self.build_context(channel, sys_msg)
+            cursor.close()
+
+            context, encoded_len = await self.build_context(channel, sys_msg)
 
         openai_kwargs = {"model": MODEL, "messages": context, "max_tokens": MAX_TOKENS-encoded_len}
 
@@ -336,6 +345,28 @@ class AI(Cog):
             await ctx.send("You must include a prompt with this command.\n"
                            "Example: `$prompt tell me a joke`\n\n"
                            "Please use `$help prompt` for more information.")
+
+    def build_context_from_file(self, filename):
+        with open(f"{FILE_ROOT_DIRECTORY}/{filename}.txt", "r") as in_file:
+            lines = in_file.readlines()
+
+        context = []
+        usr_msg = {"role": "user", "content": f"#{filename}"}
+        num_tokens = usr_tokens = get_token_len(usr_msg)
+
+        while lines:
+            msg = {"role": "assistant", "content": lines.pop(randint(0, len(lines)))}
+            
+            if (encoding_len := get_token_len(msg)) + num_tokens + usr_tokens > MAX_MSG_LEN:
+                break
+
+            num_tokens += encoding_len + usr_tokens
+            context.append(usr_msg)
+            context.append(msg)
+
+        context.append(usr_msg)
+
+        return context, num_tokens
 
     # Builds the context for a request to OpenAI for chat completion
     # param channel -

@@ -1,0 +1,2 @@
+FILE_ROOT_DIRECTORY = "./files"
+SEND_LINE_CHAR = '#'
