@@ -355,7 +355,7 @@ class AI(Cog):
         num_tokens = usr_tokens = get_token_len(usr_msg)
 
         while lines:
-            msg = {"role": "assistant", "content": lines.pop(randint(0, len(lines)))}
+            msg = {"role": "assistant", "content": lines.pop(randint(0, len(lines) - 1))}
             
             if (encoding_len := get_token_len(msg)) + num_tokens + usr_tokens > MAX_MSG_LEN:
                 break
