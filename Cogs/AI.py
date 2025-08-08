@@ -269,16 +269,16 @@ class AI(Cog):
     async def prompt(self, ctx, **kwargs):
         self.reply_chance = 1
 
-        flags, not_flags = get_flags(ctx.message.clean_content)
-        
         if isinstance(ctx, Context):
             channel = ctx.channel
             channel_id = ctx.channel.id
             author = ctx.message.author
+            flags, not_flags = get_flags(ctx.message.clean_content)
         else:
             channel = ctx
             channel_id = ctx.id
             author = kwargs.get("author")
+            flags = []
 
         if 'f' in flags:
             try:
