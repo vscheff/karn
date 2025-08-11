@@ -347,7 +347,7 @@ class AI(Cog):
                            "Please use `$help prompt` for more information.")
 
     def build_context_from_file(self, filename):
-        with open(f"{FILE_ROOT_DIRECTORY}/{filename}.txt", "r") as in_file:
+        with open(f"{FILE_ROOT_DIRECTORY}/{filename.lower()}.txt", "r") as in_file:
             lines = in_file.readlines()
 
         context = []
