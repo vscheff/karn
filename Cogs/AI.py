@@ -352,12 +352,13 @@ class AI(Cog):
 
         context = []
         usr_msg = {"role": "user", "content": f"#{filename}"}
-        num_tokens = usr_tokens = get_token_len(usr_msg)
+        usr_tokens = get_token_len(usr_msg)
+        num_tokens = usr_tokens + TOKENS_PER_REPLY
 
         while lines:
             msg = {"role": "assistant", "content": lines.pop(randint(0, len(lines) - 1))}
             
-            if (encoding_len := get_token_len(msg)) + num_tokens + usr_tokens > MAX_MSG_LEN:
+            if (encoding_len := get_token_len(msg)) + usr_tokens + num_tokens > MAX_MSG_LEN:
                 break
 
             num_tokens += encoding_len + usr_tokens
