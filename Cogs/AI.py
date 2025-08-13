@@ -14,7 +14,7 @@ from tiktoken import encoding_for_model
 # Local dependencies
 from global_vars import FILE_ROOT_DIRECTORY
 from utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES
-from utils import get_cursor, get_flags, package_message, send_tts_if_in_vc, text_to_speech
+from utils import get_cursor, get_flags, get_json_from_socket, package_message, send_tts_if_in_vc, text_to_speech
 
 
 OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
@@ -171,19 +171,16 @@ class AI(Cog):
                 await msg.delete()
                 return await ctx.send("Unable to generate that image. Try modifying your prompt.")
 
-            url = f"{LEONARDO_URL}/{response['sdGenerationJob']['generationId']}"
-            
-            generated_images = []
+            try:
+                generated_images = get_json_from_socket()["data"]["object"]["images"]
+            except TimeoutError:
+                await msg.delete()
+                return await ctx.send("Unable to retrieve image. Please try again later.")
 
-            while len(generated_images) < num_images:
-                await sleep(3)
-                get_response = get(url, headers=headers).json()
-                generated_images = get_response["generations_by_pk"]["generated_images"]
-        
         await msg.delete()
         
-        for i in range(num_images):
-            await ctx.send(generated_images[i]["url"])
+        for image in generated_images:
+            await ctx.send(image["url"])
 
     @command(help="Adds the bot to your current voice channel",
              brief="Add bot to your voice channel")

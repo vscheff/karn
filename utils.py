@@ -1,11 +1,13 @@
 from asyncio import sleep
 import discord
 from gtts import gTTS
+from json import loads
 from mysql.connector.errors import OperationalError
 from openai import OpenAI
 import os
 from random import choices, randint
 from re import search
+from socket import socket
 from string import ascii_letters, digits
 
 OPENAI_CLIENT = OpenAI(api_key=os.getenv("CHATGPT_TOKEN"), organization=os.getenv("CHATGPT_ORG"))
@@ -21,6 +23,10 @@ SUPPORTED_VOICES = ("alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "s
 SUPPORTED_SPEEDS = (0.25, 4.0)
 DEFAULT_TTS_VOICE = "onyx"
 DEFAULT_TTS_SPEED = 1.05
+
+SOCKET_PORT = 8008
+SOCKET_TIMEOUT = 8
+SOCKET_BUFF_SIZE = 1024
 
 # Ensures the SQL database is still connected, and returns a cursor from that connection
 def get_cursor(conn):
@@ -54,6 +60,23 @@ def get_flags(args, join=False, make_dic=False, no_args=None):
         return flag_dic, not_flags
 
     return flags, not_flags
+
+def get_json_from_socket():
+    with socket() as sock:
+        sock.settimeout(SOCKET_TIMEOUT)
+        sock.bind(("127.0.0.1", SOCKET_PORT))
+        sock.listen(1)
+        data = []
+        conn, addr = sock.accept()
+        
+        with conn:
+            while True:
+                if (message := conn.recv(SOCKET_BUFF_SIZE)):
+                    data.append(message.decode())
+                else:
+                    break
+
+    return loads(''.join(data))
 
 def get_supported_filetype(images, randomize=True):
     while True:
