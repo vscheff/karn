@@ -20,6 +20,7 @@ from utils import get_cursor, get_flags, get_json_from_socket, package_message, 
 OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
 OPENAI_ORGANIZATION = getenv("CHATGPT_ORG")
 LEONARDO_API_KEY = getenv("LEONARDO_TOKEN")
+LEONARDO_WEBHOOK_AUTH = getenv("LEONARDO_WEBHOOK")
 
 DEFAULT_LEONARDO_MODEL = "b2614463-296c-462a-9586-aafdb8f00e36"
 LEONARDO_URL = "https://cloud.leonardo.ai/api/rest/v1/generations"
@@ -172,10 +173,13 @@ class AI(Cog):
                 return await ctx.send("Unable to generate that image. Try modifying your prompt.")
 
             try:
-                generated_images = get_json_from_socket()["data"]["object"]["images"]
+                generated_images = get_json_from_socket(LEONARDO_WEBHOOK_AUTH)["data"]["object"]["images"]
             except TimeoutError:
                 await msg.delete()
                 return await ctx.send("Unable to retrieve image. Please try again later.")
+            except PermissionError:
+                await msg.delete()
+                return await ctx.send("An error occured, please try again.")
 
         await msg.delete()
         
@@ -260,7 +264,11 @@ class AI(Cog):
     # $prompt command for users to submit prompts to the language model
     # param   args - will contain the prompt to send
     # param author - used by `send_reply()` to forward author name from message
-    @command(help="Generates natural language or code from a given prompt",
+    @command(help="Generates natural language or code from a given prompt.\n"
+                  "Example: `$prompt Tell me story about a man who wanted to be hockey player, but played golf instead`\n\n"
+                  "This command has the following flags:\n"
+                  "* **-f**: Generate a response in the style of an input file.\n"
+                  "\tExample: `$prompt -f dracula`",
              brief="Generates natural language",
              aliases=["chat", "promt"])
     async def prompt(self, ctx, **kwargs):

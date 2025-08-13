@@ -61,7 +61,7 @@ def get_flags(args, join=False, make_dic=False, no_args=None):
 
     return flags, not_flags
 
-def get_json_from_socket():
+def get_json_from_socket(auth):
     with socket() as sock:
         sock.settimeout(SOCKET_TIMEOUT)
         sock.bind(("127.0.0.1", SOCKET_PORT))
@@ -76,7 +76,15 @@ def get_json_from_socket():
                 else:
                     break
 
-    return loads(''.join(data))
+    json_data = loads(''.join(data))
+
+    auth_type, auth_in = json_data["authorization"].split()
+
+    if auth_type != "Bearer" or auth_in != auth:
+        print(f"Bad webhook authorization detected: {json_data['authorization']}")
+        raise PermissionError
+
+    return json_data["content"]
 
 def get_supported_filetype(images, randomize=True):
     while True:
