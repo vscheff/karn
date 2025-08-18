@@ -10,8 +10,8 @@ A Discord bot written in Python utilizing discord.py
 - Query support for images, videos, webpages, Wikipedia articles, Magic: The Gathering cards, comic strips, word definitions, and weather
 - Randomization including dice rolling, coin flipping, list selection, list shuffling, and random number generation
 - Item rating system that allows users to upvote and downvote abritary words/phrases
-- QR code generation
 - Creation of arbitary text files that can have lines input into them and have random lines returned
+- QR code generation
 
 ## Requirements
 - Python 3.9 or newer
@@ -138,4 +138,5 @@ Every day at 03:00 Eastern Time all files in each server's directory are backed 
 - Hats
 - System Context Messages
 - Daily Message settings
+
 Should you require any data recovery assistance, please contact me on Discord @newboard.
