@@ -20,11 +20,12 @@ A Discord bot written in Python utilizing discord.py
 - Webserver running on the same machine
 
 ## Installation
-1. Fill `.env` file with all relevant environment variables (these are explained further down)
-2. Install required Python libaries: `pip install -r requirements.txt`
-3. Import database schema from `discord.sql` into a table named "discord": `mysqldump discord < /path/to/directory/discord.sql`
-4. Move `leonardo_hook.php` into your webserver's directory
-5. Start the bot with `python3 bot.py`
+1. Fill `BLANK.env` file with all relevant environment variables (these are explained further down)
+2. Rename `BLANK.env` to `.env`
+3. Install required Python libaries: `pip install -r requirements.txt`
+4. Import database schema from `discord.sql` into a table named "discord": `mysqldump discord < /path/to/directory/discord.sql`
+5. Move `leonardo_hook.php` into your webserver's directory
+6. Start the bot with `python3 bot.py`
 
 ## Environment Variables
 - `DISCORD_TOKEN` - Discord Application API Token

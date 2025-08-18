@@ -23,5 +23,5 @@ async def add_cogs(bot, conn):
     await bot.add_cog(Query())
     await bot.add_cog(Random(bot))
     await bot.add_cog(Rating(conn))
-    await bot.add_cog(Utility(bot))
     await bot.add_cog(Terminal())
+    await bot.add_cog(Utility(bot))
