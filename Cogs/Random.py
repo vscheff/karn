@@ -16,7 +16,7 @@ class Random(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(help="Returns a randomly selected facti\n\n"
+    @commands.command(help="Returns a randomly selected fact\n\n"
                            "This command has the following flags:\n"
                            "* **-n**: Returns only not safe for work facts"
                            "\tExample: `$fact -n`",
@@ -55,7 +55,7 @@ class Random(commands.Cog):
                       brief="Returns a random number")
     async def number(self, ctx, lower: int, upper: int = None):
         if upper is None:
-            lower, upper = 1, lower
+            lower, upper = 1, lower if lower > 0 else lower, 0
         await ctx.send(randint(lower, upper))
 
     # Called if $number encounters an unhandled exception

@@ -73,7 +73,7 @@ class Hat(Cog):
         cursor.close()
 
     @command(help="Randomly picks an item from the hat.\n\n"
-                  "To pop more than one item, include the desired number of items as an argument:\n"
+                  "To pick more than one item, include the desired number of items as an argument:\n"
                   "Example: `$pick 3`\n\n"
                   "This command has the following flags:\n"
                   "* **-h**: Used to specify a hat other than the channel's default hat.\n"

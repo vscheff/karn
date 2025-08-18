@@ -28,6 +28,16 @@ SOCKET_PORT = 8008
 SOCKET_TIMEOUT = 8
 SOCKET_BUFF_SIZE = 1024
 
+
+def get_as_number(string):
+    try:
+        return int(string)
+    except ValueError:
+        try:
+            return float(string)
+        except ValueError:
+            return False
+
 # Ensures the SQL database is still connected, and returns a cursor from that connection
 def get_cursor(conn):
     try:

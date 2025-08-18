@@ -5,8 +5,9 @@ from datetime import datetime, timedelta
 import discord
 import os
 import qrcode
+from re import findall
 
-from utils import package_message
+from utils import get_as_number, package_message
 
 # Filename/path for temporary storage of QR image
 QR_FILEPATH = "./files/temp_qr.png"
@@ -45,26 +46,47 @@ class Utility(commands.Cog):
     async def ping(self, ctx):
         await ctx.send(f"pong (*{self.bot.latency * 1000:.0f}ms*)")
 
-    # $execute command used for ACE
-    # param arg - all user input following the command-name
-    @commands.command(help="Attempts to execute the given code in Python\n"
-                           "This command will only accept one-line statements\n"
-                           "Example: `$execute 6 * 7`",
+    # $calc command used for calculating the result of mathematical expressions
+    # param args - all user input following the command name
+    @commands.command(help="Returns the result of a mathematical expression.\n"
+                           "Example: `$calc 6 * 7`",
                       brief="Executes given Python code")
-    async def execute(self, ctx, *, arg):
-        try:
-            compiled = compile(arg, "<string>", "eval")
-            obj = eval(compiled)
-            await package_message(obj, ctx)
-        except SyntaxError as e:
-            await ctx.send(f"Bad Syntax: Error occurred at Index [{e.offset-1}], "
-                           f"Character ({e.text[e.offset-1]})")
-        except Exception as e:
-            await ctx.send(str(e))
+    async def calc(self, ctx, *, args):
+        prec = {'+': 0, '-': 0, '*': 1, '/': 1, '^': 2}
+
+        # https://regex101.com/r/rYoPQz/1
+        tokens = findall(r"-?\d+\.?\d*|[+\-/*()^]", ''.join(args))
+        values, ops = [], []
+
+        # Shunting Yard alrorithm
+        for token in tokens:
+            if (result := get_as_number(token)) is not False:
+                values.append(result)
+            elif token == '(':
+                ops.append(token)
+            elif token == ')':
+                while ops and ops[-1] != '(':
+                    apply_operator(ops, values)
+
+                ops.pop()
+            else:
+                while ops and ops[-1] not in "()" and prec[ops[-1]] > prec[token]:
+                    apply_operator(ops, values)
+
+                ops.append(token)
+
+        while ops:
+            apply_operator(ops, values)
+
+        await ctx.send(values[0])
+
+    @calc.error
+    async def calc_error(self, ctx, error):
+        await ctx.send("Unable to calculate result. "
+                       "Please ensure your input is a valid mathematical equation.")
 
     # $ready command used as a "all-systems-go" check for the bot
-    @commands.command(hidden=True,
-                      help="Performs an \"All-Systems-Go\" check for the bot, and returns a status report.",
+    @commands.command(help="Performs an \"All-Systems-Go\" check for the bot, and returns a status report.",
                       brief="Check for \"All-Systems-Go\"")
     async def ready(self, ctx):
         await ctx.send(f"Websocket closed: {self.bot.is_closed()}\n"
@@ -74,8 +96,7 @@ class Utility(commands.Cog):
     # $purge command used to bulk delete messages from a text channel
     # param before - int representing the number of days, before which messages will be deleted
     # param  after - int representing the number of days, before which messages will NOT be deleted
-    @commands.command(hidden=True,
-                      help="Delete all messages in a channel older than a given number of days.\n"
+    @commands.command(help="Delete all messages in a channel older than a given number of days.\n"
                            "Example: `$purge 3`\n"
                            "That command will delete all messages older than 3 days.\n\n"
                            "Alternatively, you can include two integers to declare a range.\n"
@@ -116,17 +137,17 @@ class Utility(commands.Cog):
                       brief="Provides a brief synopsis of Karn")
     async def info(self, ctx):
         await ctx.send(f"Hello! I am Karn, your friendly Time-Travelling Golem!\n"
-                       f"I was developed by NewBoard, and am hosted locally in Kalamazoo!\n"
+                       f"I was developed by Vertical Bar, and am hosted locally in Kalamazoo!\n"
                        f"If you would like to know me more intimately my Open Source code can be found here:\n\n"
                        f"https://github.com/vscheff/karn")
 
     @commands.command(hidden=True)
-    async def newboard(self, ctx):
+    async def verticalbar(self, ctx):
         await ctx.send("01010110 01101111 01101110 "
                        "00100000 01010011 01100011 01101000 01100101 01100110 01100110 01101100 01100101 01110010")
 
 
-# Used by $qr and $set_invite to creat a QR code image
+# Used by $qr to create a QR code image
 # param data - string of data to encode in the QR image
 def make_qr(data):
     qr = qrcode.QRCode(version=None,                                       # None type allows dynamic QR size
@@ -137,3 +158,8 @@ def make_qr(data):
     # Construct the QR code with the 'fit' modifier to scale the input data
     qr.make(fit=True)
     return qr.make_image(fill_color="black", back_color="white")
+
+def apply_operator(ops, values):
+    right = values.pop()
+    left = values.pop()
+    values.append(eval(f"{left}{ops.pop().replace('^', "**")}{right}"))
