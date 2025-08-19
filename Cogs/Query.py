@@ -77,17 +77,23 @@ class Query(Cog):
                            "Please use `$help card` for more information.")
 
     @command(help="Returns a random comic strip from a given Comic name.\n"
-                  "Example: `$comic Garfield`",
+                  "Example: `$comic Garfield`\n\n"
+                  "This command has the following flags:\n"
+                  "* **l**: Lists available comics\n"
+                  "\tExample: `$comic -l`",
              brief="Returns a random comic strip")
     async def comic(self, ctx, *, args):
         flags, query = get_flags(args, join=True)
+
+        if 'l' in flags:
+            return await package_message(build_comic_list(), ctx)
         
         try:
             comic = search(query, date="random")
         except InvalidEndpointError:
             if not (results := directory.search(query)):
-                await ctx.send(f"Unknown comic: {query}\nAvailable comics include:")
-                await package_message("* " + "\n* ".join(directory.listall()), ctx)
+                await ctx.send(f"Unknown comic \"{query}\"\nAvailable comics include:")
+                await package_message(build_comic_list(), ctx)
                 return
             
             comic = search(results[0]).random_date()
@@ -402,3 +408,6 @@ def merge_double(link0, link1):
     output_img.paste(img0)
     output_img.paste(Image.open(FACE_1), (img0.size[0], 0))
     output_img.save(OUTPUT_PNG)
+
+def build_comic_list():
+    return "* " + "\n* ".join(directory.listall())

@@ -6,7 +6,7 @@ from random import choice, sample
 from requests import get
 from re import sub
 
-from utils import get_cursor, get_flags, package_message
+from utils import get_cursor, get_flags, get_id_from_mention, package_message
 from tips import TIP_LIST
 
 WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
@@ -67,7 +67,9 @@ class DailyLoop(commands.Cog):
         flags, args = get_flags(args.lower())
 
         if 'c' in flags:
-            channel_id = args[0].strip("<#>")
+            if (channel_id := get_id_from_mention(args[0])) is None:
+                return await ctx.send("Invalid channel. Please send channel in the format: #channel\n"
+                                      "Use `$help daily` for more information")
             query = ' '.join(args[1:])
         else:
             channel_id = ctx.channel.id

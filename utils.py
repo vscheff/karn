@@ -70,6 +70,13 @@ def get_flags(args, join=False, make_dic=False, no_args=None):
         return flag_dic, not_flags
 
     return flags, not_flags
+    
+def get_id_from_mention(mention):
+    # regex101.com/r/OeJ1dG/1
+    if not (match := search(r"<#(\d+)>", mention)):
+        return None
+
+    return match.group(1)
 
 def get_json_from_socket(auth):
     with socket() as sock:

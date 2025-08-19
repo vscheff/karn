@@ -147,8 +147,8 @@ Should you require any data recovery assistance, please contact me @newboard on 
 Karn steals his name from a [time-travelling silver golem](https://mtg.wiki/page/Karn) in the Magic: the Gathering multiverse. The project maintainer, Vertical Bar, had an unhealthy obsession with MtG when he began this project.
 
 ## TODO
-- [ ] Add way to view available comics without triggering a command error with `$comic`
-- [ ] Accept channel ID with the `-c` command flag to `$ignore` to allow configuration of other channels
+- [x] Add way to view available comics without triggering a command error with `$comic`
+- [x] Accept channel ID with the `-c` command flag to `$ignore` to allow configuration of other channels
 - [ ] Segregrate input/output files into seperate server directories
 - [ ] Configurable webserver settings
 - [ ] Configurable SQL database name

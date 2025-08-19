@@ -14,7 +14,7 @@ from tiktoken import encoding_for_model
 # Local dependencies
 from global_vars import FILE_ROOT_DIRECTORY
 from utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES
-from utils import get_cursor, get_flags, get_json_from_socket, package_message, send_tts_if_in_vc, text_to_speech
+from utils import get_cursor, get_flags, get_id_from_mention, get_json_from_socket, package_message, send_tts_if_in_vc, text_to_speech
 
 
 OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
@@ -467,15 +467,23 @@ class AI(Cog):
         cursor.close()
 
     @command(help="Toggle whether the bot should respond to your messages without being prompted. "
-                  "The bot will still respond if your message contain its name, or if you use the `$prompt` command."
+                  "The bot will still respond if your message contain its name, or if you use the `$prompt` command.\n\n"
                   "This command has the following flags:\n"
-                  "* **-c**: Toggle whether the bot should respond to messages in the channel without being prompted.",
+                  "* **-c**: Toggle whether the bot should respond to messages in the current channel without being prompted. "
+                  "You can specify a channel other than the current channel by including the channel mention as an argument.\n"
+                  "\tExample: `$ignore -c #general`",
              brief="Toggle unprompted responses")
     async def ignore(self, ctx, *, args=''):
         flags, args = get_flags(args)
 
         if 'c' in flags:
-            return await self.ignore_channel(ctx)
+            channel = get_id_from_mention(args[0]) if args else ctx.channel.id
+            
+            if channel is None:
+                return await ctx.send("Invalid channel. Please send channel in the format: #channel\n"
+                                      "Use `$help ignore` for more information")
+
+            return await self.ignore_channel(ctx, channel)
 
         cursor = get_cursor(self.conn)
 
@@ -499,28 +507,28 @@ class AI(Cog):
         else:
             await ctx.send("I will no longer respond to your messages without being prompted.")
 
-    async def ignore_channel(self, ctx):
+    async def ignore_channel(self, ctx, channel):
         cursor = get_cursor(self.conn)
 
         respond = False
 
-        cursor.execute("SELECT respond FROM Channels WHERE channel_id = %s", [ctx.channel.id])
+        cursor.execute("SELECT respond FROM Channels WHERE channel_id = %s", [channel])
 
         if not (result := cursor.fetchall()):
-            cursor.execute("INSERT INTO Channels (channel_id, respond) VALUES (%s, %s)", [ctx.channel.id, 0])
+            cursor.execute("INSERT INTO Channels (channel_id, respond) VALUES (%s, %s)", [channel, 0])
         elif result[0][0]:
-            cursor.execute("UPDATE Channels SET respond = 0 WHERE channel_id = %s", [ctx.channel.id])
+            cursor.execute("UPDATE Channels SET respond = 0 WHERE channel_id = %s", [channel])
         else:
-            cursor.execute("UPDATE Channels SET respond = 1 WHERE channel_id = %s", [ctx.channel.id])
+            cursor.execute("UPDATE Channels SET respond = 1 WHERE channel_id = %s", [channel])
             respond = True
 
         self.conn.commit()
         cursor.close()
 
         if respond:
-            await ctx.send("I will now occasionally respond to messages in this channel without being prompted.")
+            await ctx.send(f"I will now occasionally respond to messages in <#{channel}> without being prompted.")
         else:
-            await ctx.send("I will no longer respond to messages in this channel without being prompted.")
+            await ctx.send(f"I will no longer respond to messages in <#{channel}> without being prompted.")
 
     # Called to read through server messages and feed them into the $prompt command if necessary
     async def send_reply(self, msg):
