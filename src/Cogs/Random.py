@@ -5,7 +5,7 @@ from randfacts import get_fact
 from random import choice, randint, shuffle
 import discord
 
-from utils import get_flags, package_message
+from src.utils import get_flags, package_message
 
 
 MAX_ROLL = 2 ** 18

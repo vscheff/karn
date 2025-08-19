@@ -3,7 +3,7 @@ from random import choice
 from re import sub
 from wordle import dictionary, Wordle
 
-from utils import get_flags
+from src.utils import get_flags
 
 
 class Games(Cog):

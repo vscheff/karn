@@ -6,28 +6,33 @@ A Discord bot written in Python utilizing discord.py
 - LLM integration including text completion, text-to-speach, and image generation
 - Daily messages configurable per channel
 - Text-based games
-- Bucket system that allows multiple "hats" to be created, have items added to, and have random items selected
+- Bucket system that allows multiple "hats" to be created that can have items added to and have item randomly selected from
 - Query support for images, videos, webpages, Wikipedia articles, Magic: The Gathering cards, comic strips, word definitions, and weather
 - Randomization including dice rolling, coin flipping, list selection, list shuffling, and random number generation
 - Item rating system that allows users to upvote and downvote abritary words/phrases
 - Creation of arbitary text files that users can add lines to, then prompt Karn to return random lines from
 - QR code generation
 
-## Requirements
+## Add Karn to your server
+Click [here](https://discord.com/oauth2/authorize?client_id=847511176476753942) to add Karn as a member to your server.
+
+## Install Karn Locally
+
+### Requirements
 - Python 3.9 or newer
 - PIP
 - mySQL/MariaDB
 - Webserver running on the same machine
 
-## Installation
-1. Fill `BLANK.env` file with all relevant environment variables (these are explained in the next section)
-2. Rename `BLANK.env` to `.env`
+### Installation
+1. Fill `setup/BLANK.env` file with all relevant environment variables (these are explained in the next section)
+2. Rename `BLANK.env` to `.env` and move to the main directory (same directory as `bot.py`)
 3. Install required Python libaries: `pip install -r requirements.txt`
-4. Import database schema from `discord.sql` into a table named "discord": `mysqldump discord < /path/to/directory/discord.sql`
-5. Move `leonardo_hook.php` into your webserver's directory
+4. Import database schema from `src/discord.sql` into a table named "discord": `mysqldump discord < /path/to/directory/setup/discord.sql`
+5. Move `setup/leonardo_hook.php` into your webserver's directory
 6. Start the bot with `python3 bot.py`
 
-## Environment Variables
+### Environment Variables
 - `DISCORD_TOKEN` - Discord Application API Token
 - `WEATHER_TOKEN` - API Token from openweathermap.org
 - `WORDNIK_TOKEN` - API Token from wordnik.com
@@ -143,6 +148,8 @@ Every day at 03:00 Eastern Time all files in each server's directory are backed 
 
 Should you require any data recovery assistance, please contact me @newboard on Discord.
 
+If you're hosting the bot locally, you're on your own for backup and data recovery.
+
 ## Why "Karn"?
 Karn steals his name from a [time-travelling silver golem](https://mtg.wiki/page/Karn) in the Magic: the Gathering multiverse. The project maintainer, Vertical Bar, had an unhealthy obsession with MtG when he began this project.
 
@@ -152,8 +159,10 @@ Karn steals his name from a [time-travelling silver golem](https://mtg.wiki/page
 - [ ] Segregrate input/output files into seperate server directories
 - [ ] Configurable webserver settings
 - [ ] Configurable SQL database name
+- [ ] Allow for remote SQL Server
 - [ ] Configurable Genesis System Context Message
 - [ ] Configurable Line Response prefix
 - [ ] Configurable command prefix
 - [ ] Configurable bot name
 - [ ] Create setup script that disables unused/inaccessible features
+- [ ] Reduce Karn's required scope

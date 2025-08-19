@@ -12,9 +12,9 @@ from tiktoken import encoding_for_model
 
 
 # Local dependencies
-from global_vars import FILE_ROOT_DIRECTORY
-from utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES
-from utils import get_cursor, get_flags, get_id_from_mention, get_json_from_socket, package_message, send_tts_if_in_vc, text_to_speech
+from src.global_vars import FILE_ROOT_DIRECTORY
+from src.utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES
+from src.utils import get_cursor, get_flags, get_id_from_mention, get_json_from_socket, package_message, send_tts_if_in_vc, text_to_speech
 
 
 OPENAI_API_KEY = getenv("CHATGPT_TOKEN")

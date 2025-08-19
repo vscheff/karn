@@ -6,8 +6,8 @@ from random import choice, sample
 from requests import get
 from re import sub
 
-from utils import get_cursor, get_flags, get_id_from_mention, package_message
-from tips import TIP_LIST
+from src.utils import get_cursor, get_flags, get_id_from_mention, package_message
+from src.tips import TIP_LIST
 
 WORDNIK_API_KEY = getenv("WORDNIK_TOKEN")
 

@@ -7,7 +7,7 @@ import os
 import qrcode
 from re import findall
 
-from utils import get_as_number, package_message
+from src.utils import get_as_number, package_message
 
 # Filename/path for temporary storage of QR image
 QR_FILEPATH = "./files/temp_qr.png"

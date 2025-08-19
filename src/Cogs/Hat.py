@@ -1,7 +1,7 @@
 from discord.ext.commands import Cog, command, MissingRequiredArgument
 from random import randint
 
-from utils import get_cursor, get_flags, package_message
+from src.utils import get_cursor, get_flags, package_message
 
 
 DEFAULT_HAT = "main"

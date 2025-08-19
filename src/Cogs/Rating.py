@@ -1,7 +1,7 @@
 from discord.ext.commands import Cog, command, errors
 from re import findall
 
-from utils import get_cursor, package_message
+from src.utils import get_cursor, package_message
 
 
 DEFAULT_RATING_COUNT = 5

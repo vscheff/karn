@@ -13,8 +13,8 @@ from re import sub
 from wikipedia import DisambiguationError, page, PageError, random
 from xkcd import getComic, getLatestComic, getLatestComicNum, getRandomComic
 
-from us_state_abbrev import abbrev_to_us_state as states
-from utils import get_flags, is_supported_filetype, get_supported_filetype, package_message
+from src.us_state_abbrev import abbrev_to_us_state as states
+from src.utils import get_flags, is_supported_filetype, get_supported_filetype, package_message
 
 
 DEFAULT_RESULT_COUNT = 1

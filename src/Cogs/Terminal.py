@@ -3,8 +3,8 @@ from os import listdir, remove
 from random import choice
 from re import search
 
-from global_vars import *
-from utils import package_message, send_tts_if_in_vc
+from src.global_vars import *
+from src.utils import package_message, send_tts_if_in_vc
 
 
 FILE_ROOT_DIRECTORY = "./files"

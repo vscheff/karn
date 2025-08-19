@@ -14,10 +14,10 @@ if TOKEN is None:
     exit("Environment file missing/corrupted. Halting now!")
 
 # Local dependencies
-from cogs import add_cogs
-from Cogs.Terminal import send_line
-from help_command import CustomHelpCommand
-from sql import connect_to_sql_database
+from src.cogs import add_cogs
+from src.Cogs.Terminal import send_line
+from src.help_command import CustomHelpCommand
+from src.sql import connect_to_sql_database
 
 bot = commands.Bot(command_prefix='$',
                    case_insensitive=True,

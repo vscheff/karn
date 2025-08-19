@@ -1,6 +1,6 @@
 from discord.ext.commands import HelpCommand
 
-from utils import package_message
+from src.utils import package_message
 
 
 class CustomHelpCommand(HelpCommand):
