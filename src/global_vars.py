@@ -1,2 +1,3 @@
-FILE_ROOT_DIRECTORY = "./files"
+FILE_ROOT_DIR = "./files"
 SEND_LINE_CHAR = '#'
+TEMP_DIR = "./TEMP"

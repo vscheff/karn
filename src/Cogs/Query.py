@@ -14,15 +14,16 @@ from wikipedia import DisambiguationError, page, PageError, random
 from xkcd import getComic, getLatestComic, getLatestComicNum, getRandomComic
 
 from src.us_state_abbrev import abbrev_to_us_state as states
+from src.utils import TEMP_DIR
 from src.utils import get_flags, is_supported_filetype, get_supported_filetype, package_message
 
 
 DEFAULT_RESULT_COUNT = 1
 
 # $card constants
-FACE_0 = "./TEMP/face_0.png"
-FACE_1 = "./TEMP/face_1.png"
-OUTPUT_PNG = "./TEMP/output.png"
+FACE_0 = f"{TEMP_DIR}/face_0.png"
+FACE_1 = f"{TEMP_DIR}/face_1.png"
+OUTPUT_PNG = f"{TEMP_DIR}/output.png"
 SCRYFALL_URL = "https://api.scryfall.com/cards"
 
 # $define constants

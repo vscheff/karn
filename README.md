@@ -56,7 +56,7 @@ In liue of building context from channel messages, you can instead use a file fr
 
 There is a default System Context message that is sent with all LLM requests (exluding requests with the `-f` command flag). You can view this context message by using the `$view_context` command. The System Context message can be configured per-channel. By using the `$set_context` command you can set the System Context message for a channel, or you can use the `$add_context` command to add additional System Context messages for a channel. This allows you to customize the bot's behaviour as it responds to messages using the LLM.
 
-Karn also has the ability to detect "rude" and "nice" messages that he will send custom responses to without making a request to the LLM. You can configure what messages he considers "rude" and "nice" by using the `$tee` command to add lines to `rude` or `nice`. For example, the command `$tee nice I like you` will add the phrase "I like you" to the phrases Karn considers "nice". Any message that contains the phrase "I like you" that triggers a response from Karn will be generated from his "nice" responses. To configure Karn's responses to "rude" and "nice" messages, use the `$tee` command to add lines to `respond_rude` or `respond_nice` respectively. Karn will select a random line from the appropriate file to respond with.
+Karn also has the ability to detect "rude" and "nice" messages that he will send custom responses to without making a request to the LLM. You can configure what messages he considers "rude" and "nice" by using the `$tee` command to add lines to `rude` or `nice`. For example, the command `$tee nice I like you` will add the phrase "I like you" to the phrases Karn considers "nice". Any message that contains the phrase "I like you" that triggers a response from Karn will be generated from his "nice" responses. To configure Karn's responses to "rude" and "nice" messages, use the `$tee` command to add lines to `respond_rude` or `respond_nice` respectively. Karn will select a random line from the appropriate file to respond with. This functionality is not triggered when explicitly using the `$prompt` command, which will always make a request to the LLM.
 
 Karn will modify the response from the LLM to replace descriptors of himself with customizable descriptors. You can add additional descriptors by using the `$tee` command to add lines to `$descriptor`. For example, using the command `$tee descriptor a funny guy` will allow Karn to describe himself as "a funny guy". So, if the LLM generates a response like "As an AI, I aim to assist you.", Karn will modify the message to instead be "As a funny guy, I aim to assist you." Descriptors will be chosen at random from the `descriptor.txt` file.
 
@@ -157,6 +157,7 @@ Karn steals his name from a [time-travelling silver golem](https://mtg.wiki/page
 - [x] Add way to view available comics without triggering a command error with `$comic`
 - [x] Accept channel ID with the `-c` command flag to `$ignore` to allow configuration of other channels
 - [ ] Segregrate input/output files into seperate server directories
+- [ ] Move file directories into SQL tables
 - [ ] Configurable webserver settings
 - [ ] Configurable SQL database name
 - [ ] Allow for remote SQL Server

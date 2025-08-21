@@ -7,10 +7,11 @@ import os
 import qrcode
 from re import findall
 
+from src.utils import TEMP_DIR
 from src.utils import get_as_number, package_message
 
 # Filename/path for temporary storage of QR image
-QR_FILEPATH = "./files/temp_qr.png"
+QR_FILEPATH = f"{TEMP_DIR}/temp_qr.png"
 
 
 class Utility(commands.Cog):

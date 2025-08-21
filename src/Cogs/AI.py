@@ -12,7 +12,7 @@ from tiktoken import encoding_for_model
 
 
 # Local dependencies
-from src.global_vars import FILE_ROOT_DIRECTORY
+from src.global_vars import FILE_ROOT_DIR
 from src.utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES
 from src.utils import get_cursor, get_flags, get_id_from_mention, get_json_from_socket, package_message, send_tts_if_in_vc, text_to_speech
 
@@ -36,11 +36,11 @@ TOKENS_PER_REPLY = 3    # Tokens required for the response from OpenAI regardles
 MAX_CONTEXT_HISTORY = 256
 MIN_MESSAGE_LEN = 4                                     # Minimum message length bot will respond to
 MAX_MSG_LEN = 3 * MAX_TOKENS // 4                       # Maximum length context to send to OpenAI
-RUDE_MESSAGES_FILEPATH = "./files/rude.txt"             # File containing phrases the bot considers "rude"
-RUDE_RESPONSE_FILEPATH = "./files/respond_rude.txt"     # File containing responses to "rude" messages
-NICE_MESSAGES_FILEPATH = "./files/nice.txt"             # File containing phrases the bot considers "nice"
-NICE_RESPONSE_FILEPATH = "./files/respond_nice.txt"     # File containing responses to "nice" messages
-AI_DESCRIPTOR_FILEPATH = "./files/descriptor.txt"       # File containing alternate self-descriptors of the bot
+RUDE_MESSAGES_FILENAME = "rude.txt"                     # File containing phrases the bot considers "rude"
+RUDE_RESPONSE_FILENAME = "respond_rude.txt"             # File containing responses to "rude" messages
+NICE_MESSAGES_FILENAME = "nice.txt"                     # File containing phrases the bot considers "nice"
+NICE_RESPONSE_FILENAME = "respond_nice.txt"             # File containing responses to "nice" messages
+AI_DESCRIPTOR_FILENAME = "descriptor.txt"               # File containing alternate self-descriptors of the bot
 DEFAULT_RUDE_MESSAGE = "shut up"                        # Phrase to consider "rude" if file not found
 DEFAULT_RUDE_RESPONSE = "I will leave, my apologies."   # Response to "rude" messages if file not found
 DEFAULT_NICE_MESSAGE = "good job"                       # Phrase to consider "nice" if file not found
@@ -73,60 +73,20 @@ class AI(Cog):
         self.reply_chance = 1
         self.client = AsyncOpenAI(api_key=OPENAI_API_KEY, organization=OPENAI_ORGANIZATION)
 
-        # Import "rude" phrases. If file not found, use default and create a file for future use
-        try:
-            self.get_rude_messages()
-        except FileNotFoundError:
-            self.rude_messages = [DEFAULT_RUDE_MESSAGE]
-            with open(RUDE_MESSAGES_FILEPATH, 'w') as out_file:
-                out_file.writelines(i + '\n' for i in self.rude_messages)
-
-        self.rude_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
-
-        # Import "nice" phrases. If file not found, use default and create a file for future use
-        try:
-            self.get_nice_messages()
-        except FileNotFoundError:
-            self.nice_messages = [DEFAULT_NICE_MESSAGE]
-            with open(NICE_MESSAGES_FILEPATH, 'w') as out_file:
-                out_file.writelines(i + '\n' for i in self.nice_messages)
-
-        self.nice_mtime = stat(NICE_MESSAGES_FILEPATH).st_mtime_ns
-
-        # Import self descriptors. If file not found, use default and create a file for future use
-        try:
-            self.get_descriptors()
-        except FileNotFoundError:
-            self.descriptors = [DEFAULT_DESCRIPTOR]
-            with open(AI_DESCRIPTOR_FILEPATH, 'w') as out_file:
-                out_file.writelines(i + '\n' for i in self.descriptors)
-
-        self.desc_mtime = stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns
-
-        # If rude response file not found, create the file with default response
-        if not exists(RUDE_RESPONSE_FILEPATH):
-            with open(RUDE_RESPONSE_FILEPATH, 'w') as out_file:
-                out_file.writelines(i + '\n' for i in [DEFAULT_RUDE_RESPONSE])
-
-        # If nice response file not found, create the file with default response
-        if not exists(NICE_RESPONSE_FILEPATH):
-            with open(NICE_RESPONSE_FILEPATH, 'w') as out_file:
-                out_file.writelines(i + '\n' for i in [DEFAULT_NICE_RESPONSE])
-
     # Import "rude" phrases from input file
-    def get_rude_messages(self):
-        with open(RUDE_MESSAGES_FILEPATH, 'r') as in_file:
-            self.rude_messages = [i.strip().lower() for i in in_file.readlines()]
+    def get_rude_messages(self, guild_id):
+        with open(f"{FILE_ROOT_DIR}/{guild_id}/{RUDE_MESSAGES_FILENAME}", 'r') as in_file:
+            return [i.strip().lower() for i in in_file.readlines()]
 
     # Import "nice" phrases from input file
-    def get_nice_messages(self):
-        with open(NICE_MESSAGES_FILEPATH, 'r') as in_file:
-            self.nice_messages = [i.strip().lower() for i in in_file.readlines()]
+    def get_nice_messages(self, guild_id):
+        with open(f"{FILE_ROOT_DIR}/{guid_id}/{NICE_MESSAGES_FILENAME}", 'r') as in_file:
+            return [i.strip().lower() for i in in_file.readlines()]
 
     # Import self descriptors from input file
     def get_descriptors(self):
-        with open(AI_DESCRIPTOR_FILEPATH, 'r') as in_file:
-            self.descriptors = [i.strip() for i in in_file.readlines()]
+        with open(f"{FILE_ROOT_DIR}/{guid_id}/{AI_DESCRIPTOR_FILENAME}", 'r') as in_file:
+            return [i.strip() for i in in_file.readlines()]
 
     @command(help="Generate an image from a given prompt\n"
                   "Example: `$generate a presidential election in minecraft`\n\n"
@@ -322,17 +282,14 @@ class AI(Cog):
                       chat.choices[0].message.content):
                 return
 
-        # Re-import self descriptors if the file has been modified since we last imported
-        if (last_mod := stat(AI_DESCRIPTOR_FILEPATH).st_mtime_ns) != self.desc_mtime:
-            self.get_descriptors()
-            self.desc_mtime = last_mod
+        descriptors = self.get_descriptors()
 
         # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
         # https://regex101.com/r/oWjuWt/2
         reply = sub("([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* *(?:golem)* "
                     "*(?:AI|digital|artificial intelligence|language model)"
                     "(?: language)*(?: text-based)*(?: model)*(?: assistant)*",
-                    r"\1 " + choice(self.descriptors),
+                    r"\1 " + choice(descriptors),
                     chat.choices[0].message.content)
         
         # Ensure bot is not prefixing the reply with a name
@@ -351,8 +308,10 @@ class AI(Cog):
                            "Example: `$prompt tell me a joke`\n\n"
                            "Please use `$help prompt` for more information.")
 
-    def build_context_from_file(self, filename):
-        with open(f"{FILE_ROOT_DIRECTORY}/{filename.lower()}.txt", "r") as in_file:
+    def build_context_from_file(self, guild_id, filename):
+        filepath = f"{FILE_ROOT_DIRECTORY}/{guild_id}/{filename.lower()}.txt"
+
+        with open(filepath, "r") as in_file:
             lines = in_file.readlines()
 
         context = []
@@ -539,17 +498,14 @@ class AI(Cog):
         # Check if the message contains the bot's name (Karn) but not as a voted item (Karn++ or Karn--)
         # https://regex101.com/r/qA25Ux/1
         if search(r"[Kk]arn(?:\Z|[^+\-])", msg.clean_content):
-            # Re-import "rude" phrases if the file has been modified since we last imported
-            if (last_mod := stat(RUDE_MESSAGES_FILEPATH).st_mtime_ns) != self.rude_mtime:
-                self.get_rude_messages()
-                self.rude_mtime = last_mod
-
+            rude_messages = get_rude_messages()
             clean_lower = msg.clean_content.lower()
 
             # If the message contains a rude phrase, reply with a response to rude messages
             # https://regex101.com/r/isXc6g/1
-            if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE) for i in self.rude_messages):
-                reply = get_random_response()
+            if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE)
+                   for i in rude_messages):
+                reply = get_random_response(msg.guild.id, rude=True)
                 await msg.channel.send(reply)
                 await send_tts_if_in_vc(self.bot, msg.author, reply)
                 return
@@ -559,9 +515,12 @@ class AI(Cog):
                 self.get_nice_messages()
                 self.nice_mtime = last_mod
 
+            nice_messages = get_nice_messages()
+
             # If the message contains a nice phrase, reply with a response to nice messages
-            if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE) for i in self.nice_messages):
-                reply = get_random_response(False)
+            if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE)
+                   for i in nice_messages):
+                reply = get_random_response(msg.guild.id, rude=False)
                 await msg.channel.send(reply)
                 await send_tts_if_in_vc(self.bot, msg.author, reply)
                 return
@@ -619,8 +578,9 @@ def get_token_len(msg):
     return sum(len(ENCODING.encode(i)) for i in (msg["role"], msg["content"])) + TOKENS_PER_MESSAGE
 
 # Imports responses from the input file, and returns a random line from it
-def get_random_response(rude=True):
-    filepath = RUDE_RESPONSE_FILEPATH if rude else NICE_RESPONSE_FILEPATH
+def get_random_response(guild_id, rude=True):
+    filename = RUDE_RESPONSE_FILEPATH if rude else NICE_RESPONSE_FILEPATH
+    filepath = f"{ROOT_FILE_DIR}/{guild_id}/{filename}"
 
     with open(filepath, 'r') as in_file:
         return choice(in_file.readlines())

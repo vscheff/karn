@@ -3,12 +3,8 @@ from os import listdir, remove
 from random import choice
 from re import search
 
-from src.global_vars import *
+from src.global_vars import FILE_ROOT_DIR, SEND_LINE_CHAR
 from src.utils import package_message, send_tts_if_in_vc
-
-
-FILE_ROOT_DIRECTORY = "./files"
-SEND_LINE_CHAR = '#'
 
 
 class Terminal(Cog):
@@ -23,7 +19,7 @@ class Terminal(Cog):
         filename = filename.lower()
 
         try:
-            with open(f"{FILE_ROOT_DIRECTORY}/{filename}.txt", "r") as in_file:
+            with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{filename}.txt", "r") as in_file:
                 content = in_file.read()
         except FileNotFoundError:
             return await ctx.send(f"No file named {filename} found! Try using `$tee` first!")
@@ -49,7 +45,7 @@ class Terminal(Cog):
         file = file.lower()
 
         try:
-            with open(f"{FILE_ROOT_DIRECTORY}/{file}.txt", "r") as in_file:
+            with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{file}.txt", "r") as in_file:
                 lines = in_file.readlines()
         except FileNotFoundError:
             return await ctx.send(f"No file named {file} found! Try using `$tee` first!")
@@ -62,7 +58,8 @@ class Terminal(Cog):
     @command(help="Lists the text files currently present in the directory",
              brief="Lists present text files")
     async def ls(self, ctx):
-        files = '\n'.join(i.replace(".txt", '') for i in sorted(listdir(FILE_ROOT_DIRECTORY)) if i[0] != '.')
+        file_names = sorted(listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"))
+        files = '\n'.join(i.replace(".txt", '') for i in filenames if i[0] != '.')
         await ctx.send(f"```\n{files}\n```")
 
     @command(help="Removes a text file from the directory",
@@ -71,7 +68,7 @@ class Terminal(Cog):
         filename = filename.lower()
 
         try:
-            remove(f"{FILE_ROOT_DIRECTORY}/{filename}.txt")
+            remove(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{filename}.txt")
         except FileNotFoundError:
             return await ctx.send(f"No file named {filename} found! Try using `$tee` first!")
 
@@ -88,7 +85,7 @@ class Terminal(Cog):
 
         file = file.lower()
 
-        with open(f"{FILE_ROOT_DIRECTORY}/{file}.txt", "a") as out_file:
+        with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{file}.txt", "a") as out_file:
             out_file.write(f"{inp}\n")
 
         await ctx.send(f"Successfully wrote line into `{file}`")
@@ -108,7 +105,7 @@ async def send_line(msg, bot):
         return False
 
     try:
-        with open(f"{FILE_ROOT_DIRECTORY}/{file}.txt", "r") as in_file:
+        with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{file}.txt", "r") as in_file:
             lines = in_file.readlines()
     except FileNotFoundError:
         return False

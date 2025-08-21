@@ -10,11 +10,12 @@ from re import search
 from socket import socket
 from string import ascii_letters, digits
 
+from src.global_vars.py import TEMP_DIR
+
 OPENAI_CLIENT = OpenAI(api_key=os.getenv("CHATGPT_TOKEN"), organization=os.getenv("CHATGPT_ORG"))
 
-FILEPATH = './files/msg.txt'
+PACKAGE_FILEPATH = f"{TEMP_DIR}/msg.txt"
 SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
-TTS_TEMP_PATH = "./TEMP/"
 TTS_RAND_STR_LEN = 8
 
 MAX_MSG_LEN = 2000
@@ -143,11 +144,11 @@ async def package_message(obj, ctx, multi_send=False):
 
         return
 
-    with open(FILEPATH, 'w', encoding='utf8') as msg_file:
+    with open(PACKAGE_FILEPATH, 'w', encoding='utf8') as msg_file:
         msg_file.write(obj)
-    if os.path.exists(FILEPATH):
-        await ctx.send(file=discord.File(FILEPATH))
-        os.remove(FILEPATH)
+    if os.path.exists(PACKAGE_FILEPATH):
+        await ctx.send(file=discord.File(PACKAGE_FILEPATH))
+        os.remove(PACKAGE_FILEPATH)
     else:
         print('Error occurred while packaging message. Temp file not created/deleted.')
 
@@ -160,7 +161,8 @@ async def send_tts_if_in_vc(bot, author, text):
 async def text_to_speech(text, client, voice=DEFAULT_TTS_VOICE, speed=DEFAULT_TTS_SPEED):
     response = OPENAI_CLIENT.audio.speech.create(model="tts-1", input=text, voice=voice, speed=speed)
     
-    TTS_TEMP_FILE = f"{TTS_TEMP_PATH}output_{''.join(choices(ascii_letters + digits, k=TTS_RAND_STR_LEN))}.mp3"
+    filename = output_{''.join(choices(ascii_letters + digits, k=TTS_RAND_STR_LEN))}.mp3
+    TTS_TEMP_FILE = f"{TEMP_DIR}/{filename}"
 
     response.stream_to_file(TTS_TEMP_FILE)
 
