@@ -18,6 +18,7 @@ from src.cogs import add_cogs
 from src.Cogs.Terminal import send_line
 from src.help_command import CustomHelpCommand
 from src.sql import connect_to_sql_database
+from src.utils import make_guild_dir
 
 bot = commands.Bot(command_prefix='$',
                    case_insensitive=True,
@@ -46,6 +47,7 @@ async def on_ready():
     print(f"\n{bot.user} is connected to the following guild(s):\n")
     for guild in bot.guilds:
         print(f"{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
+        make_guild_dir(guild.id)
 
 
 @bot.event

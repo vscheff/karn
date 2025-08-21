@@ -59,7 +59,7 @@ class Terminal(Cog):
              brief="Lists present text files")
     async def ls(self, ctx):
         file_names = sorted(listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"))
-        files = '\n'.join(i.replace(".txt", '') for i in filenames if i[0] != '.')
+        files = '\n'.join(i.replace(".txt", '') for i in file_names if i[0] != '.')
         await ctx.send(f"```\n{files}\n```")
 
     @command(help="Removes a text file from the directory",

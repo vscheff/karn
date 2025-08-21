@@ -80,12 +80,12 @@ class AI(Cog):
 
     # Import "nice" phrases from input file
     def get_nice_messages(self, guild_id):
-        with open(f"{FILE_ROOT_DIR}/{guid_id}/{NICE_MESSAGES_FILENAME}", 'r') as in_file:
+        with open(f"{FILE_ROOT_DIR}/{guild_id}/{NICE_MESSAGES_FILENAME}", 'r') as in_file:
             return [i.strip().lower() for i in in_file.readlines()]
 
     # Import self descriptors from input file
-    def get_descriptors(self):
-        with open(f"{FILE_ROOT_DIR}/{guid_id}/{AI_DESCRIPTOR_FILENAME}", 'r') as in_file:
+    def get_descriptors(self, guild_id):
+        with open(f"{FILE_ROOT_DIR}/{guild_id}/{AI_DESCRIPTOR_FILENAME}", 'r') as in_file:
             return [i.strip() for i in in_file.readlines()]
 
     @command(help="Generate an image from a given prompt\n"
@@ -282,7 +282,7 @@ class AI(Cog):
                       chat.choices[0].message.content):
                 return
 
-        descriptors = self.get_descriptors()
+        descriptors = self.get_descriptors(ctx.guild.id)
 
         # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
         # https://regex101.com/r/oWjuWt/2
@@ -498,8 +498,8 @@ class AI(Cog):
         # Check if the message contains the bot's name (Karn) but not as a voted item (Karn++ or Karn--)
         # https://regex101.com/r/qA25Ux/1
         if search(r"[Kk]arn(?:\Z|[^+\-])", msg.clean_content):
-            rude_messages = get_rude_messages()
             clean_lower = msg.clean_content.lower()
+            rude_messages = self.get_rude_messages(msg.guild.id)
 
             # If the message contains a rude phrase, reply with a response to rude messages
             # https://regex101.com/r/isXc6g/1
@@ -510,12 +510,7 @@ class AI(Cog):
                 await send_tts_if_in_vc(self.bot, msg.author, reply)
                 return
 
-            # Re-import "nice" phrases if the file has been modified since we last imported
-            if (last_mod := stat(NICE_MESSAGES_FILEPATH).st_mtime_ns) != self.nice_mtime:
-                self.get_nice_messages()
-                self.nice_mtime = last_mod
-
-            nice_messages = get_nice_messages()
+            nice_messages = self.get_nice_messages(msg.guild.id)
 
             # If the message contains a nice phrase, reply with a response to nice messages
             if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE)
@@ -579,8 +574,8 @@ def get_token_len(msg):
 
 # Imports responses from the input file, and returns a random line from it
 def get_random_response(guild_id, rude=True):
-    filename = RUDE_RESPONSE_FILEPATH if rude else NICE_RESPONSE_FILEPATH
-    filepath = f"{ROOT_FILE_DIR}/{guild_id}/{filename}"
+    filename = RUDE_RESPONSE_FILENAME if rude else NICE_RESPONSE_FILENAME
+    filepath = f"{FILE_ROOT_DIR}/{guild_id}/{filename}"
 
     with open(filepath, 'r') as in_file:
         return choice(in_file.readlines())

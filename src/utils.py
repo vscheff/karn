@@ -10,7 +10,7 @@ from re import search
 from socket import socket
 from string import ascii_letters, digits
 
-from src.global_vars.py import TEMP_DIR
+from src.global_vars import FILE_ROOT_DIR, TEMP_DIR
 
 OPENAI_CLIENT = OpenAI(api_key=os.getenv("CHATGPT_TOKEN"), organization=os.getenv("CHATGPT_ORG"))
 
@@ -117,6 +117,11 @@ def get_supported_filetype(images, randomize=True):
 def is_supported_filetype(filename):
     return (match := search(r"\.[a-zA-z\d]+\Z", filename)) and match.group() in SUPPORTED_FILE_FORMATS
 
+def make_guild_dir(guild_id):
+    filepath = f"{FILE_ROOT_DIR}/{guild_id}"
+    if not os.path.isdir(filepath):
+        os.makedirs(filepath)
+
 async def package_message(obj, ctx, multi_send=False):
     if isinstance(obj, (int, float)):
         obj = str(obj)
@@ -161,7 +166,7 @@ async def send_tts_if_in_vc(bot, author, text):
 async def text_to_speech(text, client, voice=DEFAULT_TTS_VOICE, speed=DEFAULT_TTS_SPEED):
     response = OPENAI_CLIENT.audio.speech.create(model="tts-1", input=text, voice=voice, speed=speed)
     
-    filename = output_{''.join(choices(ascii_letters + digits, k=TTS_RAND_STR_LEN))}.mp3
+    filename = f"output_{''.join(choices(ascii_letters + digits, k=TTS_RAND_STR_LEN))}.mp3"
     TTS_TEMP_FILE = f"{TEMP_DIR}/{filename}"
 
     response.stream_to_file(TTS_TEMP_FILE)
