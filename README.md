@@ -156,7 +156,7 @@ Karn steals his name from a [time-travelling silver golem](https://mtg.wiki/page
 ## TODO
 - [x] Add way to view available comics without triggering a command error with `$comic`
 - [x] Accept channel ID with the `-c` command flag to `$ignore` to allow configuration of other channels
-- [ ] Segregrate input/output files into seperate server directories
+- [x] Segregrate input/output files into seperate server directories
 - [ ] Move file directories into SQL tables
 - [ ] Configurable webserver settings
 - [ ] Configurable SQL database name

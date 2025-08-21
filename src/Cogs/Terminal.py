@@ -60,6 +60,10 @@ class Terminal(Cog):
     async def ls(self, ctx):
         file_names = sorted(listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"))
         files = '\n'.join(i.replace(".txt", '') for i in file_names if i[0] != '.')
+        
+        if not files:
+            return await ctx.send("No files exist in your server's directory. Try using `$tee` first!")
+
         await ctx.send(f"```\n{files}\n```")
 
     @command(help="Removes a text file from the directory",
@@ -105,7 +109,7 @@ async def send_line(msg, bot):
         return False
 
     try:
-        with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{file}.txt", "r") as in_file:
+        with open(f"{FILE_ROOT_DIR}/{msg.guild.id}/{file}.txt", "r") as in_file:
             lines = in_file.readlines()
     except FileNotFoundError:
         return False

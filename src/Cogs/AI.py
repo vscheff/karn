@@ -75,18 +75,27 @@ class AI(Cog):
 
     # Import "rude" phrases from input file
     def get_rude_messages(self, guild_id):
-        with open(f"{FILE_ROOT_DIR}/{guild_id}/{RUDE_MESSAGES_FILENAME}", 'r') as in_file:
-            return [i.strip().lower() for i in in_file.readlines()]
+        try:
+            with open(f"{FILE_ROOT_DIR}/{guild_id}/{RUDE_MESSAGES_FILENAME}", 'r') as in_file:
+                return [i.strip().lower() for i in in_file.readlines()]
+        except FileNotFoundError:
+            return [DEFAULT_RUDE_MESSAGE]
 
     # Import "nice" phrases from input file
     def get_nice_messages(self, guild_id):
-        with open(f"{FILE_ROOT_DIR}/{guild_id}/{NICE_MESSAGES_FILENAME}", 'r') as in_file:
-            return [i.strip().lower() for i in in_file.readlines()]
+        try:
+            with open(f"{FILE_ROOT_DIR}/{guild_id}/{NICE_MESSAGES_FILENAME}", 'r') as in_file:
+                return [i.strip().lower() for i in in_file.readlines()]
+        except FileNotFoundError:
+            return [DEFAULT_NICE_MESSAGE]
 
     # Import self descriptors from input file
     def get_descriptors(self, guild_id):
-        with open(f"{FILE_ROOT_DIR}/{guild_id}/{AI_DESCRIPTOR_FILENAME}", 'r') as in_file:
-            return [i.strip() for i in in_file.readlines()]
+        try:
+            with open(f"{FILE_ROOT_DIR}/{guild_id}/{AI_DESCRIPTOR_FILENAME}", 'r') as in_file:
+                return [i.strip() for i in in_file.readlines()]
+        except FileNotFoundError:
+            return [DEFAULT_DESCRIPTOR]
 
     @command(help="Generate an image from a given prompt\n"
                   "Example: `$generate a presidential election in minecraft`\n\n"
@@ -247,7 +256,7 @@ class AI(Cog):
 
         if 'f' in flags:
             try:
-                context, encoded_len = self.build_context_from_file(not_flags[1])
+                context, encoded_len = self.build_context_from_file(ctx.guild.id, not_flags[1])
             except FileNotFoundError:
                 return await ctx.send("Input file not found. Use `$ls` to view available input files.")
         else:
@@ -309,7 +318,7 @@ class AI(Cog):
                            "Please use `$help prompt` for more information.")
 
     def build_context_from_file(self, guild_id, filename):
-        filepath = f"{FILE_ROOT_DIRECTORY}/{guild_id}/{filename.lower()}.txt"
+        filepath = f"{FILE_ROOT_DIR}/{guild_id}/{filename.lower()}.txt"
 
         with open(filepath, "r") as in_file:
             lines = in_file.readlines()
@@ -577,5 +586,8 @@ def get_random_response(guild_id, rude=True):
     filename = RUDE_RESPONSE_FILENAME if rude else NICE_RESPONSE_FILENAME
     filepath = f"{FILE_ROOT_DIR}/{guild_id}/{filename}"
 
-    with open(filepath, 'r') as in_file:
-        return choice(in_file.readlines())
+    try:
+        with open(filepath, 'r') as in_file:
+            return choice(in_file.readlines())
+    except FileNotFoundError:
+        return DEFAULT_RUDE_RESPONSE if rude else DEFAULT_NICE_RESPONSE

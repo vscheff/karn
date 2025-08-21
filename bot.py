@@ -47,8 +47,10 @@ async def on_ready():
     print(f"\n{bot.user} is connected to the following guild(s):\n")
     for guild in bot.guilds:
         print(f"{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
-        make_guild_dir(guild.id)
 
+@bot.event
+async def on_guild_join(guild):
+    make_guild_dir(guild.id)
 
 @bot.event
 async def on_message(msg):
@@ -63,7 +65,6 @@ async def on_message(msg):
             await bot.get_cog("AI").send_reply(msg)
 
     bot.get_cog("Rating").rate_listener(msg)
-
 
 @bot.event
 async def on_command_error(ctx, error):
