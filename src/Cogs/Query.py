@@ -97,7 +97,7 @@ class Query(Cog):
                 await package_message(build_comic_list(), ctx)
                 return
             
-            comic = search(results[0]).random_date()
+            comic = search(results[0], date="random")
 
         await ctx.send(comic.image_url)
 

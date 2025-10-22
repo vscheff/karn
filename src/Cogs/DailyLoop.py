@@ -44,7 +44,6 @@ class DailyLoop(commands.Cog):
                            "* *garfield*: Sends a random Garfield comic\n"
                            "* *peanuts*: Sends a random Peantus comic\n"
                            "* *tip*: Sends a tip for using Karn\n"
-                           "* *peanuts*: Sends a random Peanuts comic\n"
                            "* *wiki*: Sends a random Wikipedia article\n"
                            "* *word*: Sends a random word and its definition\n"
                            "* *xkcd*: Sends a random XKCD comic\n"

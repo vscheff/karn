@@ -47,12 +47,13 @@ DEFAULT_NICE_MESSAGE = "good job"                       # Phrase to consider "ni
 DEFAULT_NICE_RESPONSE = "Thanks, I aim to please!"      # Response to "nice" messages if file not found
 DEFAULT_DESCRIPTOR = "your humble assistant"            # Self-descriptor to use if file not found
 REPLY_UPPER_LIMIT = 100                                 # Upper limit for unprompted reply chance
+ERROR_MESSAGE = "An error occured while trying to generate your message. Please try again later."
 
 # The default context message used to "prime" the language model in preparation for it to act as our AI assistant
 GENESIS_MESSAGE = {"role": "system",
                    "content": "You are a time-travelling golem named Karn. "
                               "You are currently acting as an AI assistant for a Discord server. "
-                              "Message content from Discord will follow the format: \"Name: Message\" "
+                              "Message content from Discord will follow the format: \"Name:: Message\" "
                               "where \"Name\" is the name of the user who sent the message, "
                               "and \"Message\" is the message that was sent. "
                               "If you are ever unable to fulfill a user's request, remind the user they can use the "
@@ -303,9 +304,13 @@ class AI(Cog):
         
         # Ensure bot is not prefixing the reply with a name
         # https://regex101.com/r/4vSz5X/1
-        reply = sub(r"\A\w+:\s", '', reply)
+        reply = sub(r"\A\w+::\s", '', reply)
 
-        await package_message(reply, ctx)
+        # Send error message if OpenAI sent a blank response
+        if not reply:
+            return await ctx.send(ERROR_MESSAGE)
+
+        await package_message(reply, ctx, multi_send=True)
        
         await send_tts_if_in_vc(self.bot, author, reply)
 
@@ -355,11 +360,13 @@ class AI(Cog):
         # Build the list of context messages
         async for message in channel.history(limit=MAX_CONTEXT_HISTORY):
             content = sub(r"\A\$prompt ", '', message.clean_content)
+            # Remove character that can cause blank responses from OpenAI
+            content = sub(r"‐", '', content)
 
             if message.author == self.bot.user:
                 msg = {"role": "assistant", "content": content}
             else:
-                msg = {"role": "user", "content": f"{message.author.display_name}: {content}"}
+                msg = {"role": "user", "content": f"{message.author.display_name}:: {content}"}
 
             # Break the loop if adding the next messages pushes us past the token limit
             if (encoding_len := get_token_len(msg)) + num_tokens > MAX_MSG_LEN:

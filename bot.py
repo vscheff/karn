@@ -69,7 +69,7 @@ async def on_message(msg):
 @bot.event
 async def on_command_error(ctx, error):
     try:
-        author = f"{ctx.author} (a.k.a {ctx.author.nick})"
+        author = f"{ctx.author} (a.k.a. {ctx.author.nick})"
     except AttributeError:
         author = f"{ctx.author}"
 
