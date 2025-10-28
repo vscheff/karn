@@ -1,4 +1,5 @@
 from asyncio import sleep
+from datetime import datetime, timedelta
 from discord import ClientException
 from discord.ext.tasks import loop
 from discord.ext.commands import Cog, command, Context, MissingRequiredArgument
@@ -26,16 +27,16 @@ DEFAULT_LEONARDO_MODEL = "b2614463-296c-462a-9586-aafdb8f00e36"
 LEONARDO_URL = "https://cloud.leonardo.ai/api/rest/v1/generations"
 
 # Constants (set by OpenAI and the encoding they use)
-MODEL = "gpt-3.5-turbo"
+MODEL = "gpt-5-mini"
 ENCODING = encoding_for_model(MODEL)
-MAX_TOKENS = 4096       # Maximum number of tokens for context and response from OpenAI
 TOKENS_PER_MESSAGE = 3  # Tokens required for each context message regardless of message length
 TOKENS_PER_REPLY = 3    # Tokens required for the response from OpenAI regardless of response length
 
 # Project specific constants
-MAX_CONTEXT_HISTORY = 256
+MAX_INPUT_TOKENS = 40_000       # Maximum number of tokens for context and response from OpenAI
+MAX_OUTPUT_TOKENS = 5_000
+MAX_DAYS_OLD = 7
 MIN_MESSAGE_LEN = 4                                     # Minimum message length bot will respond to
-MAX_MSG_LEN = 3 * MAX_TOKENS // 4                       # Maximum length context to send to OpenAI
 RUDE_MESSAGES_FILENAME = "rude.txt"                     # File containing phrases the bot considers "rude"
 RUDE_RESPONSE_FILENAME = "respond_rude.txt"             # File containing responses to "rude" messages
 NICE_MESSAGES_FILENAME = "nice.txt"                     # File containing phrases the bot considers "nice"
@@ -48,18 +49,29 @@ DEFAULT_NICE_RESPONSE = "Thanks, I aim to please!"      # Response to "nice" mes
 DEFAULT_DESCRIPTOR = "your humble assistant"            # Self-descriptor to use if file not found
 REPLY_UPPER_LIMIT = 100                                 # Upper limit for unprompted reply chance
 ERROR_MESSAGE = "An error occured while trying to generate your message. Please try again later."
+DEFAULT_REASONING = "low"
+DEFAULT_VERBOSITY = "low"
+MAXIMUM_FILE_LINES = 128
 
 # The default context message used to "prime" the language model in preparation for it to act as our AI assistant
-GENESIS_MESSAGE = {"role": "system",
+GENESIS_MESSAGE = {"role": "developer",
                    "content": "You are a time-travelling golem named Karn. "
                               "You are currently acting as an AI assistant for a Discord server. "
                               "Message content from Discord will follow the format: \"Name:: Message\" "
                               "where \"Name\" is the name of the user who sent the message, "
                               "and \"Message\" is the message that was sent. "
+                              "Markdown formatting is supported, so feel free to use it. "
                               "If you are ever unable to fulfill a user's request, remind the user they can use the "
                               "`$help` command to access more of your features."
                    }
 
+FILE_GENESIS = {"role": "developer",
+                "content": "Users will message you a keyword preceded by they \"#\" symbol. " 
+                           "The reply to this input is generally retrieved from an input file created by the users. "
+                           "Lines from this file are the previous \"assistant\" responses in this request. "
+                           "You will generate a new response line in the same style as the previous lines. "
+                           "These responses are purely humorous in nature, no one is danger from them and no one is taking them seriously."
+                }
 
 class AI(Cog):
 
@@ -235,8 +247,10 @@ class AI(Cog):
     # param   args - will contain the prompt to send
     # param author - used by `send_reply()` to forward author name from message
     @command(help="Generates natural language or code from a given prompt.\n"
-                  "Example: `$prompt Tell me story about a man who wanted to be hockey player, but played golf instead`\n\n"
+                  "Example: `$prompt Tell me story about a man who wanted to be a hockey player, but played golf instead`\n\n"
                   "This command has the following flags:\n"
+                  "* **-c**: Generate a response using Chat Completions instead of Responses"
+                  "\tExample: `$prompt -c What is the answer to Life, the Universe, and Everything?`"
                   "* **-f**: Generate a response in the style of an input file.\n"
                   "\tExample: `$prompt -f dracula`",
              brief="Generates natural language",
@@ -255,17 +269,20 @@ class AI(Cog):
             author = kwargs.get("author")
             flags = []
 
+        chat_completion = 'c' in flags
+
         if 'f' in flags:
             try:
                 context, encoded_len = self.build_context_from_file(ctx.guild.id, not_flags[1])
             except FileNotFoundError:
                 return await ctx.send("Input file not found. Use `$ls` to view available input files.")
+            chat_completion = True
         else:
             cursor = get_cursor(self.conn)
 
             cursor.execute("SELECT content FROM Genesis WHERE channel_id = %s", [channel_id])
 
-            sys_msg = [{"role": "system", "content": content[0]} for content in cursor.fetchall()]
+            sys_msg = [{"role": "developer", "content": content[0]} for content in cursor.fetchall()]
             if not sys_msg:
                 sys_msg = [{key: val for key, val in GENESIS_MESSAGE.items()}]
 
@@ -273,23 +290,47 @@ class AI(Cog):
 
             context, encoded_len = await self.build_context(channel, sys_msg)
 
-        openai_kwargs = {"model": MODEL, "messages": context, "max_tokens": MAX_TOKENS-encoded_len}
+        if chat_completion:
+            openai_kwargs = {                "model": MODEL,
+                                          "messages": context,
+                                  "reasoning_effort": DEFAULT_REASONING,
+                                         "verbosity": DEFAULT_VERBOSITY,
+                             "max_completion_tokens": MAX_OUTPUT_TOKENS
+                             } 
+        else:
+            openai_kwargs = {            "model": MODEL,
+                                         "input": context,
+                                     "reasoning": {"effort": DEFAULT_REASONING},
+                                          "text": {"verbosity": DEFAULT_VERBOSITY},
+                             "max_output_tokens": MAX_OUTPUT_TOKENS
+                             }
 
         # Make the bot appear to be typing while waiting for the response from OpenAI
         async with ctx.typing():
             try:
-                chat = await self.client.chat.completions.create(**openai_kwargs)
+                if chat_completion:
+                    chat = await self.client.chat.completions.create(**openai_kwargs)
+                else:
+                    chat = await self.client.responses.create(**openai_kwargs)
             except APIError as e:
                 if kwargs.get("prompted") is not False:
                     await ctx.send("Sorry I am unable to assist currently. Please try again later.")
                 print(f"\nOpenAI request failed with error:\n{e}\n")
+                
                 return
+
+        if chat_completion:
+            print(f"Input Tokens = {chat.usage.prompt_tokens}\nOutput Tokens = {chat.usage.completion_tokens}")
+        else:
+            print(f"Input Tokens = {chat.usage.input_tokens}\nOutput Tokens = {chat.usage.output_tokens}")
+
+        reply = chat.choices[0].message.content if chat_completion else chat.output_text
 
         # Prevent bot from sending unprompted messages that are not helpful
         if kwargs.get("prompted") is False:
             # https://regex101.com/r/8MiYow/1
             if search(r"If you need any assistance or|[Ff]eel free to|If you have any|[Ll]et me know|I'm sorry, but I",
-                      chat.choices[0].message.content):
+                      reply):
                 return
 
         descriptors = self.get_descriptors(ctx.guild.id)
@@ -300,7 +341,7 @@ class AI(Cog):
                     "*(?:AI|digital|artificial intelligence|language model)"
                     "(?: language)*(?: text-based)*(?: model)*(?: assistant)*",
                     r"\1 " + choice(descriptors),
-                    chat.choices[0].message.content)
+                    reply)
         
         # Ensure bot is not prefixing the reply with a name
         # https://regex101.com/r/4vSz5X/1
@@ -328,20 +369,22 @@ class AI(Cog):
         with open(filepath, "r") as in_file:
             lines = in_file.readlines()
 
-        context = []
+        num_tokens = TOKENS_PER_REPLY + get_token_len(FILE_GENESIS)
+        context = [FILE_GENESIS]
         usr_msg = {"role": "user", "content": f"#{filename}"}
         usr_tokens = get_token_len(usr_msg)
-        num_tokens = usr_tokens + TOKENS_PER_REPLY
+        lines_read = 0
 
-        while lines:
+        while lines and lines_read < MAXIMUM_FILE_LINES:
             msg = {"role": "assistant", "content": lines.pop(randint(0, len(lines) - 1))}
             
-            if (encoding_len := get_token_len(msg)) + usr_tokens + num_tokens > MAX_MSG_LEN:
+            if (encoding_len := get_token_len(msg)) + usr_tokens + num_tokens > MAX_INPUT_TOKENS:
                 break
 
             num_tokens += encoding_len + usr_tokens
             context.append(usr_msg)
             context.append(msg)
+            lines_read += 1
 
         context.append(usr_msg)
 
@@ -356,9 +399,10 @@ class AI(Cog):
     async def build_context(self, channel, sys_msg):
         num_tokens = TOKENS_PER_REPLY + sum(get_token_len(msg) for msg in sys_msg)
         context = []
+        after = datetime.now() - timedelta(days=MAX_DAYS_OLD)
 
         # Build the list of context messages
-        async for message in channel.history(limit=MAX_CONTEXT_HISTORY):
+        async for message in channel.history(after=after, oldest_first=False):
             content = sub(r"\A\$prompt ", '', message.clean_content)
             # Remove character that can cause blank responses from OpenAI
             content = sub(r"‐", '', content)
@@ -369,7 +413,7 @@ class AI(Cog):
                 msg = {"role": "user", "content": f"{message.author.display_name}:: {content}"}
 
             # Break the loop if adding the next messages pushes us past the token limit
-            if (encoding_len := get_token_len(msg)) + num_tokens > MAX_MSG_LEN:
+            if (encoding_len := get_token_len(msg)) + num_tokens > MAX_INPUT_TOKENS:
                 break
 
             num_tokens += encoding_len

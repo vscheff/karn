@@ -1,11 +1,11 @@
 # Main starting file for Karn
 # This file creates the Bot object, loads the cogs, and starts the event loop
 
+import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from mysql.connector.errors import InterfaceError
 from os import getenv
-import discord
 
 # env must be loaded before importing ./cogs.py
 load_dotenv()
@@ -78,7 +78,8 @@ async def on_command_error(ctx, error):
           f"\t  Guild: {ctx.guild}\n"
           f"\tChannel: {ctx.message.channel}\n"
           f"\tMessage: {ctx.message.content}\n"
-          f"Error:\n{error}\n")
+          f"Error:\n{error}")
+
 
 # Begin the bot's event loop
 bot.run(TOKEN)
