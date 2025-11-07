@@ -51,7 +51,7 @@ class Utility(commands.Cog):
     # param args - all user input following the command name
     @commands.command(help="Returns the result of a mathematical expression.\n"
                            "Example: `$calc 6 * 7`",
-                      brief="Executes given Python code")
+                      brief="Calculates the result of a mathematical expression")
     async def calc(self, ctx, *, args):
         prec = {'+': 0, '-': 0, '*': 1, '/': 1, '^': 2}
 
