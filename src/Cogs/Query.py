@@ -3,7 +3,7 @@ from comics.exceptions import InvalidEndpointError
 from copy import deepcopy
 from discord import Embed, File
 from discord.ext.commands import Cog, command, MissingRequiredArgument
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from os import getenv, remove
 from os.path import exists
 from PIL import Image
@@ -166,7 +166,7 @@ class Query(Cog):
 
         search_query = ' '.join(query)
 
-        if not (results := DDGS().images(keywords=search_query, safesearch="off")):
+        if not (results := DDGS().images(query=search_query, safesearch="off")):
             return await ctx.send(f"No results found for \"{search_query}\".")
 
         image_urls = [i["image"] for i in results]
@@ -196,7 +196,7 @@ class Query(Cog):
 
         search_query = ' '.join(query)
 
-        if not (results := DDGS().text(keywords=search_query, safesearch="off")):
+        if not (results := DDGS().text(query=search_query, safesearch="off")):
             return await ctx.send(f"No results found for \"{search_query}\".")
 
         for result in results[:sub_arg if sub_arg else DEFAULT_RESULT_COUNT]:
@@ -225,7 +225,7 @@ class Query(Cog):
 
         search_query = ' '.join(query)
 
-        if not (results := DDGS().videos(keywords=search_query, safesearch="off")):
+        if not (results := DDGS().videos(query=search_query, safesearch="off")):
             return await ctx.send(f"No results found for \"{search_query}\".")
 
         for result in results[:sub_arg if sub_arg else DEFAULT_RESULT_COUNT]:

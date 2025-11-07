@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from discord import ClientException
 from discord.ext.tasks import loop
 from discord.ext.commands import Cog, command, Context, MissingRequiredArgument
+from json import dumps, loads
 from openai import APIError, AsyncOpenAI
 from os import getenv, stat
 from os.path import exists
@@ -16,7 +17,7 @@ from tiktoken import encoding_for_model
 from src.global_vars import FILE_ROOT_DIR
 from src.utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES
 from src.utils import get_cursor, get_flags, get_id_from_mention, get_json_from_socket, package_message, send_tts_if_in_vc, text_to_speech
-
+from src.tools import get_tool_token_cost, tools
 
 OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
 OPENAI_ORGANIZATION = getenv("CHATGPT_ORG")
@@ -85,6 +86,7 @@ class AI(Cog):
         self.conn = conn
         self.reply_chance = 1
         self.client = AsyncOpenAI(api_key=OPENAI_API_KEY, organization=OPENAI_ORGANIZATION)
+        self.tools_token_cost = get_tool_token_cost(tools, ENCODING)
 
     # Import "rude" phrases from input file
     def get_rude_messages(self, guild_id):
@@ -276,6 +278,7 @@ class AI(Cog):
                 context, encoded_len = self.build_context_from_file(ctx.guild.id, not_flags[1])
             except FileNotFoundError:
                 return await ctx.send("Input file not found. Use `$ls` to view available input files.")
+            
             chat_completion = True
         else:
             cursor = get_cursor(self.conn)
@@ -288,7 +291,7 @@ class AI(Cog):
 
             cursor.close()
 
-            context, encoded_len = await self.build_context(channel, sys_msg)
+            context, encoded_len = await self.build_context(channel, sys_msg, chat_completion)
 
         if chat_completion:
             openai_kwargs = {                "model": MODEL,
@@ -302,7 +305,8 @@ class AI(Cog):
                                          "input": context,
                                      "reasoning": {"effort": DEFAULT_REASONING},
                                           "text": {"verbosity": DEFAULT_VERBOSITY},
-                             "max_output_tokens": MAX_OUTPUT_TOKENS
+                             "max_output_tokens": MAX_OUTPUT_TOKENS,
+                                         "tools": tools
                              }
 
         # Make the bot appear to be typing while waiting for the response from OpenAI
@@ -320,12 +324,20 @@ class AI(Cog):
                 return
 
         if chat_completion:
-            print(f"Input Tokens = {chat.usage.prompt_tokens}\nOutput Tokens = {chat.usage.completion_tokens}")
+            reply = chat.choices[0].message.content
         else:
-            print(f"Input Tokens = {chat.usage.input_tokens}\nOutput Tokens = {chat.usage.output_tokens}")
+            function_called = False
 
-        reply = chat.choices[0].message.content if chat_completion else chat.output_text
+            for item in chat.output:
+                if item.type == "function_call":
+                    await self.handle_functions(ctx, item)
+                    function_called = True
 
+            if function_called:
+                return
+            
+            reply = chat.output_text
+            
         # Prevent bot from sending unprompted messages that are not helpful
         if kwargs.get("prompted") is False:
             # https://regex101.com/r/8MiYow/1
@@ -363,6 +375,16 @@ class AI(Cog):
                            "Example: `$prompt tell me a joke`\n\n"
                            "Please use `$help prompt` for more information.")
 
+    async def handle_functions(self, ctx, item):
+        args = loads(item.arguments)
+        
+        if item.name == "card":
+            await self.bot.get_cog("Query").card(ctx, args=args["query"])
+        elif item.name == "generate":
+            await self.bot.get_cog("AI").generate(ctx, args="-p " + args["prompt"])
+        elif item.name == "image":
+            await self.bot.get_cog("Query").image(ctx, args=f"-c {args['count']} {args['query']}")
+
     def build_context_from_file(self, guild_id, filename):
         filepath = f"{FILE_ROOT_DIR}/{guild_id}/{filename.lower()}.txt"
 
@@ -396,8 +418,8 @@ class AI(Cog):
     # return:
     #       context - list of dictionaries containing messages with a total token length < `MAX_MSG_LEN`
     #    num_tokens - number of tokens used by the context
-    async def build_context(self, channel, sys_msg):
-        num_tokens = TOKENS_PER_REPLY + sum(get_token_len(msg) for msg in sys_msg)
+    async def build_context(self, channel, sys_msg, chat_completion=False):
+        num_tokens = TOKENS_PER_REPLY + get_token_len(sys_msg) + self.tools_token_cost if not chat_completion else 0
         context = []
         after = datetime.now() - timedelta(days=MAX_DAYS_OLD)
 
@@ -629,8 +651,22 @@ class AI(Cog):
 
 # Returns number of tokens for a given context message
 # param msg - dictionary containing the context message
-def get_token_len(msg):
-    return sum(len(ENCODING.encode(i)) for i in (msg["role"], msg["content"])) + TOKENS_PER_MESSAGE
+def get_token_len(messages):
+    messages = [messages] if isinstance(messages, dict) else messages
+
+    num_tokens = 0
+    for msg in messages:
+        num_tokens += TOKENS_PER_MESSAGE
+        for key, val in msg.items():
+            if isinstance(val, list):
+                num_tokens += sum(len(ENCODING.encode(str(i))) for i in val)
+            elif isinstance(val, dict):
+                for _, sub_val in val.items():
+                    num_tokens += len(ENCODING.encode(str(sub_val)))
+            else:
+                num_tokens += len(ENCODING.encode(str(val)))
+
+    return num_tokens
 
 # Imports responses from the input file, and returns a random line from it
 def get_random_response(guild_id, rude=True):

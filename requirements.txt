@@ -1,6 +1,6 @@
 comics >= 0.7.0
 discord
-duckduckgo-search
+ddgs
 gtts
 lxml
 mysql-connector-python
