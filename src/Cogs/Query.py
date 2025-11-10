@@ -323,7 +323,8 @@ class Query(Cog):
                   "kalamazoo; kalamazoo, mi; kalamazoo, michigan; 49006\n"
                   "Example: $weather 49078",
              brief="Returns the weather of a city")
-    async def weather(self, ctx, *, city):
+    async def weather(self, ctx, *, args):
+        flags, city = get_flags(args, join=True)
         city = [i.strip() for i in city.split(',') if i]
         params = {"appid": WEATHER_API_KEY, "units": "imperial"}
 
@@ -341,6 +342,9 @@ class Query(Cog):
         weather = get(WEATHER_URL, params=params).json()
 
         if weather["cod"] != "404":
+            if 'j' in flags:
+                return weather
+
             main = weather["main"]
             await ctx.send(f"**Temperature:** {main['temp']:.0f}°F (*Feels Like* {main['feels_like']:.0f}°)\n"
                            f"**Wind:** {weather['wind']['speed']:.0f} mph\n"
@@ -349,6 +353,9 @@ class Query(Cog):
                            f"**Humidity:** {main['humidity']}%\n"
                            f"**Visibility:** {weather['visibility'] // 1609} mi")
         else:
+            if 'j' in flags:
+                return "City not found"
+
             await ctx.send("City not found")
 
     @weather.error

@@ -251,9 +251,9 @@ class AI(Cog):
     @command(help="Generates natural language or code from a given prompt.\n"
                   "Example: `$prompt Tell me story about a man who wanted to be a hockey player, but played golf instead`\n\n"
                   "This command has the following flags:\n"
-                  "* **-c**: Generate a response using Chat Completions instead of Responses"
-                  "\tExample: `$prompt -c What is the answer to Life, the Universe, and Everything?`"
-                  "* **-f**: Generate a response in the style of an input file.\n"
+                  "* **-c**: Generate a response using Chat Completions instead of Responses\n"
+                  "\tExample: `$prompt -c What is the answer to Life, the Universe, and Everything?`\n"
+                  "* **-f**: Generate a response in the style of an input file\n"
                   "\tExample: `$prompt -f dracula`",
              brief="Generates natural language",
              aliases=["chat", "promt"])
@@ -309,32 +309,34 @@ class AI(Cog):
                                          "tools": tools
                              }
 
-        # Make the bot appear to be typing while waiting for the response from OpenAI
-        async with ctx.typing():
-            try:
-                if chat_completion:
-                    chat = await self.client.chat.completions.create(**openai_kwargs)
-                else:
-                    chat = await self.client.responses.create(**openai_kwargs)
-            except APIError as e:
-                if kwargs.get("prompted") is not False:
-                    await ctx.send("Sorry I am unable to assist currently. Please try again later.")
-                print(f"\nOpenAI request failed with error:\n{e}\n")
-                
-                return
+        if (chat := await self.request_response(ctx, chat_completion, openai_kwargs, kwargs)) is False:
+            return
 
         if chat_completion:
             reply = chat.choices[0].message.content
         else:
-            function_called = False
-
+            need_response = function_called = False
+            
             for item in chat.output:
                 if item.type == "function_call":
-                    await self.handle_functions(ctx, item)
                     function_called = True
 
+                    response = await self.handle_functions(ctx, item)
+
+                    if response:
+                        openai_kwargs["input"].append( {
+                            "type": "function_call_output",
+                            "call_id": item.call_id,
+                            "output": dumps(response)
+                        })
+                        need_response = True
+
             if function_called:
-                return
+                if not need_response:
+                    return
+                
+                openai_kwargs["previous_response_id"] = chat.id
+                chat = await self.request_response(ctx, chat_completion, openai_kwargs, kwargs)
             
             reply = chat.output_text
             
@@ -367,6 +369,22 @@ class AI(Cog):
        
         await send_tts_if_in_vc(self.bot, author, reply)
 
+    async def request_response(self, ctx, chat_completion, openai_kwargs, kwargs):
+        # Make the bot appear to be typing while waiting for the response from OpenAI
+        async with ctx.typing():
+            try:
+                if chat_completion:
+                    return await self.client.chat.completions.create(**openai_kwargs)
+                
+                return await self.client.responses.create(**openai_kwargs)
+            except APIError as e:
+                if kwargs.get("prompted") is not False:
+                    await ctx.send("Sorry I am unable to assist currently. Please try again later.")
+                print(f"\nOpenAI request failed with error:\n{e}\n")
+                
+                return False
+
+
     # Called if $prompt encounters an unhandled exception
     @prompt.error
     async def prompt_error(self, ctx, error):
@@ -377,6 +395,7 @@ class AI(Cog):
 
     async def handle_functions(self, ctx, item):
         args = loads(item.arguments)
+        response = None
         
         if item.name == "card":
             await self.bot.get_cog("Query").card(ctx, args=args["query"])
@@ -384,6 +403,10 @@ class AI(Cog):
             await self.bot.get_cog("AI").generate(ctx, args="-p " + args["prompt"])
         elif item.name == "image":
             await self.bot.get_cog("Query").image(ctx, args=f"-c {args['count']} {args['query']}")
+        elif item.name == "weather":
+            response = await self.bot.get_cog("Query").weather(ctx, args="-j " + args["location"])
+
+        return response
 
     def build_context_from_file(self, guild_id, filename):
         filepath = f"{FILE_ROOT_DIR}/{guild_id}/{filename.lower()}.txt"
@@ -461,8 +484,7 @@ class AI(Cog):
         msg = ' '.join(msg)
         new_gen_msg = msg if 'o' in flags else f"{GENESIS_MESSAGE['content']} {msg}"
 
-        # Ensure the given genesis message doesn't require more tokens than `MAX_MSG_LEN`
-        if (token_len := get_token_len({"role": "system", "content": new_gen_msg})) > MAX_MSG_LEN:
+        if (token_len := get_token_len({"role": "system", "content": new_gen_msg})) > MAX_INPUT_TOKENS:
             return await ctx.send("Input genesis message is too long. Context was not set.")
 
         cursor = get_cursor(self.conn)
@@ -480,7 +502,7 @@ class AI(Cog):
                   "Example: `$add_context You always talk about baseball, even if it doesn't fit the conversation.`",
              brief="Add additional system context")
     async def add_context(self, ctx, *, args):
-        if (token_len := get_token_len({"role": "system", "content": args})) > MAX_MSG_LEN:
+        if (token_len := get_token_len({"role": "system", "content": args})) > MAX_INPUT_TOKENS:
             return await ctx.send("Input genesis message is too long. Context was not set.")
 
         cursor = get_cursor(self.conn)

@@ -48,6 +48,21 @@ tools = [
             "required": ["query", "count"]
         }
     },
+    {
+        "type": "function",
+        "name": "weather",
+        "description": "Returns the current weather for a given location",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "Location to retrieve weather for"
+                    }
+                },
+            "required": ["location"]
+        }
+    },
 ]
 
 FUNC_INIT = 10
