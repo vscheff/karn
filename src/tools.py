@@ -51,13 +51,13 @@ tools = [
     {
         "type": "function",
         "name": "weather",
-        "description": "Returns the current weather for a given location",
+        "description": "Fetches and returns the live weather forecast for a given location",
         "parameters": {
             "type": "object",
             "properties": {
                 "location": {
                     "type": "string",
-                    "description": "Location to retrieve weather for"
+                    "description": "Location to retrieve weather for. The location can be specified in any of the following formats: city; city, state; zipcode."
                     }
                 },
             "required": ["location"]

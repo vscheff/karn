@@ -60,7 +60,7 @@ GENESIS_MESSAGE = {"role": "developer",
                               "You are currently acting as an AI assistant for a Discord server. "
                               "Message content from Discord will follow the format: \"Name:: Message\" "
                               "where \"Name\" is the name of the user who sent the message, "
-                              "and \"Message\" is the message that was sent. "
+                              "and \"Message\" is the message that was sent. Never prepend your own name to a response in this style. "
                               "Markdown formatting is supported, so feel free to use it. "
                               "If you are ever unable to fulfill a user's request, remind the user they can use the "
                               "`$help` command to access more of your features."
@@ -358,8 +358,8 @@ class AI(Cog):
                     reply)
         
         # Ensure bot is not prefixing the reply with a name
-        # https://regex101.com/r/4vSz5X/1
-        reply = sub(r"\A\w+::\s", '', reply)
+        # https://regex101.com/r/4vSz5X/2
+        reply = sub(r"\A(?:\w+::)|(?:Karn:)\s", '', reply)
 
         # Send error message if OpenAI sent a blank response
         if not reply:
