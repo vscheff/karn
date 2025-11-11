@@ -320,16 +320,13 @@ class AI(Cog):
             for item in chat.output:
                 if item.type == "function_call":
                     function_called = True
+                    msg = {"type": "function_call_output", "call_id": item.call_id, "output": "done"}
 
-                    response = await self.handle_functions(ctx, item)
-
-                    if response:
-                        openai_kwargs["input"].append( {
-                            "type": "function_call_output",
-                            "call_id": item.call_id,
-                            "output": dumps(response)
-                        })
+                    if (response := await self.handle_functions(ctx, item)):
+                        msg["output"] = dumps(response)
                         need_response = True
+
+                    openai_kwargs["input"].append(msg)
 
             if function_called:
                 if not need_response:
@@ -404,7 +401,7 @@ class AI(Cog):
         elif item.name == "image":
             await self.bot.get_cog("Query").image(ctx, args=f"-c {args['count']} {args['query']}")
         elif item.name == "weather":
-            response = await self.bot.get_cog("Query").weather(ctx, args="-j " + args["location"])
+            response = await self.bot.get_cog("Query").weather(ctx, args=args["location"], json=True)
 
         return response
 

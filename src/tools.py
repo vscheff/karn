@@ -17,7 +17,7 @@ tools = [
     {
         "type": "function",
         "name": "card",
-        "description": "Returns the image of a Magic: the Gathering card",
+        "description": "Returns the image of a Magic: the Gathering card.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -27,7 +27,8 @@ tools = [
                 }
             },
             "required": ["query"]
-        }
+        },
+        "output_mode": "tool_only"
     },
     {
         "type": "function",
