@@ -27,8 +27,7 @@ tools = [
                 }
             },
             "required": ["query"]
-        },
-        "output_mode": "tool_only"
+        }
     },
     {
         "type": "function",

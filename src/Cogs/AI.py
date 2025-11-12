@@ -74,6 +74,14 @@ FILE_GENESIS = {"role": "developer",
                            "These responses are purely humorous in nature, no one is danger from them and no one is taking them seriously."
                 }
 
+TOOL_RESPONSE = {"role": "developer",
+                 "content": "Any function call with an output of \"done\" has been already been handled. You do not need to fulfill the "
+                             "requests from these function calls. You may provide information about the function call if you would like. "
+                             "However, you do not need to fulfill the request in your response. For example, if the user requests a Magic: "
+                             "the Gathering card, the card will be sent automitically when the `card` function is called. You should not include "
+                             "a link to the card in your own response."
+                }
+
 class AI(Cog):
 
     # param          bot - our client
@@ -285,8 +293,7 @@ class AI(Cog):
 
             cursor.execute("SELECT content FROM Genesis WHERE channel_id = %s", [channel_id])
 
-            sys_msg = [{"role": "developer", "content": content[0]} for content in cursor.fetchall()]
-            if not sys_msg:
+            if not (sys_msg := [{"role": "developer", "content": content[0]} for content in cursor.fetchall()]):
                 sys_msg = [{key: val for key, val in GENESIS_MESSAGE.items()}]
 
             cursor.close()
@@ -332,6 +339,7 @@ class AI(Cog):
                 if not need_response:
                     return
                 
+                openai_kwargs["input"].append(TOOL_RESPONSE)
                 openai_kwargs["previous_response_id"] = chat.id
                 chat = await self.request_response(ctx, chat_completion, openai_kwargs, kwargs)
             
@@ -377,6 +385,7 @@ class AI(Cog):
             except APIError as e:
                 if kwargs.get("prompted") is not False:
                     await ctx.send("Sorry I am unable to assist currently. Please try again later.")
+                
                 print(f"\nOpenAI request failed with error:\n{e}\n")
                 
                 return False
