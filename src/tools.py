@@ -1,5 +1,8 @@
 tools = [
     {
+        "type": "web_search"
+    },
+    {
         "type": "function",
         "name": "generate",
         "description": "Generates an image",
@@ -80,6 +83,9 @@ def get_tool_token_cost(tools, encoding):
     num_tokens = 0
 
     for tool in tools:
+        if tool["type"] != "function":
+            continue
+            
         num_tokens += FUNC_INIT + FUNC_END + len(encoding.encode(f"{tool['name']}:{tool['description'].rstrip('.')}"))
         
         if not len(tool["parameters"]["properties"]):

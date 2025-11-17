@@ -1,5 +1,6 @@
 # Cog that holds all commands related to server/bot utility
 
+from discord import app_commands, Interaction
 from discord.ext import commands
 from datetime import datetime, timedelta
 import discord
@@ -146,6 +147,11 @@ class Utility(commands.Cog):
     async def verticalbar(self, ctx):
         await ctx.send("01010110 01101111 01101110 "
                        "00100000 01010011 01100011 01101000 01100101 01100110 01100110 01101100 01100101 01110010")
+
+    @app_commands.command(name="echo", description="Echoes a message.",
+                          extras={"help": "Echoes a given string within your current text channel." ,"brief": "Echoes a message."})
+    async def echo(self, interaction: Interaction, message: str):
+        await interaction.response.send_message(message)
 
 
 # Used by $qr to create a QR code image

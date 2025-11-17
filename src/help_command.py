@@ -1,4 +1,4 @@
-from discord.ext.commands import HelpCommand
+from discord.ext.commands import Command, HelpCommand
 
 from src.utils import package_message
 
@@ -10,19 +10,22 @@ class CustomHelpCommand(HelpCommand):
     # Called when a user gives the $help command
     # param mapping - a mapping of cogs to commands
     async def send_bot_help(self, mapping):
-        cog_list = []
+        cog_list = {}
+
         for cog, commands in mapping.items():
             # Skip cogs that don't contain commands
             if not commands:
                 continue
-            # Only include this cog if it has at least one public command
-            if command_list := self.get_command_list(commands):
-                if cog:
-                    cog_list.append(f"# {cog.qualified_name}\n{command_list}")
-                else:
-                    cog_list.append(f"# Miscellaneous\n{command_list}")
+            
+            cog_list[cog.qualified_name if cog else "Miscellaneous"] = commands
 
-        await package_message('\n'.join(cog_list), self.get_destination(), multi_send=True)
+        for command in self.context.bot.tree.get_commands():
+            cog_name = command.binding.__class__.__name__ if command.binding else "Miscellaneous"
+            cog_list.setdefault(cog_name, [])
+            cog_list[cog_name].append(command)
+
+        command_list = [f"# {key}\n{self.get_command_list(val)}" for key, val in cog_list.items()]
+        await package_message('\n'.join(command_list), self.get_destination(), multi_send=True)
 
     # Called when user gives the $help {cog_name} command
     # param cog - the cog that was requested for help
@@ -38,6 +41,20 @@ class CustomHelpCommand(HelpCommand):
         await self.get_destination().send(f"# {command.name}\n{command.help}")
 
     def get_command_list(self, commands):
-        if self.context.author.guild_permissions.administrator:
-            return '* ' + "\n* ".join(sorted([f"*{i.name}* - {i.brief}" for i in commands]))
-        return '* ' + "\n* ".join(sorted([f"*{i.name}* - {i.brief}" for i in commands if not i.hidden]))
+        ret_list = []
+
+        for command in commands:
+            if isinstance(command, Command):
+                if command.hidden:
+                    continue
+                
+                ret_list.append({"name": command.name, "brief": command.brief, "prefix": "$"})
+            else:
+                if command.extras.get("hidden"):
+                    continue
+
+                ret_list.append({"name": command.name, "brief": command.extras.get("brief", ""), "prefix": "/"})
+        
+        ret_list = [f"`{i['prefix']}{i['name']}` - {i['brief']}" for i in sorted(ret_list, key=lambda x: x["name"])]
+
+        return '* ' + "\n* ".join(ret_list)

@@ -55,6 +55,8 @@ async def on_ready():
     for guild in bot.guilds:
         print(f"{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
 
+    await bot.tree.sync()
+
     change_activity.start()
 
 @tasks.loop(hours=1)
