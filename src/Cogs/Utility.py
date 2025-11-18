@@ -23,13 +23,14 @@ class Utility(commands.Cog):
 
     # $qr command used to generate QR code images
     # param arg - all user input following command-name
-    @commands.command(help="Generate a QR code for input data\nExample: `$qr https://www.gnu.org/`",
-                      brief="Generate a QR code")
-    async def qr(self, ctx, *, arg):
-        img = make_qr(arg)
+    @commands.hybrid_command(help="Generate a QR code for input data\nExample: `$qr https://www.gnu.org/`",
+                             brief="Generate a QR code")
+    async def qr(self, ctx, *, data: str, hidden: bool=False):
+        img = make_qr(data)
         img.save(QR_FILEPATH)
+
         if os.path.exists(QR_FILEPATH):
-            await ctx.send(file=discord.File(QR_FILEPATH))
+            await ctx.send(file=discord.File(QR_FILEPATH), ephemeral=hidden)
             os.remove(QR_FILEPATH)
         else:
             print("Error occurred while generating QR code. Temp file not created/deleted.")
@@ -43,21 +44,21 @@ class Utility(commands.Cog):
                            "Please use `$help qr` for more information.")
 
     # $ping command used to test bot readiness and latency
-    @commands.command(help="Returns \"pong\" and the round-trip latency if the bot is online.",
-                      brief="Returns \"pong\" if the bot is online.")
+    @commands.hybrid_command(help="Returns \"pong\" and the round-trip latency if the bot is online.",
+                             brief="Returns \"pong\" if the bot is online.")
     async def ping(self, ctx):
         await ctx.send(f"pong (*{self.bot.latency * 1000:.0f}ms*)")
 
     # $calc command used for calculating the result of mathematical expressions
     # param args - all user input following the command name
-    @commands.command(help="Returns the result of a mathematical expression.\n"
-                           "Example: `$calc 6 * 7`",
-                      brief="Calculates the result of a mathematical expression")
-    async def calc(self, ctx, *, args):
+    @commands.hybrid_command(help="Returns the result of a mathematical expression.\n"
+                                  "Example: `$calc 6 * 7`",
+                             brief="Calculates the result of a mathematical expression")
+    async def calc(self, ctx, *, expression:str):
         prec = {'+': 0, '-': 0, '*': 1, '/': 1, '^': 2}
 
         # https://regex101.com/r/rYoPQz/1
-        tokens = findall(r"-?\d+\.?\d*|[+\-/*()^]", ''.join(args))
+        tokens = findall(r"-?\d+\.?\d*|[+\-/*()^]", ''.join(expression))
         values, ops = [], []
 
         # Shunting Yard alrorithm
@@ -88,46 +89,50 @@ class Utility(commands.Cog):
                        "Please ensure your input is a valid mathematical equation.")
 
     # $ready command used as a "all-systems-go" check for the bot
-    @commands.command(help="Performs an \"All-Systems-Go\" check for the bot, and returns a status report.",
-                      brief="Check for \"All-Systems-Go\"")
+    @commands.hybrid_command(help="Performs an \"All-Systems-Go\" check for the bot, and returns a status report.",
+                             brief="Check for \"All-Systems-Go\"")
     async def ready(self, ctx):
         await ctx.send(f"Websocket closed: {self.bot.is_closed()}\n"
                        f"Internal cache ready: {self.bot.is_ready()}\n"
-                       f"Websocket rate limited: {self.bot.is_ws_ratelimited()}")
+                       f"Websocket rate limited: {self.bot.is_ws_ratelimited()}",
+                       ephemeral=True)
 
     # $purge command used to bulk delete messages from a text channel
     # param before - int representing the number of days, before which messages will be deleted
     # param  after - int representing the number of days, before which messages will NOT be deleted
-    @commands.command(help="Delete all messages in a channel older than a given number of days.\n"
-                           "Example: `$purge 3`\n"
-                           "That command will delete all messages older than 3 days.\n\n"
-                           "Alternatively, you can include two integers to declare a range.\n"
-                           "Example: `$purge 3 42`\n"
-                           "That command will delete all messages older than 3 days, "
-                           "but not older than 42 days.\n\n",
-                      brief="Bulk delete messages in current channel")
+    @commands.hybrid_command(help="Delete all messages in a channel older than a given number of days.\n"
+                                  "Example: `$purge 3`\n"
+                                  "That command will delete all messages older than 3 days.\n\n"
+                                  "Alternatively, you can include two integers to declare a range.\n"
+                                  "Example: `$purge 3 42`\n"
+                                  "That command will delete all messages older than 3 days, "
+                                  "but not older than 42 days.\n\n",
+                             brief="Bulk delete messages in current channel")
     @commands.has_permissions(manage_messages=True)
     async def purge(self, ctx, before: int, after: int = None):
         del_before = datetime.now() - timedelta(days=before)
+        
         if after is None:
-            await ctx.send(f"Deleting messages sent before **{del_before.isoformat(' ', 'minutes')}**")
+            await ctx.send(f"Deleting messages sent before **{del_before.isoformat(' ', 'minutes')}**", ephemeral=True)
             deleted = await ctx.channel.purge(before=del_before, bulk=True)
         else:
             if after <= before:
                 await ctx.send("Bad argument, second given integer must be larger than the first.")
                 return
+            
             # Subtract the remaining days to get the lower-limit
             del_after = del_before - timedelta(days=after - before)
             await ctx.send(f"Deleting messages between **{del_after.isoformat(' ', 'minutes')}** "
-                           f"and **{del_before.isoformat(' ', 'minutes')}**.")
+                           f"and **{del_before.isoformat(' ', 'minutes')}**.", ephemeral=True)
             deleted = await ctx.channel.purge(before=del_before, after=del_after, bulk=True)
-        await ctx.send(f"Successfully deleted {len(deleted)} messages from this channel!")
+        
+        await ctx.send(f"Successfully deleted {len(deleted)} messages from this channel!", ephemeral=True)
 
     # Called if $purge encounters an unhandled exception
     @purge.error
     async def purge_error(self, ctx, error):
         if isinstance(error, commands.errors.MissingPermissions):
-            print(f"$purge command failed: User {ctx.author.name} lacks permissions")
+            await ctx.send("You lack the required permissions to execute this command.")
         elif isinstance(error, commands.errors.MissingRequiredArgument):
             await ctx.send("You must include an integer with this command."
                            "Please use `$help purge` for more information.")
@@ -135,8 +140,8 @@ class Utility(commands.Cog):
             await ctx.send("Bad argument, please only use integers with this command.\n")
 
     # $info command used to provide some info on this bot
-    @commands.command(help="Provides a brief synopsis of Karn, including a link to his Open Source code",
-                      brief="Provides a brief synopsis of Karn")
+    @commands.hybrid_command(help="Provides a brief synopsis of Karn, including a link to his Open Source code",
+                             brief="Provides a brief synopsis of Karn")
     async def info(self, ctx):
         await ctx.send(f"Hello! I am Karn, your friendly Time-Travelling Golem!\n"
                        f"I was developed by Vertical Bar, and am hosted locally in Kalamazoo!\n"
@@ -148,12 +153,11 @@ class Utility(commands.Cog):
         await ctx.send("01010110 01101111 01101110 "
                        "00100000 01010011 01100011 01101000 01100101 01100110 01100110 01101100 01100101 01110010")
 
-    @app_commands.command(name="echo", description="Echoes a message.",
-                          extras={"help": "Echoes a given string within your current text channel.\n"
-                                          "Example: `/echo Repeat this back to me`",
-                                  "brief": "Echoes a message."})
-    async def echo(self, interaction: Interaction, message: str):
-        await interaction.response.send_message(message)
+    @commands.hybrid_command(help="Echoes a given string within your current text channel.\n"
+                                  "Example: `/echo Repeat this back to me`",
+                             brief="Echoes a message.")
+    async def echo(self, ctx, *, message: str):
+        await ctx.send(message)
 
 
 # Used by $qr to create a QR code image

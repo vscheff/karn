@@ -49,8 +49,6 @@ class CustomHelpCommand(HelpCommand):
 
             return f"# {name}\n{command.extras['help']}"
 
-            return
-
         return f"No command called \"{name}\" found."
 
     def get_command_list(self, commands):
@@ -68,6 +66,4 @@ class CustomHelpCommand(HelpCommand):
 
                 ret_list.append({"name": command.name, "brief": command.extras.get("brief", ""), "prefix": "/"})
         
-        ret_list = [f"`{i['prefix']}{i['name']}` - {i['brief']}" for i in sorted(ret_list, key=lambda x: x["name"])]
-
-        return '* ' + "\n* ".join(ret_list)
+        return "* " + "\n* ".join([f"`{i['prefix']}{i['name']}` - {i['brief']}" for i in sorted(ret_list, key=lambda x: x["name"])])

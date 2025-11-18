@@ -6,7 +6,7 @@ from discord.ext.commands import Cog, command, MissingRequiredArgument
 from ddgs import DDGS
 from os import getenv, remove
 from os.path import exists
-from PIL import Image, ImageChops
+from PIL import Image
 from random import choice, randint
 from requests import get
 from re import sub
@@ -417,14 +417,10 @@ def merge_double(link0, link1):
     output_img.paste(remove_border_white(Image.open(FACE_1)), (img0.size[0], 0))
     output_img.save(OUTPUT_PNG)
 
-
 def remove_border_white(img, threshold=25):
-    
-
     img = img.convert("RGBA")
     pixels = img.load()
     width, height = img.size
-
     visited = set()
     stack = [(0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1)]
 
@@ -436,7 +432,7 @@ def remove_border_white(img, threshold=25):
 
         visited.add((x, y))
 
-        red, green, blue, alpha = pixels[x, y]
+        red, green, blue, _ = pixels[x, y]
 
         if any(i < threshold for i in [red, green, blue]):
             continue
@@ -444,8 +440,7 @@ def remove_border_white(img, threshold=25):
         pixels[x, y] = (0, 0, 0, 0)
 
         for dx, dy in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]:
-            if 0 <= dx < width and 0 <= dy < height:
-                if (dx, dy) not in visited:
+            if 0 <= dx < width and 0 <= dy < height and (dx, dy) not in visited:
                     stack.append((dx, dy))
 
     return img
