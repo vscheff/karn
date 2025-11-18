@@ -30,15 +30,28 @@ class CustomHelpCommand(HelpCommand):
     # Called when user gives the $help {cog_name} command
     # param cog - the cog that was requested for help
     async def send_cog_help(self, cog):
-        command_list = self.get_command_list(cog.get_commands())
-        await self.get_destination().send(f"**{cog.qualified_name}**:\n{command_list}")
+        command_list = cog.get_commands()
+        command_list.extend(i for i in self.context.bot.tree.get_commands() if i.binding and i.binding.__class__.__name__ == cog.qualified_name)
+
+        await self.get_destination().send(f"# {cog.qualified_name}\n{self.get_command_list(command_list)}")
 
     # Called when user gives the $help {command_name} command
     # param command - the command that was requested for help
     async def send_command_help(self, command):
-        if command.hidden and not self.context.author.guild_permissions.administrator:
+        if command.hidden:
             return
         await self.get_destination().send(f"# {command.name}\n{command.help}")
+
+    async def command_not_found(self, name):
+        for command in self.context.bot.tree.get_commands():
+            if command.name != name:
+                continue
+
+            return f"# {name}\n{command.extras['help']}"
+
+            return
+
+        return f"No command called \"{name}\" found."
 
     def get_command_list(self, commands):
         ret_list = []

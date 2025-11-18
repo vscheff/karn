@@ -6,7 +6,7 @@ from discord.ext.commands import Cog, command, MissingRequiredArgument
 from ddgs import DDGS
 from os import getenv, remove
 from os.path import exists
-from PIL import Image
+from PIL import Image, ImageChops
 from random import choice, randint
 from requests import get
 from re import sub
@@ -411,11 +411,44 @@ def merge_double(link0, link1):
     with open(FACE_1, "wb") as img_file:
         img_file.write(get(link1).content)
 
-    img0 = Image.open(FACE_0)
-    output_img = Image.new("RGB", (img0.size[0] * 2, img0.size[1]))
+    img0 = remove_border_white(Image.open(FACE_0))
+    output_img = Image.new("RGBA", (img0.size[0] * 2, img0.size[1]), color=(0, 0, 0, 0))
     output_img.paste(img0)
-    output_img.paste(Image.open(FACE_1), (img0.size[0], 0))
+    output_img.paste(remove_border_white(Image.open(FACE_1)), (img0.size[0], 0))
     output_img.save(OUTPUT_PNG)
+
+
+def remove_border_white(img, threshold=25):
+    
+
+    img = img.convert("RGBA")
+    pixels = img.load()
+    width, height = img.size
+
+    visited = set()
+    stack = [(0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1)]
+
+    while stack:
+        x, y = stack.pop()
+
+        if (x, y) in visited:
+            continue
+
+        visited.add((x, y))
+
+        red, green, blue, alpha = pixels[x, y]
+
+        if any(i < threshold for i in [red, green, blue]):
+            continue
+
+        pixels[x, y] = (0, 0, 0, 0)
+
+        for dx, dy in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]:
+            if 0 <= dx < width and 0 <= dy < height:
+                if (dx, dy) not in visited:
+                    stack.append((dx, dy))
+
+    return img
 
 def build_comic_list():
     return "* " + "\n* ".join(directory.listall())

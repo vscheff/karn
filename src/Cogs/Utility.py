@@ -23,7 +23,7 @@ class Utility(commands.Cog):
 
     # $qr command used to generate QR code images
     # param arg - all user input following command-name
-    @commands.command(help="Generate a QR code for input data\n`Example: $qr https://www.gnu.org/`",
+    @commands.command(help="Generate a QR code for input data\nExample: `$qr https://www.gnu.org/`",
                       brief="Generate a QR code")
     async def qr(self, ctx, *, arg):
         img = make_qr(arg)
@@ -149,7 +149,9 @@ class Utility(commands.Cog):
                        "00100000 01010011 01100011 01101000 01100101 01100110 01100110 01101100 01100101 01110010")
 
     @app_commands.command(name="echo", description="Echoes a message.",
-                          extras={"help": "Echoes a given string within your current text channel." ,"brief": "Echoes a message."})
+                          extras={"help": "Echoes a given string within your current text channel.\n"
+                                          "Example: `/echo Repeat this back to me`",
+                                  "brief": "Echoes a message."})
     async def echo(self, interaction: Interaction, message: str):
         await interaction.response.send_message(message)
 
