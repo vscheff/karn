@@ -22,18 +22,28 @@ class CustomHelpCommand(HelpCommand):
         for command in self.context.bot.tree.get_commands():
             cog_name = command.binding.__class__.__name__ if command.binding else "Miscellaneous"
             cog_list.setdefault(cog_name, [])
-            cog_list[cog_name].append(command)
+            
+            if not any(i.name == command.name for i in cog_list[cog_name]):
+                cog_list[cog_name].append(command)
 
         command_list = [f"# {key}\n{self.get_command_list(val)}" for key, val in cog_list.items()]
         await package_message('\n'.join(command_list), self.get_destination(), multi_send=True)
 
     # Called when user gives the $help {cog_name} command
     # param cog - the cog that was requested for help
-    async def send_cog_help(self, cog):
+    async def send_cog_help(self, cog, return_text=False):
         command_list = cog.get_commands()
-        command_list.extend(i for i in self.context.bot.tree.get_commands() if i.binding and i.binding.__class__.__name__ == cog.qualified_name)
 
-        await self.get_destination().send(f"# {cog.qualified_name}\n{self.get_command_list(command_list)}")
+        for cmd in self.context.bot.tree.get_commands():
+            if cmd.binding and cmd.binding.__class__.__name__ == cog.qualified_name and not any(i.name == cmd.name for i in command_list):
+                command_list.append(cmd)
+        
+        response = f"# {cog.qualified_name}\n{self.get_command_list(command_list)}"
+
+        if return_text:
+            return response
+
+        await self.get_destination().send(response)
 
     # Called when user gives the $help {command_name} command
     # param command - the command that was requested for help
@@ -48,6 +58,10 @@ class CustomHelpCommand(HelpCommand):
                 continue
 
             return f"# {name}\n{command.extras['help']}"
+
+        for cog in self.context.bot.cogs.values():
+            if cog.qualified_name.lower() == name:
+                return await self.send_cog_help(cog, return_text=True)
 
         return f"No command called \"{name}\" found."
 

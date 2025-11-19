@@ -1,4 +1,4 @@
-from discord.ext.commands import Cog, command, errors
+from discord.ext.commands import Cog, command, errors, hybrid_command
 from re import findall
 
 from src.utils import get_cursor, package_message
@@ -11,29 +11,30 @@ class Rating(Cog):
     def __init__(self, conn):
         self.conn = conn
 
-    @command(help=f"Returns the least voted items\n\n"
-                  f"Include an integer argument to specify the number of "
-                  f"results to return (default={DEFAULT_RATING_COUNT})\n"
-                  f"Example: `$bot 3`",
-             brief="Show the least voted items")
-    async def bot(self, ctx, num=DEFAULT_RATING_COUNT):
+    @hybrid_command(help=f"Returns the least voted items\n\n"
+                         f"Include an integer argument to specify the number of "
+                         f"results to return (default={DEFAULT_RATING_COUNT})\n"
+                         f"Example: `$bot 3`",
+                    brief="Show the least voted items")
+    async def bot(self, ctx, num: int=DEFAULT_RATING_COUNT):
         await self.send_ratings(ctx, num, False)
 
-    @command(help="Returns the top voted items\n\n"
-                  f"Include an integer argument to specify the number of "
-                  f"results to return (default={DEFAULT_RATING_COUNT})\n"
-                  f"Example: `$top 3`",
-             brief="Show the top voted items",
-             aliases=["scores"])
-    async def top(self, ctx, num=DEFAULT_RATING_COUNT):
+    @hybrid_command(help=f"Returns the top voted items\n\n"
+                         f"Include an integer argument to specify the number of "
+                         f"results to return (default={DEFAULT_RATING_COUNT})\n"
+                         f"Example: `$top 3`",
+                    brief="Show the top voted items",
+                    aliases=["scores"])
+    async def top(self, ctx, num: int=DEFAULT_RATING_COUNT):
         await self.send_ratings(ctx, num, True)
 
     async def send_ratings(self, ctx, num, reverse):
         cursor = get_cursor(self.conn)
-
         cursor.execute("SELECT name, score FROM Rating WHERE guild_id = %s", [ctx.guild.id])
+        results = sorted(cursor.fetchall(), key=lambda x: x[1], reverse=reverse)
+        cursor.close()
 
-        if not (results := sorted(cursor.fetchall(), key=lambda x: x[1], reverse=reverse)):
+        if not results:
             return await ctx.send("No scores exist for this guild. Try adding `++` to any item you'd like to upvote!")
 
         msg = '\n'.join(f"{j}. *{i[0]}* **[{i[1]}]**" for i, j in zip(results[:num], range(1, num + 1)))
@@ -51,21 +52,21 @@ class Rating(Cog):
             await ctx.send("Bad argument, use only integers with this command.\n\n"
                            "Please use `$help top` for more information.")
 
-    @command(help="Show the score for a given item.\n"
-                  "Example: `$show linux`",
-             brief="Show the score for an item")
-    async def show(self, ctx, *, args):
-        if not args:
+    @hybrid_command(help="Show the score for a given item.\n"
+                         "Example: `$show linux`",
+                    brief="Show the score for an item")
+    async def show(self, ctx, *, item: str):
+        if not item:
             return await ctx.send("You must include an item with this command.\n\n"
                                   "Please use `$help show` for more information.")
 
         cursor = get_cursor(self.conn)
-        cursor.execute("SELECT score FROM Rating WHERE name = %s AND guild_id = %s", [args, ctx.guild.id])
+        cursor.execute("SELECT score FROM Rating WHERE name = %s AND guild_id = %s", [item, ctx.guild.id])
 
         if not (result := cursor.fetchall()):
-            await ctx.send(f"No score exists for \"{args}\". Try using `--` or `++` to vote for this item first.")
+            await ctx.send(f"No score exists for \"{item}\". Try using `--` or `++` to vote for this item first.")
         else:
-            await ctx.send(f"*{args}* **[{result[0][0]}]**")
+            await ctx.send(f"*{item}* **[{result[0][0]}]**")
 
         cursor.close()
 

@@ -1,4 +1,4 @@
-from discord.ext.commands import Cog, command, MissingRequiredArgument
+from discord.ext.commands import Cog, hybrid_command, MissingRequiredArgument
 from os import listdir, remove
 from random import choice
 from re import search
@@ -9,10 +9,10 @@ from src.utils import get_flags, package_message, send_tts_if_in_vc
 
 class Terminal(Cog):
 
-    @command(help="Returns the entire contents of a given text file\n"
-                  "Example: `cat parody_bands`",
-             brief="Read from a file")
-    async def cat(self, ctx, filename):
+    @hybrid_command(help="Returns the entire contents of a given text file\n"
+                         "Example: `cat parody_bands`",
+                    brief="Read from a file")
+    async def cat(self, ctx, filename: str):
         if search(r"\W", filename):
             return await ctx.send(f"Invalid filename: `{filename}`\nPlease only use word characters.")
 
@@ -22,7 +22,7 @@ class Terminal(Cog):
             with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{filename}.txt", "r") as in_file:
                 content = in_file.read()
         except FileNotFoundError:
-            return await ctx.send(f"No file named {filename} found! Try using `$tee` first!")
+            return await ctx.send(f"No file named \"{filename}\" found! Try using `$tee` first.")
 
         await package_message(content, ctx)
 
@@ -33,27 +33,25 @@ class Terminal(Cog):
                            "Example: `$cat jokes`\n\n"
                            "Please use `$help cat` for more information.")
 
-    @command(help="Return lines from a file that match a given pattern string\n"
-                  "Example: `grep parody_bands Von`",
-             brief="Search a file")
-    async def grep(self, ctx, *, args):
-        file, pattern = args.split(maxsplit=1)
+    @hybrid_command(help="Return lines from a file that match a given pattern string\n"
+                         "Example: `grep parody_bands Von`",
+                    brief="Search a file")
+    async def grep(self, ctx, filename: str, *, pattern: str):
+        if search(r"\W", filename):
+            return await ctx.send(f"Invalid filename: {filename}\nPlease only use word characters.")
 
-        if search(r"\W", file):
-            return await ctx.send(f"Invalid filename: {file}\nPlease only use word characters.")
-
-        file = file.lower()
+        filename = filename.lower()
 
         try:
-            with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{file}.txt", "r") as in_file:
+            with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{filename}.txt", "r") as in_file:
                 lines = in_file.readlines()
         except FileNotFoundError:
-            return await ctx.send(f"No file named {file} found! Try using `$tee` first!")
+            return await ctx.send(f"No file named \"{filename}\" found! Try using `$tee` first.")
 
         if matches := [i for i in lines if search(pattern, i[:-1])]:
             return await package_message(''.join(matches), ctx)
 
-        await ctx.send(f"No matches found in {file}")
+        await ctx.send(f"No matches found in `{filename}`")
 
     @grep.error
     async def grep_error(self, ctx, error):
@@ -62,8 +60,8 @@ class Terminal(Cog):
                            "Example: `$grep mud dracula`\n\n"
                            "Please use `$help grep` for more information.")
     
-    @command(help="Lists the text files currently present in the directory",
-             brief="Lists present text files")
+    @hybrid_command(help="Lists the text files currently present in the directory",
+                    brief="Lists present text files")
     async def ls(self, ctx):
         file_names = sorted(listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"))
         files = '\n'.join(i.replace(".txt", '') for i in file_names if i[0] != '.')
@@ -73,17 +71,17 @@ class Terminal(Cog):
 
         await ctx.send(f"```\n{files}\n```")
 
-    @command(help="Removes a text file from the directory",
-             brief="Remove a text file")
-    async def rm(self, ctx, filename):
+    @hybrid_command(help="Removes a text file from the directory",
+                    brief="Remove a text file")
+    async def rm(self, ctx, filename: str):
         filename = filename.lower()
 
         try:
             remove(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{filename}.txt")
         except FileNotFoundError:
-            return await ctx.send(f"No file named {filename} found! Try using `$tee` first!")
+            return await ctx.send(f"No file named \"{filename}\" found! Try using `$tee` first.")
 
-        await ctx.send(f"Successfully removed {filename}!")
+        await ctx.send(f"Successfully removed `{filename}`!")
 
     @rm.error
     async def rm_error(self, ctx, error):
@@ -92,21 +90,19 @@ class Terminal(Cog):
                            "Example: `$grep johnny`\n\n"
                            "Please use `$help grep` for more information.")
     
-    @command(help="Writes user input into a given text file\n"
-                  "Example: `tee parody_bands Jon Von Jovi`",
-             brief="Write to a file")
-    async def tee(self, ctx, *, args):
-        file, inp = args.split(maxsplit=1)
+    @hybrid_command(help="Writes user input into a given text file\n"
+                         "Example: `tee parody_bands Jon Von Jovi`",
+                    brief="Write to a file")
+    async def tee(self, ctx, filename: str, *, data: str):
+        if search(r"\W", filename):
+            return await ctx.send(f"Invalid filename: `{filename}`\nPlease only use word characters.")
 
-        if search(r"\W", file):
-            return await ctx.send(f"Invalid filename: `{file}`\nPlease only use word characters.")
+        filename = filename.lower()
 
-        file = file.lower()
+        with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{filename}.txt", "a") as out_file:
+            out_file.write(f"{data}\n")
 
-        with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{file}.txt", "a") as out_file:
-            out_file.write(f"{inp}\n")
-
-        await ctx.send(f"Successfully wrote line into `{file}`")
+        await ctx.send(f"Successfully wrote line into `{filename}`")
     
     @tee.error
     async def tee_error(self, ctx, error):
@@ -115,21 +111,22 @@ class Terminal(Cog):
                            "Example: `$tee silverhand`\n\n"
                            "Please use `$help tee` for more information.")
 
-    @command(help="Returns the line count, word count, and character count for a given file. Multiple files can be specified in the same command.\n\n"
-                  "This command has the following flags:\n"
-                  "* **-c**: Return the number of bytes in the file\n"
-                  "\tExample: `$wc -c dracula`\n"
-                  "* **-l**: Return the line count for the file\n"
-                  "\tExample: `$wc -l johnny`\n"
-                  "* **-m**: Return the character count for the file\n"
-                  "\tExample: `$wc -m silverhand`\n"
-                  "* **-w**: Return the word count for the file\n"
-                  "\tExample: `$wc -w jules`",
-             brief="Returns various counts for a file")
-    async def wc(self, ctx, *, args):
+    @hybrid_command(help="Returns the line count, word count, and character count for a given file. "
+                         "Multiple files can be specified in the same command.\n\n"
+                         "This command has the following flags:\n"
+                         "* **-c**: Return the number of bytes in the file\n"
+                         "\tExample: `$wc -c dracula`\n"
+                         "* **-l**: Return the line count for the file\n"
+                         "\tExample: `$wc -l johnny`\n"
+                         "* **-m**: Return the character count for the file\n"
+                         "\tExample: `$wc -m silverhand`\n"
+                         "* **-w**: Return the word count for the file\n"
+                         "\tExample: `$wc -w jules`",
+                    brief="Returns various counts for a file")
+    async def wc(self, ctx, *, args: str):
         flags, files = get_flags(args)
-        response = ""
         mode = "rb" if 'c' in flags else 'r'
+        response = ""
 
         for file in files:
             file = file.lower()

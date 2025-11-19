@@ -84,6 +84,9 @@ async def on_message(msg):
 
 @bot.event
 async def on_command_error(ctx, error):
+    if hasattr(error, "handled") and error.handled:
+        return
+
     try:
         author = f"{ctx.author} (a.k.a. {ctx.author.nick})"
     except AttributeError:
