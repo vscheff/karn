@@ -50,14 +50,13 @@ async def on_ready():
     # This prevents the recurring CommandRegistrationError exception
     if not bot.cogs:
         await add_cogs(bot, sql_connection)
+        change_activity.start()
 
     print(f"\n{bot.user} is connected to the following guild(s):\n")
     for guild in bot.guilds:
         print(f"{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
 
     await bot.tree.sync()
-
-    change_activity.start()
 
 @tasks.loop(hours=1)
 async def change_activity():

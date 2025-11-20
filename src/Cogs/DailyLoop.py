@@ -203,11 +203,11 @@ class DailyLoop(commands.Cog):
 
     async def daily_calvin(self, channel):
         await channel.send(f"__**The Calvin and Hobbes strip of the day is:**__")
-        await self.bot.get_command("comic")(channel, args="calvinandhobbes")
+        await self.bot.get_command("comic")(channel, comic="calvinandhobbes")
 
     async def daily_card(self, channel):
         await channel.send(f"__**The MtG card of the day is:**__")
-        await self.bot.get_command("card")(channel, args="-r")
+        await self.bot.get_command("card")(channel, card="-r")
 
     async def daily_fact(self, channel):
         await channel.send(f"__**The fact of the day is:**__")
@@ -215,11 +215,11 @@ class DailyLoop(commands.Cog):
 
     async def daily_garfield(self, channel):
         await channel.send(f"__**The Garfield strip of the day is:**__")
-        await self.bot.get_command("comic")(channel, args="garfield")
+        await self.bot.get_command("comic")(channel, comic="garfield")
 
     async def daily_peanuts(self, channel):
         await channel.send(f"__**The Peanuts strip of the day is:**__")
-        await self.bot.get_command("comic")(channel, args="peanuts")
+        await self.bot.get_command("comic")(channel, comic="peanuts")
 
     async def daily_tip(self, channel):
         await channel.send(f"__**The tip of the day is:**__")
@@ -227,7 +227,7 @@ class DailyLoop(commands.Cog):
 
     async def daily_wiki(self, channel):
         await channel.send(f"__**The Wikipedia article of the day is:**__")
-        await self.bot.get_command("wiki")(channel, args="-r")
+        await self.bot.get_command("wiki")(channel, query="-r")
 
     async def daily_word(self, channel):
         response = get(WORDNIK_URL, params={"date": date.today(), "api_key": WORDNIK_API_KEY})
@@ -252,7 +252,7 @@ class DailyLoop(commands.Cog):
 
     async def daily_xkcd(self, channel):
         await channel.send(f"__**The xkcd comic of the day is:**__")
-        await self.bot.get_command("xkcd")(channel, args="-r")
+        await self.bot.get_command("xkcd")(channel, number="-r")
 
 
 def build_cat_str(categories):

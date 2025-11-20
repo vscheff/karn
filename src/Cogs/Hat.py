@@ -1,4 +1,4 @@
-from discord.ext.commands import Cog, command, MissingRequiredArgument
+from discord.ext.commands import Cog, command, hybrid_command, errors, MissingRequiredArgument
 from random import randint
 
 from src.utils import get_cursor, get_flags, package_message
@@ -11,18 +11,18 @@ class Hat(Cog):
     def __init__(self, conn):
         self.conn = conn
 
-    @command(help="Add an item to the hat.\n"
-                  "Example: `$add The Room`\n\n"
-                  "This command has the following flags:\n"
-                  "* **-h**: Used to specify a hat other than the channel's default hat.\n"
-                  "\tExample: `$add -h movies Troll 2`\n"
-                  "* **-m**: Indicates your subcommand argument is a comma-seperated list of elements.\n"
-                  "\tExample: `$add -m Monster a Go-Go, Birdemic, Batman & Robin`",
-             brief="Add an item to the hat")
-    async def add(self, ctx, *, args):
+    @hybrid_command(help="Add an item to the hat.\n"
+                         "Example: `$add The Room`\n\n"
+                         "This command has the following flags:\n"
+                         "* **-h**: Used to specify a hat other than the channel's default hat.\n"
+                         "\tExample: `$add -h movies Troll 2`\n"
+                         "* **-m**: Indicates your subcommand argument is a comma-seperated list of elements.\n"
+                         "\tExample: `$add -m Monster a Go-Go, Birdemic, Batman & Robin`",
+                    brief="Add an item to the hat")
+    async def add(self, ctx, *, item: str):
         cursor = get_cursor(self.conn)
 
-        flags, arg = get_flags(args)
+        flags, arg = get_flags(item)
         hat = get_hat(flags, arg, cursor, ctx.channel.id)
 
         items = [i.strip() for i in ' '.join(arg).split(',')] if 'm' in flags else [' '.join(arg)]
@@ -37,16 +37,17 @@ class Hat(Cog):
 
     @add.error
     async def add_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include an item to add to the hat.\n"
                            "Example: `$add Moonfall`\n\n"
                            "Please use `$help add` for more information.")
+            error.handled = True
 
-    @command(help="Clear all items from the hat.\n\n"
-                  "To clear a hat other than the channel's default hat, include it as an argument:\n"
-                  "Example: `$clear movies`",
-             brief="Clear all items from the hat")
-    async def clear(self, ctx, hat=None):
+    @hybrid_command(help="Clear all items from the hat.\n\n"
+                         "To clear a hat other than the channel's default hat, include it as an argument:\n"
+                         "Example: `$clear movies`",
+                    brief="Clear all items from the hat")
+    async def clear(self, ctx, hat: str=None):
         cursor = get_cursor(self.conn)
 
         hat = hat if hat else get_hat([], [], cursor, ctx.channel.id)
@@ -58,8 +59,8 @@ class Hat(Cog):
         self.conn.commit()
         cursor.close()
 
-    @command(help="List all active hats for this server.\n\n",
-             brief="List all active hats for this server")
+    @hybrid_command(help="List all active hats for this server.\n\n",
+                    brief="List all active hats for this server")
     async def list(self, ctx):
         cursor = get_cursor(self.conn)
 
@@ -72,43 +73,40 @@ class Hat(Cog):
 
         cursor.close()
 
-    @command(help="Randomly picks an item from the hat.\n\n"
-                  "To pick more than one item, include the desired number of items as an argument:\n"
-                  "Example: `$pick 3`\n\n"
-                  "This command has the following flags:\n"
-                  "* **-h**: Used to specify a hat other than the channel's default hat.\n"
-                  "\tExample: `$pick -h movies`\n",
-             brief="Pick an item from the hat")
-    async def pick(self, ctx, *, args=None):
+    @hybrid_command(help="Randomly picks an item from the hat.\n\n"
+                         "To pick more than one item, include the desired number of items as an argument:\n"
+                         "Example: `$pick 3`\n\n"
+                         "This command has the following flags:\n"
+                         "* **-h**: Used to specify a hat other than the channel's default hat.\n"
+                         "\tExample: `$pick -h movies`\n",
+                    brief="Pick an item from the hat")
+    async def pick(self, ctx, *, args: str=None):
         await self.choose(ctx, args, False)
 
-    @command(help="Randomly chose and remove an item from the hat.\n\n"
-                  "To pop more than one item, include the desired number of items as an argument:\n"
-                  "Example: `$pop 3`\n\n"
-                  "This command has the following flags:\n"
-                  "* **-h**: Used to specify a hat other than the channel's default hat.\n"
-                  "\tExample: `$pop -h movies`\n",
-             brief="Pick and remove an item from the hat")
-    async def pop(self, ctx, *, args=None):
+    @hybrid_command(help="Randomly chose and remove an item from the hat.\n\n"
+                         "To pop more than one item, include the desired number of items as an argument:\n"
+                         "Example: `$pop 3`\n\n"
+                         "This command has the following flags:\n"
+                         "* **-h**: Used to specify a hat other than the channel's default hat.\n"
+                         "\tExample: `$pop -h movies`\n",
+                    brief="Pick and remove an item from the hat")
+    async def pop(self, ctx, *, args: str=None):
         await self.choose(ctx, args, True)
 
     async def choose(self, ctx, args, delete):
         cursor = get_cursor(self.conn)
 
-        if args:
-            flags, arg = get_flags(args)
-            hat = get_hat(flags, arg, cursor, ctx.channel.id)
-            if arg:
-                try:
-                    num = int(arg.pop(0))
-                except ValueError:
-                    cursor.close()
-                    await ctx.send("Invalid argument, please only use integer values!")
-                    return None
-            else:
-                num = 1
+        flags, arg = get_flags(args)
+        hat = get_hat(flags, arg, cursor, ctx.channel.id)
+
+        if arg:
+            try:
+                num = int(arg.pop(0))
+            except ValueError:
+                cursor.close()
+                await ctx.send("Invalid argument, please only use integer values!")
+                return None
         else:
-            hat = DEFAULT_HAT
             num = 1
 
         cursor.execute("SELECT item FROM Hat WHERE guild_id = %s AND hat_name = %s", [ctx.guild.id, hat])
@@ -141,16 +139,16 @@ class Hat(Cog):
         self.conn.commit()
         cursor.close()
 
-    @command(help="Remove an item from the hat.\n"
-                  "Example: `$remove 3`\n"
-                  "To view the indexes for a hat, use the `$view` command.\n\n"
-                  "This command has the following flags:\n"
-                  "* **-h**: Used to specify a hat other than the channel's default hat.\n"
-                  "\tExample: `$remove -h movies 3`\n",
-             brief="Remove an item from the hat")
-    async def remove(self, ctx, *, args):
+    @hybrid_command(help="Remove an item from the hat.\n"
+                         "Example: `$remove 3`\n"
+                         "To view the indexes for a hat, use the `$view` command.\n\n"
+                         "This command has the following flags:\n"
+                         "* **-h**: Used to specify a hat other than the channel's default hat.\n"
+                         "\tExample: `$remove -h movies 3`\n",
+                    brief="Remove an item from the hat")
+    async def remove(self, ctx, *, num: str):
         cursor = get_cursor(self.conn)
-        flags, arg = get_flags(args)
+        flags, arg = get_flags(num)
         hat = get_hat(flags, arg, cursor, ctx.channel.id)
 
         if not arg:
@@ -184,16 +182,17 @@ class Hat(Cog):
 
     @remove.error
     async def remove_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include an index to remove from the hat.\n"
                            "Example: `$remove 3`\n\n"
                            "Please use `$help remove` for more information.")
+            error.handled = True
 
-    @command(help="View all items in the hat.\n\n"
-                  "To view a hat other than the channel's default hat, include it as an argument:\n"
-                  "Example: `$view movies`",
-             brief="View all items from the hat")
-    async def view(self, ctx, hat=None):
+    @hybrid_command(help="View all items in the hat.\n\n"
+                         "To view a hat other than the channel's default hat, include it as an argument:\n"
+                         "Example: `$view movies`",
+                    brief="View all items from the hat")
+    async def view(self, ctx, hat: str=None):
         cursor = get_cursor(self.conn)
 
         hat = hat if hat else get_hat([], [], cursor, ctx.channel.id)
@@ -208,14 +207,16 @@ class Hat(Cog):
 
         cursor.close()
 
-    @command(help="Set the default hat for this channel.\n"
-                  "Example: `$set_default movies`",
-             brief="Set the default hat")
-    async def set_default(self, ctx, hat=DEFAULT_HAT):
+    @hybrid_command(help="Set the default hat for this channel.\n"
+                         "Example: `$set_default movies`",
+                    brief="Set the default hat")
+    async def set_default(self, ctx, hat: str=DEFAULT_HAT):
         cursor = get_cursor(self.conn)
 
-        cursor.execute("DELETE FROM Channels WHERE channel_id = %s", [ctx.channel.id])
-        cursor.execute("INSERT INTO Channels (channel_id, default_hat) VALUES (%s, %s)", [ctx.channel.id, hat])
+        cursor.execute("INSERT INTO Channels (channel_id, default_hat)"
+                       "VALUES (%s, %s)"
+                       "ON DUPLICATE KEY UPDATE default_hat = VALUES(default_hat)",
+                       [ctx.channel.id, hat])
 
         await ctx.send(f"Successfully set **{hat}** as the default hat for {ctx.channel.name}!")
 

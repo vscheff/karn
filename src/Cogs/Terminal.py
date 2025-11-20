@@ -1,4 +1,4 @@
-from discord.ext.commands import Cog, hybrid_command, MissingRequiredArgument
+from discord.ext.commands import Cog, errors, hybrid_command
 from os import listdir, remove
 from random import choice
 from re import search
@@ -28,10 +28,11 @@ class Terminal(Cog):
 
     @cat.error
     async def cat_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a filename with this command.\n"
                            "Example: `$cat jokes`\n\n"
                            "Please use `$help cat` for more information.")
+            error.handled = True
 
     @hybrid_command(help="Return lines from a file that match a given pattern string\n"
                          "Example: `grep parody_bands Von`",
@@ -55,11 +56,12 @@ class Terminal(Cog):
 
     @grep.error
     async def grep_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a filename and search query with this command.\n"
                            "Example: `$grep mud dracula`\n\n"
                            "Please use `$help grep` for more information.")
-    
+            error.handled = True
+
     @hybrid_command(help="Lists the text files currently present in the directory",
                     brief="Lists present text files")
     async def ls(self, ctx):
@@ -85,11 +87,12 @@ class Terminal(Cog):
 
     @rm.error
     async def rm_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a filename with this command.\n"
                            "Example: `$grep johnny`\n\n"
                            "Please use `$help grep` for more information.")
-    
+            error.handled = True
+
     @hybrid_command(help="Writes user input into a given text file\n"
                          "Example: `tee parody_bands Jon Von Jovi`",
                     brief="Write to a file")
@@ -106,10 +109,11 @@ class Terminal(Cog):
     
     @tee.error
     async def tee_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a filename with this command.\n"
                            "Example: `$tee silverhand`\n\n"
                            "Please use `$help tee` for more information.")
+            error.handled = True
 
     @hybrid_command(help="Returns the line count, word count, and character count for a given file. "
                          "Multiple files can be specified in the same command.\n\n"
@@ -159,10 +163,11 @@ class Terminal(Cog):
 
     @wc.error
     async def wc_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include at least one filename with this command.\n"
                            "Example: `$wc jules`\n\n"
                            "Please use `$help wc` for more information.")
+            error.handled = True
 
 async def send_line(msg, bot):
     if msg.content[0] == SEND_LINE_CHAR:

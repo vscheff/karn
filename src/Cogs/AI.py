@@ -404,13 +404,13 @@ class AI(Cog):
         response = None
         
         if item.name == "card":
-            await self.bot.get_cog("Query").card(ctx, args=args["query"])
+            await self.bot.get_cog("Query").card(ctx, card=args["query"])
         elif item.name == "generate":
             await self.bot.get_cog("AI").generate(ctx, args="-p " + args["prompt"])
         elif item.name == "image":
-            await self.bot.get_cog("Query").image(ctx, args=f"-c {args['count']} {args['query']}")
+            await self.bot.get_cog("Query").image(ctx, query=f"-c {args['count']} {args['query']}")
         elif item.name == "weather":
-            response = await self.bot.get_cog("Query").weather(ctx, args=args["location"], json=True)
+            response = await self.bot.get_cog("Query").weather(ctx, location=args["location"], return_json=True)
 
         return response
 

@@ -1,7 +1,6 @@
 # Cog that holds all commands related to server/bot utility
 
-from discord import app_commands, Interaction
-from discord.ext import commands
+from discord.ext.commands import Bot, Cog, command, errors, has_permissions, hybrid_command
 from datetime import datetime, timedelta
 import discord
 import os
@@ -15,16 +14,16 @@ from src.utils import get_as_number, package_message
 QR_FILEPATH = f"{TEMP_DIR}/temp_qr.png"
 
 
-class Utility(commands.Cog):
+class Utility(Cog):
 
     # attr bot - our client
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     # $qr command used to generate QR code images
     # param arg - all user input following command-name
-    @commands.hybrid_command(help="Generate a QR code for input data\nExample: `$qr https://www.gnu.org/`",
-                             brief="Generate a QR code")
+    @hybrid_command(help="Generate a QR code for input data\nExample: `$qr https://www.gnu.org/`",
+                    brief="Generate a QR code")
     async def qr(self, ctx, *, data: str, hidden: bool=False):
         img = make_qr(data)
         img.save(QR_FILEPATH)
@@ -38,22 +37,23 @@ class Utility(commands.Cog):
     # Called if $qr encounters an unhandled exception
     @qr.error
     async def qr_error(self, ctx, error):
-        if isinstance(error, commands.errors.MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a string of data with this command.\n"
                            "Example: `$qr https://www.linux.org/`"
                            "Please use `$help qr` for more information.")
+            error.handled = True
 
     # $ping command used to test bot readiness and latency
-    @commands.hybrid_command(help="Returns \"pong\" and the round-trip latency if the bot is online.",
-                             brief="Returns \"pong\" if the bot is online.")
+    @hybrid_command(help="Returns \"pong\" and the round-trip latency if the bot is online.",
+                    brief="Returns \"pong\" if the bot is online.")
     async def ping(self, ctx):
         await ctx.send(f"pong (*{self.bot.latency * 1000:.0f}ms*)")
 
     # $calc command used for calculating the result of mathematical expressions
     # param args - all user input following the command name
-    @commands.hybrid_command(help="Returns the result of a mathematical expression.\n"
-                                  "Example: `$calc 6 * 7`",
-                             brief="Calculates the result of a mathematical expression")
+    @hybrid_command(help="Returns the result of a mathematical expression.\n"
+                         "Example: `$calc 6 * 7`",
+                    brief="Calculates the result of a mathematical expression")
     async def calc(self, ctx, *, expression:str):
         prec = {'+': 0, '-': 0, '*': 1, '/': 1, '^': 2}
 
@@ -85,12 +85,21 @@ class Utility(commands.Cog):
 
     @calc.error
     async def calc_error(self, ctx, error):
-        await ctx.send("Unable to calculate result. "
-                       "Please ensure your input is a valid mathematical equation.")
+        if isinstance(error, errors.CommandInvokeError):
+            if isinstance(error.original, IndexError):
+                await ctx.send("Unable to calculate result. "
+                               "Please ensure your input is a valid mathematical equation.")
+                error.handled = True
+            elif isinstance(error.original, ZeroDivisionError):
+                await ctx.send("Division by zero! Unable to calculate result.")
+                error.handled = True
+        elif isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include a mathematical expression with this command.\nPlease use `$help calc` for more information.")
+            error.handled = True
 
     # $ready command used as a "all-systems-go" check for the bot
-    @commands.hybrid_command(help="Performs an \"All-Systems-Go\" check for the bot, and returns a status report.",
-                             brief="Check for \"All-Systems-Go\"")
+    @hybrid_command(help="Performs an \"All-Systems-Go\" check for the bot, and returns a status report.",
+                    brief="Check for \"All-Systems-Go\"")
     async def ready(self, ctx):
         await ctx.send(f"Websocket closed: {self.bot.is_closed()}\n"
                        f"Internal cache ready: {self.bot.is_ready()}\n"
@@ -100,15 +109,15 @@ class Utility(commands.Cog):
     # $purge command used to bulk delete messages from a text channel
     # param before - int representing the number of days, before which messages will be deleted
     # param  after - int representing the number of days, before which messages will NOT be deleted
-    @commands.hybrid_command(help="Delete all messages in a channel older than a given number of days.\n"
-                                  "Example: `$purge 3`\n"
-                                  "That command will delete all messages older than 3 days.\n\n"
-                                  "Alternatively, you can include two integers to declare a range.\n"
-                                  "Example: `$purge 3 42`\n"
-                                  "That command will delete all messages older than 3 days, "
-                                  "but not older than 42 days.\n\n",
-                             brief="Bulk delete messages in current channel")
-    @commands.has_permissions(manage_messages=True)
+    @hybrid_command(help="Delete all messages in a channel older than a given number of days.\n"
+                         "Example: `$purge 3`\n"
+                         "That command will delete all messages older than 3 days.\n\n"
+                         "Alternatively, you can include two integers to declare a range.\n"
+                         "Example: `$purge 3 42`\n"
+                         "That command will delete all messages older than 3 days, "
+                         "but not older than 42 days.\n\n",
+                    brief="Bulk delete messages in current channel")
+    @has_permissions(manage_messages=True)
     async def purge(self, ctx, before: int, after: int = None):
         del_before = datetime.now() - timedelta(days=before)
         
@@ -131,33 +140,43 @@ class Utility(commands.Cog):
     # Called if $purge encounters an unhandled exception
     @purge.error
     async def purge_error(self, ctx, error):
-        if isinstance(error, commands.errors.MissingPermissions):
+        error.handled = True
+
+        if isinstance(error, errors.MissingPermissions):
             await ctx.send("You lack the required permissions to execute this command.")
-        elif isinstance(error, commands.errors.MissingRequiredArgument):
+        elif isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include an integer with this command."
                            "Please use `$help purge` for more information.")
-        elif isinstance(error, commands.errors.BadArgument):
+        elif isinstance(error, errors.BadArgument):
             await ctx.send("Bad argument, please only use integers with this command.\n")
+        else:
+            error.handled = False
 
     # $info command used to provide some info on this bot
-    @commands.hybrid_command(help="Provides a brief synopsis of Karn, including a link to his Open Source code",
-                             brief="Provides a brief synopsis of Karn")
+    @hybrid_command(help="Provides a brief synopsis of Karn, including a link to his Open Source code",
+                    brief="Provides a brief synopsis of Karn")
     async def info(self, ctx):
         await ctx.send(f"Hello! I am Karn, your friendly Time-Travelling Golem!\n"
                        f"I was developed by Vertical Bar, and am hosted locally in Kalamazoo!\n"
                        f"If you would like to know me more intimately my Open Source code can be found here:\n\n"
                        f"https://github.com/vscheff/karn")
 
-    @commands.command(hidden=True)
+    @command(hidden=True)
     async def verticalbar(self, ctx):
         await ctx.send("01010110 01101111 01101110 "
                        "00100000 01010011 01100011 01101000 01100101 01100110 01100110 01101100 01100101 01110010")
 
-    @commands.hybrid_command(help="Echoes a given string within your current text channel.\n"
-                                  "Example: `/echo Repeat this back to me`",
-                             brief="Echoes a message.")
+    @hybrid_command(help="Echoes a given string within your current text channel.\n"
+                         "Example: `/echo Repeat this back to me`",
+                    brief="Echoes a message.")
     async def echo(self, ctx, *, message: str):
         await ctx.send(message)
+
+    @echo.error
+    async def echo_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include a message to echo with this command.\nPlease use `$help echo` for more information.")
+            error.handled = True
 
 
 # Used by $qr to create a QR code image

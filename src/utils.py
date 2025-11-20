@@ -1,4 +1,4 @@
-from asyncio import sleep
+from asyncio import get_running_loop, sleep
 import discord
 from gtts import gTTS
 from json import loads
@@ -48,6 +48,9 @@ def get_cursor(conn):
         return conn.cursor()
 
 def get_flags(args, join=False, make_dic=False, no_args=None):
+    if args is None:
+        return [], []
+
     arg_list = args.split()
     flags = []
     not_flags = []
@@ -157,6 +160,9 @@ async def package_message(obj, ctx, multi_send=False):
     else:
         print('Error occurred while packaging message. Temp file not created/deleted.')
 
+
+async def run_blocking(func, *args, **kwargs):
+    return await get_running_loop().run_in_executor(None, lambda: func(*args, **kwargs))
 
 async def send_tts_if_in_vc(bot, author, text):
     for client in bot.voice_clients:

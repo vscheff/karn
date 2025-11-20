@@ -2,7 +2,7 @@ from comics import directory, search
 from comics.exceptions import InvalidEndpointError
 from copy import deepcopy
 from discord import Embed, File
-from discord.ext.commands import Cog, command, MissingRequiredArgument
+from discord.ext.commands import Cog, errors, hybrid_command
 from ddgs import DDGS
 from os import getenv, remove
 from os.path import exists
@@ -15,7 +15,7 @@ from xkcd import getComic, getLatestComic, getLatestComicNum, getRandomComic
 
 from src.us_state_abbrev import abbrev_to_us_state as states
 from src.utils import TEMP_DIR
-from src.utils import get_flags, is_supported_filetype, get_supported_filetype, package_message
+from src.utils import get_flags, is_supported_filetype, get_supported_filetype, package_message, run_blocking
 
 
 DEFAULT_RESULT_COUNT = 1
@@ -37,13 +37,13 @@ WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?"
 
 
 class Query(Cog):
-    @command(help="Returns Scryfall data for a given MtG card"
-                  f"\n\nThis command has the following flags:\n"
-                  f"* **-r**: Returns a random MtG card.\n"
-                  f"\tExample: `$card -r`\n",
-             brief="Returns data of an MtG card")
-    async def card(self, ctx, *, args):
-        flags, query = get_flags(args)
+    @hybrid_command(help="Returns Scryfall data for a given MtG card"
+                         "\n\nThis command has the following flags:\n"
+                         "* **-r**: Returns a random MtG card.\n"
+                         "\tExample: `$card -r`\n",
+                    brief="Returns data of an MtG card")
+    async def card(self, ctx, *, card: str):
+        flags, query = get_flags(card)
         card_name = ' '.join(query)
 
         if 'r' in flags:
@@ -72,44 +72,49 @@ class Query(Cog):
 
     @card.error
     async def card_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a card name or search query with this command.\n"
                            "Example: `$card nekusar`\n\n"
                            "Please use `$help card` for more information.")
+            error.handled = True
 
-    @command(help="Returns a random comic strip from a given Comic name.\n"
-                  "Example: `$comic Garfield`\n\n"
-                  "This command has the following flags:\n"
-                  "* **l**: Lists available comics\n"
-                  "\tExample: `$comic -l`",
-             brief="Returns a random comic strip")
-    async def comic(self, ctx, *, args):
-        flags, query = get_flags(args, join=True)
+    @hybrid_command(help="Returns a random comic strip from a given Comic name.\n"
+                         "Example: `$comic Garfield`\n\n"
+                         "This command has the following flags:\n"
+                         "* **l**: Lists available comics\n"
+                         "\tExample: `$comic -l`",
+                    brief="Returns a random comic strip")
+    async def comic(self, ctx, *, comic: str):
+        flags, query = get_flags(comic, join=True)
 
         if 'l' in flags:
             return await package_message(build_comic_list(), ctx)
-        
+       
+        if ctx.interaction:
+            await ctx.defer()
+
         try:
-            comic = search(query, date="random")
+            comic = await run_blocking(search, query, date="random")
         except InvalidEndpointError:
             if not (results := directory.search(query)):
                 await ctx.send(f"Unknown comic \"{query}\"\nAvailable comics include:")
                 await package_message(build_comic_list(), ctx)
                 return
             
-            comic = search(results[0], date="random")
+            comic = await run_blocking(search, results[0], date="random")
 
         await ctx.send(comic.image_url)
 
     @comic.error
     async def comic_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a comic name with this command.\n"
                            "Example: `$comic Calvin and Hobbes`\n\n"
                            "Please use `$help comic` for more information.")
+            error.handled = True
 
-    @command(help="Returns definitions for a given word\nExample: `$define love`",
-             brief="Returns definitions for a given word")
+    @hybrid_command(help="Returns definitions for a given word\nExample: `$define love`",
+                    brief="Returns definitions for a given word")
     async def define(self, ctx, word: str):
         params = {"limit": MAX_DEFINITIONS, "sourceDictionaries": "wiktionary",
                   "includeTags": "false", "api_key": WORDNIK_API_KEY}
@@ -145,22 +150,23 @@ class Query(Cog):
 
     @define.error
     async def define_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a word to define.\n"
                            "Example: `$define hate`\n\n"
                            "Please use `$help define` for more information.")
+            error.handled = True
 
-    @command(help=f"Returns images relevant to a given query\n"
-                  f"Example: `$image Grant MacDonald`\n\n"
-                  f"This command has the following flags:\n"
-                  f"* **-c**: Specify a number of images to return [default={DEFAULT_RESULT_COUNT}].\n"
-                  f"\tExample: `$image -c 10 Margaery Tyrell`\n"
-                  f"* **-r**: Return randomly selected images from the search instead of the most relevant images.\n"
-                  f"\tExample: `$image -r Cressida`",
-             brief="Search the web for an image",
-             aliases=["images"])
-    async def image(self, ctx, *, args):
-        flags, query = get_flags(args)
+    @hybrid_command(help=f"Returns images relevant to a given query\n"
+                         f"Example: `$image Grant MacDonald`\n\n"
+                         f"This command has the following flags:\n"
+                         f"* **-c**: Specify a number of images to return [default={DEFAULT_RESULT_COUNT}].\n"
+                         f"\tExample: `$image -c 10 Margaery Tyrell`\n"
+                         f"* **-r**: Return randomly selected images from the search instead of the most relevant images.\n"
+                         f"\tExample: `$image -r Cressida`",
+                    brief="Search the web for an image",
+                    aliases=["images", "imagine"])
+    async def image(self, ctx, *, query: str):
+        flags, query = get_flags(query)
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
         randomize = 'r' in flags
 
@@ -179,19 +185,20 @@ class Query(Cog):
 
     @image.error
     async def image_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a search term with this command.\n"
                            "Example: `$image Natalie Dormer`\n\n"
                            "Please use `$help image` for more information.")
+            error.handled = True
 
-    @command(help=f"Search the web with a given query"
-                  f"Example: `$search Chris Chan`\n\n"
-                  f"This command has the following flags:\n"
-                  f"* **-c**: Specify a number of results to return [default={DEFAULT_RESULT_COUNT}].\n"
-                  f"\tExample: `search -c 10 Sam Hyde`\n",
-             brief="Search the web")
-    async def search(self, ctx, *, args):
-        flags, query = get_flags(args)
+    @hybrid_command(help=f"Search the web with a given query"
+                         f"Example: `$search Chris Chan`\n\n"
+                         f"This command has the following flags:\n"
+                         f"* **-c**: Specify a number of results to return [default={DEFAULT_RESULT_COUNT}].\n"
+                         f"\tExample: `search -c 10 Sam Hyde`\n",
+                    brief="Search the web")
+    async def search(self, ctx, *, query: str):
+        flags, query = get_flags(query)
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
 
         search_query = ' '.join(query)
@@ -208,19 +215,20 @@ class Query(Cog):
 
     @search.error
     async def search_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a search term with this command.\n"
                            "Example: `$search Christine Weston Chandler`\n\n"
                            "Please use `$help search` for more information.")
+            error.handled = True
 
-    @command(help=f"Search the web for videos with a given query"
-                  f"Example: `$search Dizaster - Love Me Long Time`\n\n"
-                  f"This command has the following flags:\n"
-                  f"* **-c**: Specify a number of results to return [default={DEFAULT_RESULT_COUNT}].\n"
-                  f"\tExample: `search -c 10 Fishtank`\n",
-             brief="Search the web for videos")
-    async def video(self, ctx, *, args):
-        flags, query = get_flags(args)
+    @hybrid_command(help=f"Search the web for videos with a given query"
+                         f"Example: `$search Dizaster - Love Me Long Time`\n\n"
+                         f"This command has the following flags:\n"
+                         f"* **-c**: Specify a number of results to return [default={DEFAULT_RESULT_COUNT}].\n"
+                         f"\tExample: `search -c 10 Fishtank`\n",
+                    brief="Search the web for videos")
+    async def video(self, ctx, *, query: str):
+        flags, query = get_flags(query)
         sub_arg = int(query.pop(0)) if 'c' in flags and query and query[0].isnumeric() else None
 
         search_query = ' '.join(query)
@@ -233,24 +241,25 @@ class Query(Cog):
 
     @video.error
     async def video_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a search term with this command.\n"
                            "Example: `$video dracula flow`\n\n"
                            "Please use `$help video` for more information.")
+            error.handled = True
 
-    @command(help="Returns the summary of a given Wikipedia article\nExample: `$wiki Thelema`\n\n"
-                  "This command has the following flags:\n"
-                  "* **-f**: Used to retrieve the full text of the given article.\n"
-                  "\tExample: `$wiki -f Jack Parsons`\n"
-                  "* **-i**: Used to retrieve all images from the given article.\n"
-                  "\tExample: `$wiki -i L. Ron Hubbard`\n"
-                  "\tOptionally, you may provide an integer sub-argument to limit the number of images sent.\n"
-                  "\tExample: `$wiki -i 3 L. Ron Hubbard` will only result in three images sent.\n"
-                  "* **-r**: Used to retrieve a random Wikipedia article.\n"
-                  "\tExample: `$wiki -r`",
-             brief="Search for a Wikipedia article")
-    async def wiki(self, ctx, *, args):
-        flags, query = get_flags(args)
+    @hybrid_command(help="Returns the summary of a given Wikipedia article\nExample: `$wiki Thelema`\n\n"
+                         "This command has the following flags:\n"
+                         "* **-f**: Used to retrieve the full text of the given article.\n"
+                         "\tExample: `$wiki -f Jack Parsons`\n"
+                         "* **-i**: Used to retrieve all images from the given article.\n"
+                         "\tExample: `$wiki -i L. Ron Hubbard`\n"
+                         "\tOptionally, you may provide an integer sub-argument to limit the number of images sent.\n"
+                         "\tExample: `$wiki -i 3 L. Ron Hubbard` will only result in three images sent.\n"
+                         "* **-r**: Used to retrieve a random Wikipedia article.\n"
+                         "\tExample: `$wiki -r`",
+                    brief="Search for a Wikipedia article")
+    async def wiki(self, ctx, *, query: str):
+        flags, query = get_flags(query)
 
         sub_arg = int(query.pop(0)) if 'i' in flags and query and query[0].isnumeric() else None
 
@@ -287,7 +296,7 @@ class Query(Cog):
 
             num_images = min(len(supported_images), sub_arg) if sub_arg else len(supported_images)
 
-            await ctx.send(f"**{result.title}**")
+            await ctx.send(f"# {result.title}")
 
             for _ in range(num_images):
                 await ctx.send(supported_images.pop(randint(0, len(supported_images) - 1)))
@@ -298,6 +307,9 @@ class Query(Cog):
             img = get_supported_filetype(deepcopy(result.images))
         except KeyError:
             img = None
+        
+        if getattr(ctx, "interaction", False):
+            await ctx.interaction.response.defer()
 
         await ctx.send(f"**{result.title}**")
 
@@ -306,26 +318,25 @@ class Query(Cog):
         else:
             await ctx.send(f"{result.summary[:1997].replace(' () ', ' ')}{'...'if len(result.summary) > 1997 else ''}")
 
-        msg = await ctx.send(result.url)
-        await msg.edit(suppress=True)
+        await ctx.send(f"<{result.url}>")
 
         if img:
             await ctx.send(img)
 
     @wiki.error
     async def wiki_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a Wikipedia page title with this command."
                            "Please use `$help wiki` for more information.")
+            error.handled = True
 
-    @command(help="Returns the current weather for a given city\n"
-                  "The city can be input in any of the following formats: "
-                  "kalamazoo; kalamazoo, mi; kalamazoo, michigan; 49006\n"
-                  "Example: $weather 49078",
-             brief="Returns the weather of a city")
-    async def weather(self, ctx, *, args, **kwargs):
-        return_json = kwargs.get("json", False)
-        city = [i.strip() for i in args.split(',') if i]
+    @hybrid_command(help="Returns the current weather for a given city\n"
+                         "The city can be input in any of the following formats: "
+                         "kalamazoo; kalamazoo, mi; kalamazoo, michigan; 49006\n"
+                         "Example: $weather 49078",
+                    brief="Returns the weather of a city")
+    async def weather(self, ctx, *, location: str, return_json: bool=False):
+        city = [i.strip() for i in location.split(',') if i]
         params = {"appid": WEATHER_API_KEY, "units": "imperial"}
 
         if city[0].isnumeric():
@@ -341,9 +352,15 @@ class Query(Cog):
 
         weather = get(WEATHER_URL, params=params).json()
 
+        if (is_interaction := hasattr(ctx, "interaction") and ctx.interaction):
+            await ctx.interaction.response.defer()
+
         if weather["cod"] != "404":
             if return_json:
-                return weather
+                if not is_interaction:
+                    return weather
+
+                return await ctx.send(weather)
 
             main = weather["main"]
             await ctx.send(f"**Temperature:** {main['temp']:.0f}°F (*Feels Like* {main['feels_like']:.0f}°)\n"
@@ -354,24 +371,26 @@ class Query(Cog):
                            f"**Visibility:** {weather['visibility'] // 1609} mi")
         else:
             if return_json:
-                return "City not found"
+                if not is_interaction:
+                    return "City not found"
 
             await ctx.send("City not found")
 
     @weather.error
     async def weather_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a city or zip code with this command.\n"
                            "Example: $weather kalamazoo\n\n"
                            "Please use `$help weather` for more information.")
+            error.handled = True
 
-    @command(help="Returns the XKCD comic of a given comic number.\n\n"
-                  "This command has the following flags:\n"
-                  "* **-r**: Returns a random XKCD comic\n"
-                  "* **-l**: Returns the latest XKCD comic",
-             brief="Return an XKCD comic")
-    async def xkcd(self, ctx, args="-l"):
-        flags, arg = get_flags(args)
+    @hybrid_command(help="Returns the XKCD comic of a given comic number.\n\n"
+                         "This command has the following flags:\n"
+                         "* **-r**: Returns a random XKCD comic\n"
+                         "* **-l**: Returns the latest XKCD comic",
+                    brief="Return an XKCD comic")
+    async def xkcd(self, ctx, number: str="-l"):
+        flags, arg = get_flags(number)
 
         if 'r' in flags:
             comic = getRandomComic()

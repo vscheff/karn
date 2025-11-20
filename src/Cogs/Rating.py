@@ -45,12 +45,14 @@ class Rating(Cog):
         if isinstance(error, errors.BadArgument):
             await ctx.send("Bad argument, use only integers with this command.\n\n"
                            "Please use `$help bot` for more information.")
+            error.handled = True
 
     @top.error
     async def top_error(self, ctx, error):
         if isinstance(error, errors.BadArgument):
             await ctx.send("Bad argument, use only integers with this command.\n\n"
                            "Please use `$help top` for more information.")
+            error.handled = True
 
     @hybrid_command(help="Show the score for a given item.\n"
                          "Example: `$show linux`",
@@ -69,6 +71,12 @@ class Rating(Cog):
             await ctx.send(f"*{item}* **[{result[0][0]}]**")
 
         cursor.close()
+
+    @show.error
+    async def show_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include an item to show with this command.\nPlease use `$help show` for more information.")
+            error.handled = True
 
     def rate_listener(self, msg):
         # https://regex101.com/r/s8gfoV/5
