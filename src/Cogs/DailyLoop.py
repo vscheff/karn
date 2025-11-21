@@ -1,5 +1,6 @@
 from datetime import datetime, date
-from discord.ext import commands, tasks
+from discord.ext import tasks
+from discord.ext.commands import Cog, Bot, errors, hybrid_command
 from json import loads, decoder
 from os import getenv
 from random import choice, sample
@@ -24,9 +25,9 @@ DESC = {"calvin": "a Calvin & Hobbes comic",
         "xkcd": "an XKCD comic"}
 
 
-class DailyLoop(commands.Cog):
+class DailyLoop(Cog):
 
-    def __init__(self, bot: commands.Bot, conn):
+    def __init__(self, bot: Bot, conn):
         self.bot = bot
         self.conn = conn
 
@@ -36,34 +37,34 @@ class DailyLoop(commands.Cog):
 
         self.daily_loop.start()
 
-    @commands.command(help="Have daily messages sent to this channel.\n"
-                           "Message categories include:\n"
-                           "* *calvin*: Sends a random Calvin & Hobbes comic\n"
-                           "* *card*: Sends a random Magic: The Gathering card\n"
-                           "* *fact*: Sends a random fact\n"
-                           "* *garfield*: Sends a random Garfield comic\n"
-                           "* *peanuts*: Sends a random Peantus comic\n"
-                           "* *tip*: Sends a tip for using Karn\n"
-                           "* *wiki*: Sends a random Wikipedia article\n"
-                           "* *word*: Sends a random word and its definition\n"
-                           "* *xkcd*: Sends a random XKCD comic\n"
-                           "Example: `$daily fact`\n\n"
-                           "This command has the following flags:\n"
-                           "* **-a**: Instructs the command to use all available categories\n"
-                           "\tExample: `$daily -a`\n"
-                           "* **-c**: Change options for a different given channel\n"
-                           "\tExample: `$daily -c #general garfield`\n"
-                           "* **-d**: Stop sending messages from the given category\n"
-                           "\tExample: `$daily -d word`\n"
-                           "* **-l**: List the categories currently being sent to this channel\n"
-                           "\tExample: `$daily -l`\n"
-                           "* **-m**: Add multiple categories in a comma-seperated list.\n"
-                           "\tExample: `$daily -m fact, wiki, word, xkcd`\n"
-                           "* **-t**: Trigger the immediate retrieval of a daily item in this channel.\n"
-                           "\tExample: `$daily -t`",
-                      brief="Send daily messages to a channel")
-    async def daily(self, ctx, *, args):
-        flags, args = get_flags(args.lower())
+    @hybrid_command(help="Have daily messages sent to this channel.\n"
+                         "Message categories include:\n"
+                         "* *calvin*: Sends a random Calvin & Hobbes comic\n"
+                         "* *card*: Sends a random Magic: The Gathering card\n"
+                         "* *fact*: Sends a random fact\n"
+                         "* *garfield*: Sends a random Garfield comic\n"
+                         "* *peanuts*: Sends a random Peantus comic\n"
+                         "* *tip*: Sends a tip for using Karn\n"
+                         "* *wiki*: Sends a random Wikipedia article\n"
+                         "* *word*: Sends a random word and its definition\n"
+                         "* *xkcd*: Sends a random XKCD comic\n"
+                         "Example: `$daily fact`\n\n"
+                         "This command has the following flags:\n"
+                         "* **-a**: Instructs the command to use all available categories\n"
+                         "\tExample: `$daily -a`\n"
+                         "* **-c**: Change options for a different given channel\n"
+                         "\tExample: `$daily -c #general garfield`\n"
+                         "* **-d**: Stop sending messages from the given category\n"
+                         "\tExample: `$daily -d word`\n"
+                         "* **-l**: List the categories currently being sent to this channel\n"
+                         "\tExample: `$daily -l`\n"
+                         "* **-m**: Add multiple categories in a comma-seperated list.\n"
+                         "\tExample: `$daily -m fact, wiki, word, xkcd`\n"
+                         "* **-t**: Trigger the immediate retrieval of a daily item in this channel.\n"
+                         "\tExample: `$daily -t`",
+                    brief="Send daily messages to a channel")
+    async def daily(self, ctx, *, category: str):
+        flags, args = get_flags(category.lower())
 
         if 'c' in flags:
             if (channel_id := get_id_from_mention(args[0])) is None:
@@ -133,10 +134,11 @@ class DailyLoop(commands.Cog):
 
     @daily.error
     async def daily_error(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
+        if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a category with this command.\n"
                            "Example: `$daily fact`\n\n"
                            "Please use `$help daily` for more information.")
+            error.handled = True
 
     @tasks.loop(hours=1)
     async def daily_loop(self, **kwargs):

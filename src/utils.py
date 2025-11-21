@@ -169,6 +169,12 @@ async def send_tts_if_in_vc(bot, author, text):
         if client.channel == author.voice.channel:
             await text_to_speech(text, client)
 
+def is_slash_command(ctx):
+    return bool(getattr(ctx, "interaction", False))
+
+def smart_typing(ctx):
+    return ctx.interaction.channel.typing() if is_slash_command(ctx) else ctx.typing()
+
 async def text_to_speech(text, client, voice=DEFAULT_TTS_VOICE, speed=DEFAULT_TTS_SPEED):
     response = OPENAI_CLIENT.audio.speech.create(model="tts-1", input=text, voice=voice, speed=speed)
     

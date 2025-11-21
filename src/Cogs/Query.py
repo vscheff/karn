@@ -335,46 +335,8 @@ class Query(Cog):
                          "kalamazoo; kalamazoo, mi; kalamazoo, michigan; 49006\n"
                          "Example: $weather 49078",
                     brief="Returns the weather of a city")
-    async def weather(self, ctx, *, location: str, return_json: bool=False):
-        city = [i.strip() for i in location.split(',') if i]
-        params = {"appid": WEATHER_API_KEY, "units": "imperial"}
-
-        if city[0].isnumeric():
-            params["zip"] = city[0]
-        else:
-            if len(city) == 1:
-                city = city[0]
-            elif len(city) == 2:
-                if len(city[1]) == 2:
-                    city[1] = states[city[1].upper()]
-                city = f"{city[0]},{city[1]}"
-            params['q'] = city
-
-        weather = get(WEATHER_URL, params=params).json()
-
-        if (is_interaction := hasattr(ctx, "interaction") and ctx.interaction):
-            await ctx.interaction.response.defer()
-
-        if weather["cod"] != "404":
-            if return_json:
-                if not is_interaction:
-                    return weather
-
-                return await ctx.send(weather)
-
-            main = weather["main"]
-            await ctx.send(f"**Temperature:** {main['temp']:.0f}°F (*Feels Like* {main['feels_like']:.0f}°)\n"
-                           f"**Wind:** {weather['wind']['speed']:.0f} mph\n"
-                           f"**Description:** {weather['weather'][0]['description']}\n"
-                           f"**Pressure:** {main['pressure'] / 33.863886666667:.2f} in\n"
-                           f"**Humidity:** {main['humidity']}%\n"
-                           f"**Visibility:** {weather['visibility'] // 1609} mi")
-        else:
-            if return_json:
-                if not is_interaction:
-                    return "City not found"
-
-            await ctx.send("City not found")
+    async def weather(self, ctx, *, location: str):
+        await ctx.send(get_weather(location))
 
     @weather.error
     async def weather_error(self, ctx, error):
@@ -413,6 +375,39 @@ class Query(Cog):
         await ctx.send(comic.imageLink)
         await ctx.send(f"||*{comic.altText}*||")
 
+
+def get_weather(location, return_json=False):
+    city = [i.strip() for i in location.split(',') if i]
+    params = {"appid": WEATHER_API_KEY, "units": "imperial"}
+
+    if city[0].isnumeric():
+        params["zip"] = city[0]
+    else:
+        if len(city) == 1:
+            city = city[0]
+        elif len(city) == 2:
+            if len(city[1]) == 2:
+                city[1] = states[city[1].upper()]
+            city = f"{city[0]},{city[1]}"
+        params['q'] = city
+
+    weather = get(WEATHER_URL, params=params).json()
+
+    if weather["cod"] == "404":
+        return "City not found"
+
+    if return_json:
+        return weather
+
+    main = weather["main"]
+    
+    return f"**Temperature:** {main['temp']:.0f}°F (*Feels Like* {main['feels_like']:.0f}°)\n"  \
+           f"**Wind:** {weather['wind']['speed']:.0f} mph\n"                                    \
+           f"**Description:** {weather['weather'][0]['description']}\n"                         \
+           f"**Pressure:** {main['pressure'] / 33.863886666667:.2f} in\n"                       \
+           f"**Humidity:** {main['humidity']}%\n"                                               \
+           f"**Visibility:** {weather['visibility'] // 1609} mi"
+ 
 async def send_card(ctx, card_json):
     if img_links := card_json.get("image_uris"):
         await ctx.send(img_links["png"])

@@ -2,7 +2,7 @@ from asyncio import sleep
 from datetime import datetime, timedelta
 from discord import ClientException
 from discord.ext.tasks import loop
-from discord.ext.commands import Cog, command, Context, MissingRequiredArgument
+from discord.ext.commands import Bot, Cog, command, Context, errors, hybrid_command, MissingRequiredArgument
 from json import dumps, loads
 from openai import APIError, AsyncOpenAI
 from os import getenv, stat
@@ -14,9 +14,11 @@ from tiktoken import encoding_for_model
 
 
 # Local dependencies
+from src.Cogs.Query import get_weather
 from src.global_vars import FILE_ROOT_DIR
-from src.utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES
-from src.utils import get_cursor, get_flags, get_id_from_mention, get_json_from_socket, package_message, send_tts_if_in_vc, text_to_speech
+from src.utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES,             \
+                      get_cursor, get_flags, get_id_from_mention, get_json_from_socket, is_slash_command,   \
+                      package_message, send_tts_if_in_vc, smart_typing, text_to_speech
 from src.tools import get_tool_token_cost, tools
 
 OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
@@ -89,7 +91,7 @@ class AI(Cog):
     #  attr reply_chance - chance the bot will respond to a message unprompted [%]
     #  attr   rude_mtime - last modification time of the "rude messages" file [ns]
     #  attr   desc_mtime - last modification time of the descriptors file [ns]
-    def __init__(self, bot, conn):
+    def __init__(self, bot: Bot, conn):
         self.bot = bot
         self.conn = conn
         self.reply_chance = 1
@@ -120,17 +122,17 @@ class AI(Cog):
         except FileNotFoundError:
             return [DEFAULT_DESCRIPTOR]
 
-    @command(help="Generate an image from a given prompt\n"
-                  "Example: `$generate a presidential election in minecraft`\n\n"
-                  "This command has the following flags:\n"
-                  "* **-c**: Specify the number of images to generate. Must be in range [1, 8].\n"
-                  "\tExample: `$generate -c 3 two cat scientists discovering a new element`\n"
-                  "* **-p**: Use the raw prompt text for generation without any prompt help.\n"
-                  "\tExample: `$generate -p a hand with seven fingers`",
-            brief="Generate an image",
-            aliases=["gen"])
-    async def generate(self, ctx, *, args):
-        flags, prompt = get_flags(args, join=True, make_dic=True, no_args=['p'])
+    @hybrid_command(help="Generate an image from a given prompt\n"
+                         "Example: `$generate a presidential election in minecraft`\n\n"
+                         "This command has the following flags:\n"
+                         "* **-c**: Specify the number of images to generate. Must be in range [1, 8].\n"
+                         "\tExample: `$generate -c 3 two cat scientists discovering a new element`\n"
+                         "* **-p**: Use the raw prompt text for generation without any prompt help.\n"
+                         "\tExample: `$generate -p a hand with seven fingers`",
+                    brief="Generate an image",
+                    aliases=["gen"])
+    async def generate(self, ctx, *, query: str):
+        flags, prompt = get_flags(query, join=True, make_dic=True, no_args=['p'])
 
         try:
             num_images = int(flags.get('c', 1))
@@ -157,7 +159,7 @@ class AI(Cog):
             'prompt': prompt,
         }
 
-        async with ctx.typing():
+        async with smart_typing(ctx):
             response = post(LEONARDO_URL, headers=headers, json=json_data).json()
             
             if "error" in response:
@@ -178,26 +180,40 @@ class AI(Cog):
         for image in generated_images:
             await ctx.send(image["url"])
 
-    @command(help="Adds the bot to your current voice channel",
-             brief="Add bot to your voice channel")
+    @generate.error
+    async def generate_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include a query used to generate the image.\n"
+                           "Example: `$generate a kitten dressed as a cowboy`\n\n"
+                           "Please use `$help generate` for more information.")
+            error.handled = True
+
+    @hybrid_command(help="Adds the bot to your current voice channel",
+                    brief="Add bot to your voice channel")
     async def join(self, ctx):
         try:
             await ctx.author.voice.channel.connect()
-
-            if not self.check_empty_channel.is_running():
-                self.check_empty_channel.start()
         except AttributeError:
-            await ctx.send("You must currently be in a voice channel to use this command.")
+            return await ctx.send("You must currently be in a voice channel to use this command.")
         except ClientException:
-            await ctx.send("I'm already in your channel!")
+            return await ctx.send("I'm already in your channel!")
+       
+        if is_slash_command(ctx):
+            await ctx.send(f"I have joined *{ctx.author.voice.channel.name}*", ephemeral=True)
 
-    @command(help="Remove the bot from a voice channel",
-             brief="Remove bot from a voice channel")
+        if not self.check_empty_channel.is_running():
+            self.check_empty_channel.start()
+
+    @hybrid_command(help="Remove the bot from a voice channel",
+                    brief="Remove bot from a voice channel")
     async def leave(self, ctx):
         try:
             await ctx.message.guild.voice_client.disconnect()
         except AttributeError:
-            await ctx.send("I am not currently in any voice channels. Try using `$join` first!")
+            return await ctx.send("I am not currently in any voice channels. Try using `$join` first!")
+
+        if is_slash_command(ctx):
+            await ctx.send(f"I have disconnected from the voice channel", ephemeral=True)
 
     @loop(seconds=20)
     async def check_empty_channel(self):
@@ -209,20 +225,20 @@ class AI(Cog):
             if len(client.channel.members) < 2:
                 await client.disconnect()
 
-    @command(help=f"Command the bot to say something in your voice channel.\n"
-             f"Example: `$say Life is Mizzy`\n\n"
-             f"This command has the following flags:\n"
-             f"* **-s**: Specify the playback speed. Must be in range [0.25, 4.0].\n"
-             f"\tExample: `$say -s 1.33 Say this faster`\n"
-             f"* **-v**: Specify the voice to use. Supported voices include: {', '.join(SUPPORTED_VOICES)}.\n"
-             f"\tExample: `$say -v shimmer I sound... different somehow`",
-             brief="Say something in a voice channel")
-    async def say(self, ctx, *, args):
+    @hybrid_command(help=f"Command the bot to say something in your voice channel.\n"
+                         f"Example: `$say Life is Mizzy`\n\n"
+                         f"This command has the following flags:\n"
+                         f"* **-s**: Specify the playback speed. Must be in range [0.25, 4.0].\n"
+                         f"\tExample: `$say -s 1.33 Say this faster`\n"
+                         f"* **-v**: Specify the voice to use. Supported voices include: {', '.join(SUPPORTED_VOICES)}.\n"
+                         f"\tExample: `$say -v shimmer I sound... different somehow`",
+                    brief="Say something in a voice channel")
+    async def say(self, ctx, *, content: str):
         if not ctx.author.voice:
             await ctx.send("You must currently be in a voice channel to use this command.")
             return
 
-        flags, not_flags = get_flags(args, join=True, make_dic=True)
+        flags, not_flags = get_flags(content, join=True, make_dic=True)
         voice = flags.get('v', DEFAULT_TTS_VOICE).lower()
 
         if voice not in SUPPORTED_VOICES:
@@ -251,21 +267,33 @@ class AI(Cog):
             while ctx.message.guild.voice_client.is_playing():
                 await sleep(1)
 
+            await slee(1)
             await self.leave(ctx)
+
+    @say.error
+    async def say_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include a message that will be read aloud.\n"
+                           "Example: `$say I will read this message aloud`\n\n"
+                           "Please use `$help say` for more information.")
+            error.handled = True
 
     # $prompt command for users to submit prompts to the language model
     # param   args - will contain the prompt to send
     # param author - used by `send_reply()` to forward author name from message
-    @command(help="Generates natural language or code from a given prompt.\n"
-                  "Example: `$prompt Tell me story about a man who wanted to be a hockey player, but played golf instead`\n\n"
-                  "This command has the following flags:\n"
-                  "* **-c**: Generate a response using Chat Completions instead of Responses\n"
-                  "\tExample: `$prompt -c What is the answer to Life, the Universe, and Everything?`\n"
-                  "* **-f**: Generate a response in the style of an input file\n"
-                  "\tExample: `$prompt -f dracula`",
-             brief="Generates natural language",
-             aliases=["chat", "promt"])
-    async def prompt(self, ctx, **kwargs):
+    @hybrid_command(help="Generates natural language or code from a given prompt.\n"
+                         "Example: `$prompt Tell me story about a man who wanted to be a hockey player, but played golf instead`\n\n"
+                         "This command has the following flags:\n"
+                         "* **-c**: Generate a response using Chat Completions instead of Responses\n"
+                         "\tExample: `$prompt -c What is the answer to Life, the Universe, and Everything?`\n"
+                         "* **-f**: Generate a response in the style of an input file\n"
+                         "\tExample: `$prompt -f dracula`",
+                    brief="Generates natural language",
+                    aliases=["chat", "promt"])
+    async def prompt(self, ctx):
+        await self.make_llm_request(ctx)
+
+    async def make_llm_request(self, ctx, **kwargs):
         self.reply_chance = 1
 
         if isinstance(ctx, Context):
@@ -410,7 +438,7 @@ class AI(Cog):
         elif item.name == "image":
             await self.bot.get_cog("Query").image(ctx, query=f"-c {args['count']} {args['query']}")
         elif item.name == "weather":
-            response = await self.bot.get_cog("Query").weather(ctx, location=args["location"], return_json=True)
+            response = get_weather(location=args["location"], return_json=True)
 
         return response
 
@@ -630,7 +658,7 @@ class AI(Cog):
                 await send_tts_if_in_vc(self.bot, msg.author, reply)
                 return
 
-            return await self.prompt(msg.channel, author=msg.author)
+            return await self.make_llm_request(msg.channel, author=msg.author)
 
         # Don't respond to messages that are only one word
         if len(msg.clean_content.split()) <= 1:
@@ -671,7 +699,7 @@ class AI(Cog):
 
         # Random chance to respond to any given message
         if randint(1, REPLY_UPPER_LIMIT) <= self.reply_chance:
-            return await self.prompt(msg.channel, author=msg.author, prompted=False)
+            return await self.make_llm_request(msg.channel, author=msg.author, prompted=False)
 
         # Random chance to increase likelihood of responses in the future
         if not randint(0, self.reply_chance):

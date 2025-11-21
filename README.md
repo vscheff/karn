@@ -22,6 +22,7 @@ Click [here](https://discord.com/oauth2/authorize?client_id=847511176476753942) 
 - Python 3.9 or newer
 - PIP
 - mySQL/MariaDB
+- ffmpeg
 - Webserver running on the same machine
 
 ### Installation

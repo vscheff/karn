@@ -1,4 +1,4 @@
-from discord.ext.commands import Cog, command
+from discord.ext.commands import Cog, hybrid_command
 from random import choice
 from re import sub
 from wordle import dictionary, Wordle
@@ -10,13 +10,13 @@ class Games(Cog):
     def __init__(self):
         self.wordle_games = {}
     
-    @command(help="Starts a new game of Wordle in the chat.\n\n"
-                  "This command has the following flags:\n"
-                  "* **-n**: Quits an ongoing game and starts a new game of Wordle.\n"
-                  "* **-q**: Quits an ongoing game of Wordle.",
-             brief="Play a game of Wordle")
-    async def wordle(self, ctx, *, args=''):
-        flags, args = get_flags(args)
+    @hybrid_command(help="Starts a new game of Wordle in the chat.\n\n"
+                         "This command has the following flags:\n"
+                         "* **-n**: Quits an ongoing game and starts a new game of Wordle.\n"
+                         "* **-q**: Quits an ongoing game of Wordle.",
+                    brief="Play a game of Wordle")
+    async def wordle(self, ctx, *, flags: str=''):
+        flags, _  = get_flags(flags)
         chann_id = ctx.channel.id
 
         if 'q' in flags:
