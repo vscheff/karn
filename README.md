@@ -1,6 +1,6 @@
 # Karn
 
-A Discord bot written in Python utilizing discord.py
+A Discord bot written in Python utilizing the `discord.py` library.
 
 ## Features
 - LLM integration including text completion, text-to-speach, and image generation
@@ -46,7 +46,7 @@ Click [here](https://discord.com/oauth2/authorize?client_id=847511176476753942) 
 
 ## Usage
 ### Standard Commands
-Much of Karn's functionality is accessed through his standard commands. All standard commands are prefixed with `$`. A list of accessible commands can be found by executing `$help`. Additionally, you can pass a command name into the `$help` command to recieve additional help on that command specifically. Many commands accept arguments and/or command flags, usage of which is explained through the use of the `$help` command. Some commands can be invoked by additional aliases such as `$gen` for `$generate`. The full command list is explained further down.
+Much of Karn's functionality is accessed through his standard commands. All standard commands are hybrid commands. They can invoked with the function prefix '$' (i.e. `$generate`) or they can be invoked as a slash command (i.e. `/generate`). A list of accessible commands can be found by executing `$help`. Additionally, you can pass a command name into the `$help` command to recieve additional help on that command specifically. Many commands accept arguments and/or command flags, usage of which is explained through the use of the `$help` command. Some commands can be invoked by additional aliases such as `$gen` for `$generate`. The full command list is explained further down.
 
 ### LLM Chatbot
 Karn utilizes the ChatGPT 5-mini LLM for chat completion and reasoning tasks. The basic way to access this functionality is through the use of the `$prompt` command. However, any message that contains "Karn" will prompt a response from Karn that will be generated from the LLM. Additionally, there is a random chance that messages sent in the server will receive a response generated from the LLM. The likelihood of this occuring will increase as more messages are received that don't trigger a response. Through the use of the `$ignore` command you can prevent Karn from responding to unprompted messages from a specific user or within a specific channel. Karn will never send an unprompted response to a message that is only one word, only contains tags, only contains voted items, or contains a URL. Additionally, if Karn determines his unprompted response is not helpful, he will not send it to the server.
@@ -80,7 +80,7 @@ Contained here is an exhaustive explanation of Karn's standard commands (excludi
 - `leave` - Instructs Karn to leave your current voice channel. Note, Karn will automatically leave a voice channel when he detects he is the only member of the voice channel.
 - `prompt` - Generates a response from the LLM. Further information on this functionality is described above. To generate a response in the style of one of a file in your server's directory, use the `-f` command flag and specify a file: `$prompt -f dracula`. By default, this command will invoke "reasoning" responses from the LLM. To instead invoke "chat completion" responses, you can use the `-c` command flag: `$prompt -c What is the answer to Life, the Universe, and Everything?`. This command can be invoked with the aliases `$chat` and `$promt`.
 - `say` - Generates text-to-speech for a given message and plays the message aloud in your voice channel. If Karn is not present in your voice channel, he will temporarily join the channel to play the message. You can specify playback speed by using the `-s` command flag and specifying a speed as a float: `$say -s 1.33 Say this faster`. By default, Karn will use OpenAI's "Onyx" voice. You can specify a different supported voice by using the `-v` command flag: `$say -v shimmer I sound... different somehow`. Use `$help say` to view a list of supported voices.
-- `set_context` - Sets the genesis system context message for a channel. By default, this will only add on to the default genesis system context message for Karn. If you want to completely overwrite the default genesis system context message, use the `-o` command flag. Please note, when overwriting the default genesis system context message, Karn may not fully understand his own name or role within your server.
+- `set_context` - Sets the genesis system context message for a channel. By default, this will only add on to the default genesis system context message for Karn. If you want to completely overwrite the default genesis system context message, use the `-o` command flag. Please note, when overwriting the default genesis system context message, Karn may not fully understand his own name or role within your server. You can reset the channel's system context message to the default message by invoking the command without any arguments or by using the `-c` command flag.
 - `view_context` - View all system context messages for a channel.
 
 ### DailyLoop
@@ -134,11 +134,12 @@ All hat commands (excluding `$list` and `$set_default`) use the hat set as defau
 
 ### Utility
 - `calc` - Sends the result of a mathematical expression. Supported operators are: `+` `-` `*` `/` `^`.
+- `echo` - Echos a given string in your current text channel.
 - `info` - Sends a brief synopsis on Karn, including a link to his Open Source code on GitHub.
 - `ping` - Sends "pong" if the bot is online, as well as the round trip message time.
 - `purge` - Bulk deletes messages in the current channel. This command accepts an integer argument, and messages that are older than that many days are deleted. For example, to delete messages older than 3 days: `$purge 3`. Alternatively, you can pass two integer arguments to declare a range. For example, to delete messages older than 3 days but not older than 42 days: `$purge 3 42`.
 - `qr` - Generates a QR code for a given string.
-- `read` - Performs an "All Systems Go" check on the bot, and sends a status report.
+- `ready` - Performs an "All Systems Go" check on the bot, and sends a status report. When invoking this command as a slash command the response is ephemeral.
 
 ### Miscellaneous
 - `help` - Sends the entire accessible command list with a brief description of each command. You can view just the commands in a given category by including that category as an argument: `$help Utility`. You can view expanded information for a given command by including the command as an argument: `$help daily`.
@@ -150,7 +151,7 @@ Every day at 03:00 Eastern Time all files in each server's directory are backed 
 - System Context Messages
 - Daily Message settings
 
-Should you require any data recovery assistance, please contact me @newboard on Discord.
+Should you require any data recovery assistance, please contact me, @vertical\_bar, on Discord.
 
 If you're hosting the bot locally, you're on your own for backup and data recovery.
 
@@ -161,6 +162,7 @@ Karn steals his name from a [time-travelling silver golem](https://mtg.wiki/page
 - [x] Add way to view available comics without triggering a command error with `$comic`
 - [x] Accept channel ID with the `-c` command flag to `$ignore` to allow configuration of other channels
 - [x] Segregrate input/output files into seperate server directories
+- [ ] Add argument descriptions
 - [ ] Move file directories into SQL tables
 - [ ] Make blank `$prompt` command work better
 - [ ] Code Wordle game to remove it as a dependency

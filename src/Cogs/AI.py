@@ -1,6 +1,7 @@
 from asyncio import sleep
 from datetime import datetime, timedelta
-from discord import ClientException
+from discord import ClientException, Interaction, Message
+from discord.app_commands import ContextMenu
 from discord.ext.tasks import loop
 from discord.ext.commands import Bot, Cog, command, Context, errors, hybrid_command, MissingRequiredArgument
 from json import dumps, loads
@@ -98,6 +99,9 @@ class AI(Cog):
         self.client = AsyncOpenAI(api_key=OPENAI_API_KEY, organization=OPENAI_ORGANIZATION)
         self.tools_token_cost = get_tool_token_cost(tools, ENCODING)
 
+        self.generate_menu = ContextMenu(name="Generate image", callback=self.generate_from_message)
+        bot.tree.add_command(self.generate_menu)
+
     # Import "rude" phrases from input file
     def get_rude_messages(self, guild_id):
         try:
@@ -121,6 +125,11 @@ class AI(Cog):
                 return [i.strip() for i in in_file.readlines()]
         except FileNotFoundError:
             return [DEFAULT_DESCRIPTOR]
+    
+    async def generate_from_message(self, interaction: Interaction, message: Message):
+        ctx = await Context.from_interaction(interaction)
+        ctx.message = message
+        await self.generate(ctx, query=message.content)
 
     @hybrid_command(help="Generate an image from a given prompt\n"
                          "Example: `$generate a presidential election in minecraft`\n\n"
@@ -290,17 +299,21 @@ class AI(Cog):
                          "\tExample: `$prompt -f dracula`",
                     brief="Generates natural language",
                     aliases=["chat", "promt"])
-    async def prompt(self, ctx):
-        await self.make_llm_request(ctx)
+    async def prompt(self, ctx, *, inp_prompt: str=None):
+        await self.make_llm_request(ctx, inp_prompt=inp_prompt if is_slash_command(ctx) else None)
 
     async def make_llm_request(self, ctx, **kwargs):
         self.reply_chance = 1
+        if (inp_prompt := kwargs.get("inp_prompt", None)) is not None:
+            inp_msg = {"role": "user", "content": f"{ctx.author}:: {inp_prompt}"}
+        else:
+            inp_msg = None
 
         if isinstance(ctx, Context):
             channel = ctx.channel
             channel_id = ctx.channel.id
             author = ctx.message.author
-            flags, not_flags = get_flags(ctx.message.clean_content)
+            flags, not_flags = get_flags(ctx.message.clean_content if inp_prompt is None else inp_prompt)
         else:
             channel = ctx
             channel_id = ctx.id
@@ -326,7 +339,7 @@ class AI(Cog):
 
             cursor.close()
 
-            context, encoded_len = await self.build_context(channel, sys_msg, chat_completion)
+            context, encoded_len = await self.build_context(channel, sys_msg, chat_completion, inp_msg)
 
         if chat_completion:
             openai_kwargs = {                "model": MODEL,
@@ -419,14 +432,6 @@ class AI(Cog):
                 return False
 
 
-    # Called if $prompt encounters an unhandled exception
-    @prompt.error
-    async def prompt_error(self, ctx, error):
-        if isinstance(error, MissingRequiredArgument):
-            await ctx.send("You must include a prompt with this command.\n"
-                           "Example: `$prompt tell me a joke`\n\n"
-                           "Please use `$help prompt` for more information.")
-
     async def handle_functions(self, ctx, item):
         args = loads(item.arguments)
         response = None
@@ -475,9 +480,10 @@ class AI(Cog):
     # return:
     #       context - list of dictionaries containing messages with a total token length < `MAX_MSG_LEN`
     #    num_tokens - number of tokens used by the context
-    async def build_context(self, channel, sys_msg, chat_completion=False):
+    async def build_context(self, channel, sys_msg, chat_completion=False, inp_prompt=None):
         num_tokens = TOKENS_PER_REPLY + get_token_len(sys_msg) + self.tools_token_cost if not chat_completion else 0
-        context = []
+        num_tokens += get_token_len(inp_prompt) if inp_prompt is not None else 0
+        context = [] if inp_prompt is None else [inp_prompt]
         after = datetime.now() - timedelta(days=MAX_DAYS_OLD)
 
         # Build the list of context messages
@@ -505,72 +511,87 @@ class AI(Cog):
         return context, num_tokens
 
     # $set_context command used to set the genesis message of a channel
-    @command(help="Set the genesis system context message for this channel. "
-                  "This \"primes\" the bot to behave in a desired manner.\n"
-                  "Example: `$set_context you must answer all prompts in J. R. R. Tolkien's writing style`\n\n"
-                  "This command has the following flags:\n"
-                  "* **-o**: Overwrite the default genesis message for the bot.\n"
-                  "\tExample: `$set_context -o You are a depressed and bored robot named Marvin the Paranoid Android`",
-             brief="Set a new genesis message",
-             aliases=["context"])
-    async def set_context(self, ctx, *, args=''):
-        flags, msg = get_flags(args)
-        msg = ' '.join(msg)
-        new_gen_msg = msg if 'o' in flags else f"{GENESIS_MESSAGE['content']} {msg}"
+    @hybrid_command(help="Set the genesis system context message for this channel. "
+                         "This \"primes\" the bot to behave in a desired manner.\n"
+                         "Example: `$set_context you must answer all prompts in J. R. R. Tolkien's writing style`\n\n"
+                         "This command has the following flags:\n"
+                         "* **-c**: Clears the current system context message and resets it to the default system context message.\n"
+                         "\tExample: `$set_context -c`"
+                         "* **-o**: Overwrite the default genesis message for the bot.\n"
+                         "\tExample: `$set_context -o You are a depressed and bored robot named Marvin the Paranoid Android`",
+                    brief="Set a new genesis message",
+                    aliases=["context"])
+    async def set_context(self, ctx, *, message: str=None):
+        flags, msg = get_flags(message)
+        
+        if not (reset_context := 'c' in flags or message is None):
+            msg = '' if reset_context else ' '.join(msg)
+            new_gen_msg = msg if 'o' in flags else f"{GENESIS_MESSAGE['content']} {msg}"
 
-        if (token_len := get_token_len({"role": "system", "content": new_gen_msg})) > MAX_INPUT_TOKENS:
-            return await ctx.send("Input genesis message is too long. Context was not set.")
+            if (token_len := get_token_len({"role": "system", "content": new_gen_msg})) > MAX_INPUT_TOKENS:
+                return await ctx.send("Input genesis message is too long. Context was not set.")
 
         cursor = get_cursor(self.conn)
 
         cursor.execute("DELETE FROM Genesis WHERE channel_id = %s", [ctx.channel.id])
-        cursor.execute("INSERT INTO Genesis (channel_id, content) VALUES (%s, %s)", [ctx.channel.id, new_gen_msg])
-
-        await ctx.send(f"New genesis message of length {token_len} has been set!")
+        
+        if not reset_context:
+            cursor.execute("INSERT INTO Genesis (channel_id, content) VALUES (%s, %s)", [ctx.channel.id, new_gen_msg])
+            await ctx.send(f"New genesis message of length {token_len} has been set!")
+        else:
+            await ctx.send("System context message has been reset to default settings")
 
         self.conn.commit()
         cursor.close()
 
-    @command(help="Add additional system context messages for this channel. "
-                  "This can help get the bot to behave in a more specific manner."
-                  "Example: `$add_context You always talk about baseball, even if it doesn't fit the conversation.`",
-             brief="Add additional system context")
-    async def add_context(self, ctx, *, args):
-        if (token_len := get_token_len({"role": "system", "content": args})) > MAX_INPUT_TOKENS:
+    @hybrid_command(help="Add additional system context messages for this channel. "
+                         "This can help get the bot to behave in a more specific manner."
+                         "Example: `$add_context You always talk about baseball, even if it doesn't fit the conversation.`",
+                    brief="Add additional system context")
+    async def add_context(self, ctx, *, message: str):
+        if (token_len := get_token_len({"role": "system", "content": message})) > MAX_INPUT_TOKENS:
             return await ctx.send("Input genesis message is too long. Context was not set.")
 
         cursor = get_cursor(self.conn)
 
-        cursor.execute("INSERT INTO Genesis (channel_id, content) VALUES (%s, %s)", [ctx.channel.id, args])
+        cursor.execute("INSERT INTO Genesis (channel_id, content) VALUES (%s, %s)", [ctx.channel.id, message])
 
         await ctx.send(f"New system context message of length {token_len} has been added!")
 
         self.conn.commit()
         cursor.close()
+    
+    @add_context.error
+    async def add_context_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include a system context message with this command.\n"
+                           "Example: `$add_context Respond using only Lovecraftian speech`\n\n"
+                           "Please use `$help add_context` for more information.")
+            error.handled = True
 
-    @command(help="View the system context message(s) for this channel.",
-             brief="View system context messages")
+    @hybrid_command(help="View the system context message(s) for this channel.",
+                    brief="View system context messages")
     async def view_context(self, ctx):
         cursor = get_cursor(self.conn)
 
         cursor.execute("SELECT content FROM Genesis WHERE channel_id = %s", [ctx.channel.id])
 
         if not (result := cursor.fetchall()):
-            await ctx.send("No system context messages set for this channel. Try using `add_context` first!")
+            await ctx.send("No system context messages set for this channel. Try using `$add_context` first!")
         else:
             response = "\n* ".join(i[0] for i in result)
             await ctx.send(f"System context messages for this channel:\n* {response}")
 
         cursor.close()
 
-    @command(help="Toggle whether the bot should respond to your messages without being prompted. "
-                  "The bot will still respond if your message contain its name, or if you use the `$prompt` command.\n\n"
-                  "This command has the following flags:\n"
-                  "* **-c**: Toggle whether the bot should respond to messages in the current channel without being prompted. "
-                  "You can specify a channel other than the current channel by including the channel mention as an argument.\n"
-                  "\tExample: `$ignore -c #general`",
-             brief="Toggle unprompted responses")
-    async def ignore(self, ctx, *, args=''):
+    @hybrid_command(help="Toggle whether the bot should respond to your messages without being prompted. "
+                         "The bot will still respond if your message contain its name, or if you use the `$prompt` command.\n\n"
+                         "This command has the following flags:\n"
+                         "* **-c**: Toggle whether the bot should respond to messages in the current channel without being prompted. "
+                         "You can specify a channel other than the current channel by including the channel mention as an argument.\n"
+                         "\tExample: `$ignore -c #general`",
+                    brief="Toggle unprompted responses")
+    async def ignore(self, ctx, *, args: str=None):
         flags, args = get_flags(args)
 
         if 'c' in flags:

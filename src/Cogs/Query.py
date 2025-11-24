@@ -15,7 +15,7 @@ from xkcd import getComic, getLatestComic, getLatestComicNum, getRandomComic
 
 from src.us_state_abbrev import abbrev_to_us_state as states
 from src.utils import TEMP_DIR
-from src.utils import get_flags, is_supported_filetype, get_supported_filetype, package_message, run_blocking
+from src.utils import get_flags, is_slash_command, is_supported_filetype, get_supported_filetype, package_message, run_blocking
 
 
 DEFAULT_RESULT_COUNT = 1
@@ -90,7 +90,7 @@ class Query(Cog):
         if 'l' in flags:
             return await package_message(build_comic_list(), ctx)
        
-        if ctx.interaction:
+        if is_slash_command(ctx):
             await ctx.defer()
 
         try:
