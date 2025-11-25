@@ -2,6 +2,7 @@
 # This file imports the cogs from each file and adds them to the bot
 
 # Local dependencies
+from src.help_command import SlashHelp
 from src.Cogs.AI import AI
 from src.Cogs.DailyLoop import DailyLoop
 from src.Cogs.Games import Games
@@ -16,6 +17,7 @@ from src.Cogs.Utility import Utility
 # param   bot - commands.Bot object containing our client
 # param guild - discord.Guild object containing the target server
 async def add_cogs(bot, conn):
+    await bot.add_cog(SlashHelp(bot))
     await bot.add_cog(AI(bot, conn))
     await bot.add_cog(DailyLoop(bot, conn))
     await bot.add_cog(Games())

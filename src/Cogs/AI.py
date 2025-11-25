@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from discord import ClientException, Interaction, Message
 from discord.app_commands import ContextMenu
 from discord.ext.tasks import loop
-from discord.ext.commands import Bot, Cog, command, Context, errors, hybrid_command, MissingRequiredArgument
+from discord.ext.commands import Bot, Cog, Context, errors, hybrid_command
 from json import dumps, loads
 from openai import APIError, AsyncOpenAI
 from os import getenv, stat
@@ -439,7 +439,7 @@ class AI(Cog):
         if item.name == "card":
             await self.bot.get_cog("Query").card(ctx, card=args["query"])
         elif item.name == "generate":
-            await self.bot.get_cog("AI").generate(ctx, args="-p " + args["prompt"])
+            await self.bot.get_cog("AI").generate(ctx, query="-p " + args["prompt"])
         elif item.name == "image":
             await self.bot.get_cog("Query").image(ctx, query=f"-c {args['count']} {args['query']}")
         elif item.name == "weather":
@@ -488,14 +488,25 @@ class AI(Cog):
 
         # Build the list of context messages
         async for message in channel.history(after=after, oldest_first=False):
-            content = sub(r"\A\$prompt ", '', message.clean_content)
+            content_text = sub(r"\A\$prompt ", '', message.clean_content)
             # Remove character that can cause blank responses from OpenAI
-            content = sub(r"‐", '', content)
+            content_text = sub(r"‐", '', content_text)
+            is_bot = message.author == self.bot.user
+            content_blocks = []
 
-            if message.author == self.bot.user:
-                msg = {"role": "assistant", "content": content}
-            else:
-                msg = {"role": "user", "content": f"{message.author.display_name}:: {content}"}
+            if content_text.strip():
+                content_blocks.append({"type": "output_text" if is_bot else "input_text",
+                                       "text": content_text if is_bot else f"{message.author.display_name}:: {content_text}"})
+
+            for attachment in message.attachments:
+                if attachment.content_type and attachment.content_type.startswith("image/"):
+                    content_blocks.append({"type": "input_image", "image_url": attachment.url})
+
+            if not content_blocks:
+                continue
+
+            msg = {"role": "assistant" if is_bot else "user",
+                   "content": content_blocks}
 
             # Break the loop if adding the next messages pushes us past the token limit
             if (encoding_len := get_token_len(msg)) + num_tokens > MAX_INPUT_TOKENS:

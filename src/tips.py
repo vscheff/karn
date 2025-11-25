@@ -54,6 +54,10 @@ TIP_LIST = [
 "I can generate images from a given prompt with the `$generate` command.\nExample: `$generate Donald Trump as a Minecraft mob`",
 "When using my `$generate` command I will \"enhance\" your prompt by default, adding additional context to help deliver the best image possible. To generate an image just using your raw prompt, use the `-p` command flag.\nExample: `$generate -p a chicken riding a cat`",
 "By using the `-f` flag with the `$prompt` command, I will generate responses in the style of a given file. Use the `$ls` command to view available files.\nFor example using the command `$prompt -f Dracula` will return a quote in the style of lines found in the file \"Dracula\".",
-"By default, I will generate responses to the `$prompt` command through the use of \"Reasoning\". To instead generate responses using the Chat Completion strategy, use the `-c` command flag. For example: `$prompt -c Continue this conversation`.",
-"Want to know how many lines, words, characters, or bytes are contained within a file? Use the `$wc` command. For exmaple, using the command `$wc dracula` will return the number of lines, words, and characters are contained in the file \"dracula\".\nTo view the number of bytes in the file, use the `-c` command flag: `$wc -c dracula`."
+"By default, I will generate responses to the `$prompt` command through the use of \"Reasoning\". To instead generate responses using Chat Completion, use the `-c` command flag. For example: `$prompt -c Continue this conversation`.",
+"Want to know how many lines, words, characters, or bytes are contained within a file? Use the `$wc` command. For exmaple, using the command `$wc dracula` will return the number of lines, words, and characters are contained in the file \"dracula\".\nTo view the number of bytes in the file, use the `-c` command flag: `$wc -c dracula`.",
+"You can put words in my mouth through the use of the `$echo` command!",
+"My standard commands can be invoked both as a prefix command (i.e. `$generate`) and as a slash command (i.e. `/generate`).",
+"You can perform some of my commands directly on existing messages by right clicking (or long-pressing on mobile) the message, selecting Apps, then selecting the command you would like to perform.",
+"I can invoke some of my own commands when responding to you. For example, you can ask me to generate an image and I will do so without you having to use the `$generate` command.",
 ]

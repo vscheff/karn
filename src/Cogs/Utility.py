@@ -8,7 +8,7 @@ import qrcode
 from re import findall
 
 from src.utils import TEMP_DIR
-from src.utils import get_as_number, package_message
+from src.utils import get_as_number, get_flags, get_id_from_mention, is_slash_command, package_message
 
 # Filename/path for temporary storage of QR image
 QR_FILEPATH = f"{TEMP_DIR}/temp_qr.png"
@@ -167,9 +167,23 @@ class Utility(Cog):
                        "00100000 01010011 01100011 01101000 01100101 01100110 01100110 01101100 01100101 01110010")
 
     @hybrid_command(help="Echoes a given string within your current text channel.\n"
-                         "Example: `/echo Repeat this back to me`",
+                         "Example: `/echo Repeat this back to me`\n\n"
+                         "This command has the following flags:\n"
+                         "* **-c**: Echoes the message in a different given channel\n"
+                         "\tExample: `$echo -c #general Repeat this in the general channel`",
                     brief="Echoes a message.")
     async def echo(self, ctx, *, message: str):
+        flags, message = get_flags(message, join=True, make_dic=True)
+        
+        if 'c' in flags:
+            if (channel_id := get_id_from_mention(flags['c'])) is None:
+                return await ctx.send("Invalid channel. Please send channel in the format: #channel\n"
+                                      "Please use `$help echo` for more information.")
+            if is_slash_command(ctx):
+                await ctx.send(f"Echoing your message in {flags['c']}", ephemeral=True)
+
+            return await self.bot.get_channel(int(channel_id)).send(message)
+
         await ctx.send(message)
 
     @echo.error
