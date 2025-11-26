@@ -5,8 +5,10 @@ from datetime import datetime, timedelta
 import discord
 import os
 import qrcode
+from random import choice
 from re import findall
 
+from src.tips import TIP_LIST
 from src.utils import TEMP_DIR
 from src.utils import get_as_number, get_flags, get_id_from_mention, is_slash_command, package_message
 
@@ -151,6 +153,11 @@ class Utility(Cog):
             await ctx.send("Bad argument, please only use integers with this command.\n")
         else:
             error.handled = False
+
+    @hybrid_command(help="Sends a random bot usage tip",
+                    brief="Sends a random bot usage tip")
+    async def tip(self, ctx):
+        await ctx.send(choice(TIP_LIST))
 
     # $info command used to provide some info on this bot
     @hybrid_command(help="Provides a brief synopsis of Karn, including a link to his Open Source code",

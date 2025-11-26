@@ -26,11 +26,14 @@ activity = discord.Activity(type=discord.ActivityType.streaming,
                             name="",
                             state="Listening for $help"
                            )
+intents = discord.Intents.default()
+intents.members = True
+intents.message_content = True
 
 bot = commands.Bot(command_prefix='$',
                    case_insensitive=True,
                    help_command=CustomHelpCommand(),
-                   intents=discord.Intents.all(),
+                   intents=intents,
                    activity=activity)
 
 # Add brief help text for the help command
@@ -73,6 +76,11 @@ async def on_message(msg):
         return
 
     if msg.content[0] == bot.command_prefix:
+        if "--help" not in msg.content:
+            return await bot.process_commands(msg)
+
+        msg.content = f"$help {msg.content.split()[0][1:]}"
+
         return await bot.process_commands(msg)
     
     if not await send_line(msg, bot):

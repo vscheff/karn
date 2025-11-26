@@ -1,7 +1,9 @@
 activities = [
         "Listening for $help",
         "Waiting for someone to say Karn",
-        "Awaiting a # command",
+        "Listening for # symbols",
+        "Awaiting a $ command",
+        "Awaiting a / command",
         "Walking across Planes",
         "Leading New Phyrexia",
         "Inheriting the spark of Urza",
@@ -51,10 +53,9 @@ activities = [
         "Hiding the Sylex",
         "Fighting off waves of Phyrexians",
         "Traveling to Shiv",
-        "Encouraging the strike force to detonate the Sylex",
         "Returning to Elesh Norn",
         "Witenssing the return of Elspeth",
         "Creating an improvised body",
         "Breaking my pacifist vows",
         "Executing Elesh Norn",
-             ]
+]

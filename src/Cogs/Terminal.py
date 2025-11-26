@@ -1,11 +1,13 @@
 from discord.ext.commands import Cog, errors, hybrid_command
 from os import listdir, remove
 from random import choice
-from re import search
+from re import search, sub
 
 from src.global_vars import FILE_ROOT_DIR, SEND_LINE_CHAR
 from src.utils import get_flags, package_message, send_tts_if_in_vc
 
+
+DEFAULT_LINE_COUNT = 10
 
 class Terminal(Cog):
 
@@ -61,6 +63,53 @@ class Terminal(Cog):
                            "Example: `$grep mud dracula`\n\n"
                            "Please use `$help grep` for more information.")
             error.handled = True
+
+    @hybrid_command(help=f"Returns the first {DEFAULT_LINE_COUNT} lines of a given file.\n"
+                         f"Example: `$head fleshsim`\n"
+                         f"You can include multiple filenames with this command"
+                         f"This command has the following flags\n"
+                         f"* **-c**: Specifies the number of lines to return\n"
+                         f"\tExample: `$head -c 5 johnny`",
+                    brief=f"Returns the first {DEFAULT_LINE_COUNT} lines of a given file.")
+    async def head(self, ctx, *, filename: str):
+        await self.get_lines(ctx, filename, reverse=False)
+
+    @hybrid_command(help=f"Returns the last {DEFAULT_LINE_COUNT} lines of a given file.\n"
+                         f"Example: `$tail silverhand`\n"
+                         f"You can include multiple filenames with this command"
+                         f"This command has the following flags\n"
+                         f"* **-c**: Specifies the number of lines to return\n"
+                         f"\tExample: `$tail -c 5 dracula`",
+                    brief=f"Returns the first {DEFAULT_LINE_COUNT} lines of a given file.")
+    async def tail(self, ctx, *, filename: str):
+        await self.get_lines(ctx, filename, reverse=True)
+    
+    async def get_lines(self, ctx, filename, reverse=False):
+        flags, files = get_flags(filename, make_dic=True)
+        
+        try:
+            num_lines = int(flags.get('c', DEFAULT_LINE_COUNT))
+        except ValueError:
+            return await ctx.send(f"Bad argument, please only use valid integers.")
+
+        if not num_lines:
+            return
+
+        multiple_files = len(files) > 1
+        response = []
+
+        for file in files:
+            try:
+                with open(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{file}.txt", 'r') as in_file:
+                    lines = in_file.readlines()
+            except FileNotFoundError:
+                response.append(f"Cannot open file `{file}`. Try using `$tee` first!\n")
+
+                continue
+
+            response.append(f"{f'\n==> {file} <==\n' if multiple_files else ''}{''.join(lines[-num_lines:] if reverse else lines[:num_lines])}\n")
+        
+        await package_message(''.join(response), ctx)
 
     @hybrid_command(help="Lists the text files currently present in the directory",
                     brief="Lists present text files")
@@ -170,28 +219,25 @@ class Terminal(Cog):
             error.handled = True
 
 async def send_line(msg, bot):
-    if msg.content[0] == SEND_LINE_CHAR:
-        file = msg.content[1:].strip().split(maxsplit=1)[0]
-    elif msg.content[0] == '<':
-        if not (match := search(r"<#\d+>", msg.content)):
-            return False
-        file = f"{bot.get_channel(int(match.group()[2:-1]))}{msg.content[match.span()[1]:]}"
-    else:
-        return False
+    msg_altered = False
 
-    if search(r"\W", file):
-        return False
+    def sub_line(match_obj):
+        nonlocal msg_altered
+        
+        try:
+            with open(f"{FILE_ROOT_DIR}/{msg.guild.id}/{match_obj[0][1:]}.txt", "r") as in_file:
+                msg_altered = True
+                return choice(in_file.readlines()).strip()
+        except FileNotFoundError:
+            return match_obj[0]
 
-    try:
-        with open(f"{FILE_ROOT_DIR}/{msg.guild.id}/{file}.txt", "r") as in_file:
-            lines = in_file.readlines()
-    except FileNotFoundError:
+    response = sub(r"#\w+", sub_line, msg.clean_content)
+    
+    if not msg_altered:
         return False
-
-    response = choice(lines)
 
     await msg.channel.send(response)
-
     await send_tts_if_in_vc(bot, msg.author, response)
 
     return True
+

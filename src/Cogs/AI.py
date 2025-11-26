@@ -132,16 +132,23 @@ class AI(Cog):
         await self.generate(ctx, query=message.content)
 
     @hybrid_command(help="Generate an image from a given prompt\n"
-                         "Example: `$generate a presidential election in minecraft`\n\n"
+                         "Example: `$generate a presidential election in minecraft`\n"
+                         "Note: By default this command will use AI to \"enhance\" your prompt by adding more detail and context.\n\n"
                          "This command has the following flags:\n"
                          "* **-c**: Specify the number of images to generate. Must be in range [1, 8].\n"
                          "\tExample: `$generate -c 3 two cat scientists discovering a new element`\n"
-                         "* **-p**: Use the raw prompt text for generation without any prompt help.\n"
-                         "\tExample: `$generate -p a hand with seven fingers`",
+                         "* **-p**: Use the raw prompt text for generation without any prompt enhancement.\n"
+                         "\tExample: `$generate -p a hand with seven fingers`\n"
+                         "* **-v**: Response will include the prompt used for generation. "
+                         "If used with the `-p` command flag, this will simply be the query itself.\n"
+                         "\tExample: `$generate -v a white horse`",
                     brief="Generate an image",
                     aliases=["gen"])
     async def generate(self, ctx, *, query: str):
-        flags, prompt = get_flags(query, join=True, make_dic=True, no_args=['p'])
+        flags, prompt = get_flags(query, join=True, make_dic=True, no_args=['p', 'v'])
+
+        if not prompt:
+            return await ctx.send("You must include a prompt used to generate the image. Please use `$help generate` for more information.")
 
         try:
             num_images = int(flags.get('c', 1))
@@ -153,7 +160,7 @@ class AI(Cog):
             return await ctx.send("Invalid argument given for number of images. "
                                   "Must be in range [1, 8]. Use `$help generate` for more information.")
 
-        msg = await ctx.send(f"Generating your image{'' if num_images == 1 else 's'}...")
+        msg = await ctx.send(f"Generating your image{'' if num_images == 1 else 's'}...", ephemeral=True)
         
         headers = {
             'accept': 'application/json',
@@ -176,7 +183,7 @@ class AI(Cog):
                 return await ctx.send("Unable to generate that image. Try modifying your prompt.")
 
             try:
-                generated_images = get_json_from_socket(LEONARDO_WEBHOOK_AUTH)["data"]["object"]["images"]
+                json_response = get_json_from_socket(LEONARDO_WEBHOOK_AUTH)
             except TimeoutError:
                 await msg.delete()
                 return await ctx.send("Unable to retrieve image. Please try again later.")
@@ -184,10 +191,14 @@ class AI(Cog):
                 await msg.delete()
                 return await ctx.send("An error occured, please try again.")
 
-        await msg.delete()
+        if not is_slash_command(ctx):
+            await msg.delete()
         
-        for image in generated_images:
+        for image in json_response["data"]["object"]["images"]:
             await ctx.send(image["url"])
+
+        if 'v' in flags:
+            await ctx.send(f"||{json_response["data"]["object"]["prompt"]}||")
 
     @generate.error
     async def generate_error(self, ctx, error):
