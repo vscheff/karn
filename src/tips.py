@@ -63,4 +63,5 @@ TIP_LIST = [
 "All prefix commands accept the long option `--help`. Using this as an argument in a prefix command with return the help message for that command. For example: `$generate --help` will return the same response as `$help generate`.",
 "Is the `$cat` command spitting out too many lines at you? You can use the `$head` command to view only the first few lines from a file, or the `$tail` command to view only the last few lines from a file.",
 "Want more bot usage tips? Use the `$tip` command to retrieve another random tip!",
+"Need to solve a mathematical expression? Use the `$calc` command! This command supports basic operators, parenthesis, constants like pi and e, and several functions like log() and sin().\nUse `$help calc` for a full list of supported operators and functions.",
 ]

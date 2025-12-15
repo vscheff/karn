@@ -2,6 +2,7 @@ from asyncio import get_running_loop, sleep
 import discord
 from gtts import gTTS
 from json import loads
+from math import pi, e
 from mysql.connector.errors import OperationalError
 from openai import OpenAI
 import os
@@ -31,6 +32,14 @@ SOCKET_BUFF_SIZE = 1024
 
 
 def get_as_number(string):
+    string = string.lower()
+
+    if string == "pi":
+        return pi
+
+    if string == 'e':
+        return e
+
     try:
         return int(string)
     except ValueError:

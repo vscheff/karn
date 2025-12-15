@@ -3,10 +3,11 @@
 from discord.ext.commands import Bot, Cog, command, errors, has_permissions, hybrid_command
 from datetime import datetime, timedelta
 import discord
+from math import acos, asin, atan, cos, log, log10, sin, tan
 import os
 import qrcode
 from random import choice
-from re import findall, fullmatch
+from re import findall, fullmatch, IGNORECASE
 
 from src.tips import TIP_LIST
 from src.utils import TEMP_DIR
@@ -15,6 +16,7 @@ from src.utils import get_as_number, get_flags, get_id_from_mention, is_slash_co
 # Filename/path for temporary storage of QR image
 QR_FILEPATH = f"{TEMP_DIR}/temp_qr.png"
 
+FUNCS = {"log", "ln", "sin", "cos", "tan", "asin", "acos", "atan"}
 
 class Utility(Cog):
 
@@ -54,15 +56,19 @@ class Utility(Cog):
     # $calc command used for calculating the result of mathematical expressions
     # param args - all user input following the command name
     @hybrid_command(help="Returns the result of a mathematical expression.\n"
-                         "Example: `$calc 6 * 7`",
+                         "Example: `$calc 6 * 7`\n"
+                         "This function supports, addition `+`, subtraction `-`, multiplication `*`, division `/`, exponentiation `^`, and parenthesis.\n"
+                         f"Additionally the constants `pi`, `e`, and the following functions are supported: {' '.join(FUNCS)}\n"
+                         "Example: `$calc sin(pi/2)`\n"
+                         "Note: All trig functions are in radians.",
                     brief="Calculates the result of a mathematical expression")
     async def calc(self, ctx, *, expression:str):
         prec = {'+': 0, '-': 0, '*': 1, '/': 1, 'u-': 2, '^': 3}
         right_assoc = {'^': True, 'u-': True}
 
         # https://regex101.com/r/rYoPQz/2
-        tokens = inject_implicit_mul(findall(r"\d+\.?\d*|[+\-/*()^]", expression.replace(' ', '')))
-        values, ops = [], []
+        tokens = findall(r"\d+\.?\d*|pi|e|log|ln|sin|cos|tan|asin|acos|atan|[+\-/*()^]", expression.replace(' ', ''), flags=IGNORECASE)
+        tokens = inject_implicit_mul([i.lower() for i in tokens])
 
         def should_pop(top, incoming):
             if top in "()":
@@ -71,16 +77,17 @@ class Utility(Cog):
             if incoming == "u-" and top == '^':
                 return False
 
-            pt, pi = prec[top], prec[incoming]
+            prec_t, prec_i = prec.get(top, -1), prec.get(incoming, -1)
 
-            if pt > pi:
+            if prec_t > prec_i:
                 return True
 
-            if pt == pi and not right_assoc.get(incoming, False):
+            if prec_t == prec_i and not right_assoc.get(incoming, False):
                 return True
 
             return False
 
+        values, ops = [], []
         prev = None
 
         # Shunting Yard alrorithm
@@ -88,6 +95,11 @@ class Utility(Cog):
             if (result := get_as_number(token)) is not False:
                 values.append(result)
                 prev = "num"
+                continue
+
+            if token in FUNCS:
+                ops.append(token)
+                prev = "op"
                 continue
 
             if token == '(':
@@ -100,6 +112,10 @@ class Utility(Cog):
                     apply_operator(ops, values)
 
                 ops.pop()
+
+                if ops and ops[-1] in FUNCS:
+                    apply_operator(ops, values)
+
                 prev = token
                 continue
 
@@ -247,9 +263,24 @@ def make_qr(data):
 def apply_operator(ops, values):
     op = ops.pop()
 
+    if op == "ln":
+        values.append(log(values.pop())); return
+    if op == "log":
+        values.append(log10(values.pop())); return
+    if op == "sin":
+        values.append(sin(values.pop())); return
+    if op == "cos":
+        values.append(cos(values.pop())); return
+    if op == "tan":
+        values.append(tan(values.pop())); return
+    if op == "asin":
+        values.append(asin(values.pop())); return
+    if op == "acos":
+        values.append(acos(values.pop())); return
+    if op == "atan":
+        values.append(atan(values.pop())); return
     if op == "u-":
-        values.append(-1 * values.pop())
-        return
+        values.append(-1 * values.pop()); return
 
     right = values.pop()
     left = values.pop()
@@ -265,19 +296,25 @@ def apply_operator(ops, values):
     elif op == '^':
         values.append(left ** right)
     else:
-        raise ValueError(f"Unknown operator: {top}")
+        raise ValueError(f"Unknown operator: {op}")
 
 def is_number(tok):
     return fullmatch(r"\d+\.?\d*", tok) is not None
 
+def is_value(tok):
+    return tok == ')' or tok in ("pi", 'e') or is_number(tok)
+
+def starts_value(tok):
+    return tok == '(' or tok in ("pi", 'e') or tok in FUNCS or is_number(tok)
+
 def inject_implicit_mul(tokens):
     out = []
 
-    for i, tok in enumerate(tokens):
+    for tok in tokens:
         if out:
             prev = out[-1]
 
-            if (is_number(prev) or prev == ')') and (is_number(tok) or tok == '('):
+            if is_value(prev) and starts_value(tok):
                 out.append('*')
 
         out.append(tok)
