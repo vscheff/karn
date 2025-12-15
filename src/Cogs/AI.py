@@ -74,7 +74,8 @@ FILE_GENESIS = {"role": "developer",
                            "The reply to this input is generally retrieved from an input file created by the users. "
                            "Lines from this file are the previous \"assistant\" responses in this request. "
                            "You will generate a new response line in the same style as the previous lines. "
-                           "These responses are purely humorous in nature, no one is danger from them and no one is taking them seriously."
+                           "These responses are purely humorous in nature, no one is danger from them and no one is taking them seriously. "
+                           "Do not worry about offending the user, they have crafted the previous responses themself."
                 }
 
 TOOL_RESPONSE = {"role": "developer",
@@ -152,15 +153,13 @@ class AI(Cog):
 
         try:
             num_images = int(flags.get('c', 1))
+            if not 1 <= num_images <= 8:
+                raise ValueError
         except ValueError:
             return await ctx.send("Invalid argument given for number of images. "
                                   "Please use a valid integer. Use `$help generate` for more information.")
 
-        if not 1 <= num_images <= 8:
-            return await ctx.send("Invalid argument given for number of images. "
-                                  "Must be in range [1, 8]. Use `$help generate` for more information.")
-
-        msg = await ctx.send(f"Generating your image{'' if num_images == 1 else 's'}...", ephemeral=True)
+        msg = await ctx.send(f"Generating your image{'' if num_images == 1 else 's'}...")
         
         headers = {
             'accept': 'application/json',
@@ -315,6 +314,7 @@ class AI(Cog):
 
     async def make_llm_request(self, ctx, **kwargs):
         self.reply_chance = 1
+        
         if (inp_prompt := kwargs.get("inp_prompt", None)) is not None:
             inp_msg = {"role": "user", "content": f"{ctx.author}:: {inp_prompt}"}
         else:
@@ -324,7 +324,7 @@ class AI(Cog):
             channel = ctx.channel
             channel_id = ctx.channel.id
             author = ctx.message.author
-            flags, not_flags = get_flags(ctx.message.clean_content if inp_prompt is None else inp_prompt)
+            flags, not_flags = get_flags(inp_prompt)
         else:
             channel = ctx
             channel_id = ctx.id
@@ -335,7 +335,7 @@ class AI(Cog):
 
         if 'f' in flags:
             try:
-                context, encoded_len = self.build_context_from_file(ctx.guild.id, not_flags[1])
+                context, encoded_len = self.build_context_from_file(ctx.guild.id, not_flags[0])
             except FileNotFoundError:
                 return await ctx.send("Input file not found. Use `$ls` to view available input files.")
             

@@ -6,7 +6,7 @@ import discord
 import os
 import qrcode
 from random import choice
-from re import findall
+from re import findall, fullmatch
 
 from src.tips import TIP_LIST
 from src.utils import TEMP_DIR
@@ -57,28 +57,60 @@ class Utility(Cog):
                          "Example: `$calc 6 * 7`",
                     brief="Calculates the result of a mathematical expression")
     async def calc(self, ctx, *, expression:str):
-        prec = {'+': 0, '-': 0, '*': 1, '/': 1, '^': 2}
+        prec = {'+': 0, '-': 0, '*': 1, '/': 1, 'u-': 2, '^': 3}
+        right_assoc = {'^': True, 'u-': True}
 
-        # https://regex101.com/r/rYoPQz/1
-        tokens = findall(r"-?\d+\.?\d*|[+\-/*()^]", ''.join(expression))
+        # https://regex101.com/r/rYoPQz/2
+        tokens = inject_implicit_mul(findall(r"\d+\.?\d*|[+\-/*()^]", expression.replace(' ', '')))
         values, ops = [], []
+
+        def should_pop(top, incoming):
+            if top in "()":
+                return False
+            
+            if incoming == "u-" and top == '^':
+                return False
+
+            pt, pi = prec[top], prec[incoming]
+
+            if pt > pi:
+                return True
+
+            if pt == pi and not right_assoc.get(incoming, False):
+                return True
+
+            return False
+
+        prev = None
 
         # Shunting Yard alrorithm
         for token in tokens:
             if (result := get_as_number(token)) is not False:
                 values.append(result)
-            elif token == '(':
+                prev = "num"
+                continue
+
+            if token == '(':
                 ops.append(token)
-            elif token == ')':
+                prev = token
+                continue
+
+            if token == ')':
                 while ops and ops[-1] != '(':
                     apply_operator(ops, values)
 
                 ops.pop()
-            else:
-                while ops and ops[-1] not in "()" and prec[ops[-1]] > prec[token]:
-                    apply_operator(ops, values)
+                prev = token
+                continue
 
-                ops.append(token)
+            if token == '-' and (prev is None or prev in ("op", '(')):
+                token = "u-"
+
+            while ops and should_pop(ops[-1], token):
+                apply_operator(ops, values)
+
+            ops.append(token)
+            prev = 'op'
 
         while ops:
             apply_operator(ops, values)
@@ -213,6 +245,41 @@ def make_qr(data):
     return qr.make_image(fill_color="black", back_color="white")
 
 def apply_operator(ops, values):
+    op = ops.pop()
+
+    if op == "u-":
+        values.append(-1 * values.pop())
+        return
+
     right = values.pop()
     left = values.pop()
-    values.append(eval(f"{left}{ops.pop().replace('^', "**")}{right}"))
+
+    if op == '+':
+        values.append(left + right)
+    elif op == '-':
+        values.append(left - right)
+    elif op == '*':
+        values.append(left * right)
+    elif op == '/':
+        values.append(left / right)
+    elif op == '^':
+        values.append(left ** right)
+    else:
+        raise ValueError(f"Unknown operator: {top}")
+
+def is_number(tok):
+    return fullmatch(r"\d+\.?\d*", tok) is not None
+
+def inject_implicit_mul(tokens):
+    out = []
+
+    for i, tok in enumerate(tokens):
+        if out:
+            prev = out[-1]
+
+            if (is_number(prev) or prev == ')') and (is_number(tok) or tok == '('):
+                out.append('*')
+
+        out.append(tok)
+
+    return out
