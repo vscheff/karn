@@ -40,6 +40,9 @@ def get_as_number(string):
     if string == 'e':
         return e
 
+    if string == "tau":
+        return pi * 2
+
     try:
         return int(string)
     except ValueError:

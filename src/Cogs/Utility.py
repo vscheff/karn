@@ -3,10 +3,10 @@
 from discord.ext.commands import Bot, Cog, command, errors, has_permissions, hybrid_command
 from datetime import datetime, timedelta
 import discord
-from math import acos, asin, atan, cos, log, log10, sin, tan
+from math import acos, asin, atan, cos, degrees, factorial, log, log10, radians, sin, tan
 import os
 import qrcode
-from random import choice
+from random import choice, random
 from re import findall, fullmatch, IGNORECASE
 
 from src.tips import TIP_LIST
@@ -16,7 +16,8 @@ from src.utils import get_as_number, get_flags, get_id_from_mention, is_slash_co
 # Filename/path for temporary storage of QR image
 QR_FILEPATH = f"{TEMP_DIR}/temp_qr.png"
 
-FUNCS = {"log", "ln", "sin", "cos", "tan", "asin", "acos", "atan"}
+FUNCS = {"log", "ln", "sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "abs", "rand", "answer", "deg", "rad"}
+CONST = {"pi", "e", "tau"}
 
 class Utility(Cog):
 
@@ -57,17 +58,20 @@ class Utility(Cog):
     # param args - all user input following the command name
     @hybrid_command(help="Returns the result of a mathematical expression.\n"
                          "Example: `$calc 6 * 7`\n"
-                         "This function supports, addition `+`, subtraction `-`, multiplication `*`, division `/`, exponentiation `^`, and parenthesis.\n"
-                         f"Additionally the constants `pi`, `e`, and the following functions are supported: {' '.join(FUNCS)}\n"
-                         "Example: `$calc sin(pi/2)`\n"
-                         "Note: All trig functions are in radians.",
+                         "This function supports, addition `+`, subtraction `-`, multiplication `*`, division `/`, "
+                         "modulation `%`, exponentiation `^`, factorials `!`, and parenthesis `()`.\n"
+                         f"Additionally the constants `{'`, `'.join(CONST)}`, and the following functions are supported: `{'`, `'.join(FUNCS)}`\n"
+                         "Example: `$calc sin(pi/2)`\n\n"
+                         "**Note**: All trig functions take input in radians and output their result in radians. "
+                         "To input degrees into trig functions, use the `deg` function: `$calc sin(deg(90)`. "
+                         "Similarly, you can use the `deg` function to interpet the output of a trig function as degrees: `$calc deg(asin(1))`",
                     brief="Calculates the result of a mathematical expression")
     async def calc(self, ctx, *, expression:str):
-        prec = {'+': 0, '-': 0, '*': 1, '/': 1, 'u-': 2, '^': 3}
+        prec = {'+': 0, '-': 0, '*': 1, '/': 1, '%': 1, 'u-': 2, '^': 3, '!': 4}
         right_assoc = {'^': True, 'u-': True}
 
         # https://regex101.com/r/rYoPQz/2
-        tokens = findall(r"\d+\.?\d*|pi|e|log|ln|sin|cos|tan|asin|acos|atan|[+\-/*()^]", expression.replace(' ', ''), flags=IGNORECASE)
+        tokens = findall(rf"\d+\.?\d*|{'|'.join(CONST)}|{'|'.join(FUNCS)}|[+\-/*%()^!]", expression.replace(' ', ''), flags=IGNORECASE)
         tokens = inject_implicit_mul([i.lower() for i in tokens])
 
         def should_pop(top, incoming):
@@ -101,6 +105,11 @@ class Utility(Cog):
                 ops.append(token)
                 prev = "op"
                 continue
+            
+            if token == '!':
+                apply_operator(['!'], values)
+                prev = "num"
+                continue;
 
             if token == '(':
                 ops.append(token)
@@ -131,7 +140,7 @@ class Utility(Cog):
         while ops:
             apply_operator(ops, values)
 
-        await ctx.send(values[0])
+        await ctx.send(format_result(values[0]))
 
     @calc.error
     async def calc_error(self, ctx, error):
@@ -142,6 +151,9 @@ class Utility(Cog):
                 error.handled = True
             elif isinstance(error.original, ZeroDivisionError):
                 await ctx.send("Division by zero! Unable to calculate result.")
+                error.handled = True
+            elif isinstance(error.original, ValueError):
+                await ctx.send(str(error.original))
                 error.handled = True
         elif isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a mathematical expression with this command.\nPlease use `$help calc` for more information.")
@@ -260,8 +272,34 @@ def make_qr(data):
     qr.make(fit=True)
     return qr.make_image(fill_color="black", back_color="white")
 
+def format_result(x, sig=15, eps=1e-12):
+    if abs(x) < eps:
+        return "0"
+
+    nearest = round(x)
+
+    if abs(x - nearest) < eps * max(1.0, abs(x)):
+        return str(nearest)
+
+    s = format(x, f".{sig}g")
+
+    if "e" not in s and "." in s:
+        s = s.rstrip("0").rstrip(".")
+    
+    return s
+
 def apply_operator(ops, values):
     op = ops.pop()
+
+    if op == '!':
+        val = values.pop()
+        
+        if not float(val).is_integer() or val < 0:
+            raise ValueError("Factorial is only defined for non-negative integers")
+
+        values.append(factorial(int(val)))
+        
+        return
 
     if op == "ln":
         values.append(log(values.pop())); return
@@ -279,6 +317,18 @@ def apply_operator(ops, values):
         values.append(acos(values.pop())); return
     if op == "atan":
         values.append(atan(values.pop())); return
+    if op == "sqrt":
+        values.append(values.pop() ** 0.5); return
+    if op == "abs":
+        values.append(abs(values.pop())); return
+    if op == "rand":
+        values.append(random()); return
+    if op == "answer":
+        values.append(42); return
+    if op == "deg":
+        values.append(degrees(values.pop())); return
+    if op == "rad":
+        values.append(radians(values.pop())); return
     if op == "u-":
         values.append(-1 * values.pop()); return
 
@@ -295,17 +345,19 @@ def apply_operator(ops, values):
         values.append(left / right)
     elif op == '^':
         values.append(left ** right)
+    elif op == "%":
+        values.append(left % right)
     else:
         raise ValueError(f"Unknown operator: {op}")
 
 def is_number(tok):
-    return fullmatch(r"\d+\.?\d*", tok) is not None
+    return fullmatch(r"\d+\.?\d*", tok) is not None or tok in CONST
 
 def is_value(tok):
-    return tok == ')' or tok in ("pi", 'e') or is_number(tok)
+    return tok == ')'  or is_number(tok)
 
 def starts_value(tok):
-    return tok == '(' or tok in ("pi", 'e') or tok in FUNCS or is_number(tok)
+    return tok == '(' or tok in FUNCS or is_number(tok)
 
 def inject_implicit_mul(tokens):
     out = []
