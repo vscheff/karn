@@ -31,26 +31,6 @@ SOCKET_TIMEOUT = 8
 SOCKET_BUFF_SIZE = 1024
 
 
-def get_as_number(string):
-    string = string.lower()
-
-    if string == "pi":
-        return pi
-
-    if string == 'e':
-        return e
-
-    if string == "tau":
-        return pi * 2
-
-    try:
-        return int(string)
-    except ValueError:
-        try:
-            return float(string)
-        except ValueError:
-            return False
-
 # Ensures the SQL database is still connected, and returns a cursor from that connection
 def get_cursor(conn):
     try:
