@@ -32,12 +32,12 @@ SOCKET_BUFF_SIZE = 1024
 
 
 # Ensures the SQL database is still connected, and returns a cursor from that connection
-def get_cursor(conn):
+def get_cursor(conn, dictionary=False):
     try:
-        return conn.cursor()
+        return conn.cursor(dictionary=dictionary)
     except OperationalError:
         conn.connect()
-        return conn.cursor()
+        return conn.cursor(dictionary=dictionary)
 
 def get_flags(args, join=False, make_dic=False, no_args=None):
     if args is None:

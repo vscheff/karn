@@ -7,16 +7,14 @@ import os
 import qrcode
 from random import choice
 
-from src.calculator import calculator
+from src.calculator import calculator, CONST, FUNCS
 from src.tips import TIP_LIST
 from src.utils import TEMP_DIR
-from src.utils import get_as_number, get_flags, get_id_from_mention, is_slash_command, package_message
+from src.utils import get_flags, get_id_from_mention, is_slash_command, package_message
 
 # Filename/path for temporary storage of QR image
 QR_FILEPATH = f"{TEMP_DIR}/temp_qr.png"
 
-FUNCS = {"log", "ln", "sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "abs", "rand", "answer", "deg", "rad"}
-CONST = {"pi", "e", "tau"}
 
 class Utility(Cog):
 
@@ -66,7 +64,7 @@ class Utility(Cog):
                          "Similarly, you can use the `deg` function to interpet the output of a trig function as degrees: `$calc deg(asin(1))`",
                     brief="Calculates the result of a mathematical expression")
     async def calc(self, ctx, *, expression:str):
-        await ctx.send(caclulator(expression))
+        await ctx.send(calculator(expression))
 
     @calc.error
     async def calc_error(self, ctx, error):
@@ -80,6 +78,9 @@ class Utility(Cog):
                 error.handled = True
             elif isinstance(error.original, ValueError):
                 await ctx.send(str(error.original))
+                error.handled = True
+            elif isinstance(error.original, OverflowError):
+                await ctx.send("Overflow")
                 error.handled = True
         elif isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a mathematical expression with this command.\nPlease use `$help calc` for more information.")

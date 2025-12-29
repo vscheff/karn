@@ -124,6 +124,9 @@ All hat commands (excluding `$list` and `$set_default`) use the hat set as defau
 - `show` - Sends the score for a given item.
 - `top` - Sends the highest rated items in the server. By default this command sends the five highest items. You can specify the number of items to send by including an integer argument: `$top 10`.
 
+### Reminders
+- `remind` - Sets a reminder for a given time. This will ping the user who set the reminder at the given time with the provided message. The input time and message are seperated by the `|` character: `$remind <when> | <message`. The time can be given as an absolute time: `$remind 01/15/2026 12:30 | Birthday Party`, or as a relative time: `$remind tomorrow at noon | call my mom`. You can use the argument `list` to view all reminders you currently have set within the server: `$remind list`.
+
 ### Terminal
 - `cat` - Sends the entire contents of a given file from the server's directory.
 - `grep` - Sends all lines from a given file from the server's directory that match a given search string. The search string supports Regular Expressions. For example, to find lines that contain a simple URL for a file named `websites`: `$grep websites www.\w+.com`.
@@ -135,7 +138,7 @@ All hat commands (excluding `$list` and `$set_default`) use the hat set as defau
 - `wc` - Returns the line count, word count, and character count for a given file. To return the number of bytes in a file, use the `-c` command flag: `$wc -c jokes`. To return *only* the line count, character count, or word count use the `-l`, `-m`, or `-w` command flag, respectively.
 
 ### Utility
-- `calc` - Sends the result of a mathematical expression. Supported operators are: `+` `-` `*` `/` `^`.
+- `calc` - Sends the result of a mathematical expression. Supported operators are: `+`, `-`, `*`, `/`, `^`, and `%`. Supported constants are: `e`, `tau`, and `pi`. Supported functions are: `abs`, `acos, `answer`, `asin`, `atan`, `cos, `deg`, `ln`, `log`, `rand`, `rad`, `sin`, `sqrt`, `tan`. All trig functions take input in radians and output their result in radians. To input degrees into trig functions, use the `deg` function: `$cals sin(deg(90))`. Similarly, you can use the `deg` function to interpret the output of trig functions as degrees: `$calc deg(asin(1))`.
 - `echo` - Echos a given string in your current text channel. You can use the `-c` command flag to echo the message in a different channel, for example: `$echo -c #general Send this message to the general chat`.
 - `info` - Sends a brief synopsis on Karn, including a link to his Open Source code on GitHub.
 - `ping` - Sends "pong" if the bot is online, as well as the round trip message time.

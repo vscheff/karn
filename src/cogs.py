@@ -10,6 +10,7 @@ from src.Cogs.Hat import Hat
 from src.Cogs.Query import Query
 from src.Cogs.Random import Random
 from src.Cogs.Rating import Rating
+from src.Cogs.Reminder import Reminders
 from src.Cogs.Terminal import Terminal
 from src.Cogs.Utility import Utility
 
@@ -25,5 +26,6 @@ async def add_cogs(bot, conn):
     await bot.add_cog(Query())
     await bot.add_cog(Random(bot))
     await bot.add_cog(Rating(conn))
+    await bot.add_cog(Reminders(bot, conn))
     await bot.add_cog(Terminal())
     await bot.add_cog(Utility(bot))

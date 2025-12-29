@@ -310,7 +310,7 @@ class AI(Cog):
                     brief="Generates natural language",
                     aliases=["chat", "promt"])
     async def prompt(self, ctx, *, inp_prompt: str=None):
-        await self.make_llm_request(ctx, inp_prompt=inp_prompt if is_slash_command(ctx) else None)
+        await self.make_llm_request(ctx, inp_prompt=inp_prompt)
 
     async def make_llm_request(self, ctx, **kwargs):
         self.reply_chance = 1

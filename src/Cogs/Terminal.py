@@ -80,7 +80,7 @@ class Terminal(Cog):
                          f"This command has the following flags\n"
                          f"* **-c**: Specifies the number of lines to return\n"
                          f"\tExample: `$tail -c 5 dracula`",
-                    brief=f"Returns the first {DEFAULT_LINE_COUNT} lines of a given file.")
+                    brief=f"Returns the last {DEFAULT_LINE_COUNT} lines of a given file.")
     async def tail(self, ctx, *, filename: str):
         await self.get_lines(ctx, filename, reverse=True)
     

@@ -64,4 +64,6 @@ TIP_LIST = [
 "Is the `$cat` command spitting out too many lines at you? You can use the `$head` command to view only the first few lines from a file, or the `$tail` command to view only the last few lines from a file.",
 "Want more bot usage tips? Use the `$tip` command to retrieve another random tip!",
 "Need to solve a mathematical expression? Use the `$calc` command! This command supports basic operators, parenthesis, constants like pi and e, and several functions like log() and sin().\nUse `$help calc` for a full list of supported operators and functions.",
+"Want me to remind you for an upcoming event? Use the `$remind` command. For example, the command: `$remind tomorrow at noon | turn on the football game` will cause me to ping you the following day at noon to remind you about the football game.",
+"Curious what reminders you currently have set? Use the command `$remind list` to list all currently set reminders.",
 ]

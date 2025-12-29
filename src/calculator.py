@@ -1,9 +1,12 @@
-from math import acos, asin, atan, cos, degrees, factorial, log, log10, radians, sin, tan
+from math import acos, asin, atan, cos, degrees, e, factorial, log, log10, pi, radians, sin, tan
 from random import random
 from re import findall, fullmatch, IGNORECASE
 
 
-async def calculator(expression):
+FUNCS = {"log", "ln", "sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "abs", "rand", "answer", "deg", "rad"}
+CONST = {"pi", "e", "tau"}
+
+def calculator(expression):
     prec = {'+': 0, '-': 0, '*': 1, '/': 1, '%': 1, 'u-': 2, '^': 3, '!': 4}
     right_assoc = {'^': True, 'u-': True}
 
@@ -77,7 +80,7 @@ async def calculator(expression):
     while ops:
         apply_operator(ops, values)
 
-    await return format_result(values[0])
+    return format_result(values[0])
 
 def is_number(tok):
     return fullmatch(r"\d+\.?\d*", tok) is not None or tok in CONST
