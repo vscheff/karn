@@ -310,7 +310,7 @@ class AI(Cog):
                     brief="Generates natural language",
                     aliases=["chat", "promt"])
     async def prompt(self, ctx, *, inp_prompt: str=None):
-        await self.make_llm_request(ctx, inp_prompt=inp_prompt)
+        await self.make_llm_request(ctx, inp_prompt=inp_prompt if is_slash_command(ctx) else None)
 
     async def make_llm_request(self, ctx, **kwargs):
         self.reply_chance = 1
@@ -320,22 +320,15 @@ class AI(Cog):
         else:
             inp_msg = None
 
-        if isinstance(ctx, Context):
-            channel = ctx.channel
-            channel_id = ctx.channel.id
-            author = ctx.message.author
-            flags, not_flags = get_flags(inp_prompt)
-        else:
-            channel = ctx
-            channel_id = ctx.id
-            author = kwargs.get("author")
-            flags = []
-
+        channel = ctx.channel
+        channel_id = ctx.channel.id
+        author = ctx.message.author
+        flags, not_flags = get_flags(ctx.message.content if inp_prompt is None else inp_prompt, make_dic=True, no_args=['c'])
         chat_completion = 'c' in flags
 
         if 'f' in flags:
             try:
-                context, encoded_len = self.build_context_from_file(ctx.guild.id, not_flags[0])
+                context, encoded_len = self.build_context_from_file(ctx.guild.id, flags['f'])
             except FileNotFoundError:
                 return await ctx.send("Input file not found. Use `$ls` to view available input files.")
             
@@ -404,15 +397,16 @@ class AI(Cog):
                       reply):
                 return
 
-        descriptors = self.get_descriptors(ctx.guild.id)
+        if ctx.guild is not None:
+            descriptors = self.get_descriptors(ctx.guild.id)
 
-        # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
-        # https://regex101.com/r/oWjuWt/2
-        reply = sub("([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* *(?:golem)* "
-                    "*(?:AI|digital|artificial intelligence|language model)"
-                    "(?: language)*(?: text-based)*(?: model)*(?: assistant)*",
-                    r"\1 " + choice(descriptors),
-                    reply)
+            # Replace instances of the bot saying "...as an AI..." with self descriptors of the bot
+            # https://regex101.com/r/oWjuWt/2
+            reply = sub("([aA]s|I am)* an* (?:digital)*(?:virtual)*(?:responsible)*(?:time-traveling)* *(?:golem)* "
+                        "*(?:AI|digital|artificial intelligence|language model)"
+                        "(?: language)*(?: text-based)*(?: model)*(?: assistant)*",
+                        r"\1 " + choice(descriptors),
+                        reply)
         
         # Ensure bot is not prefixing the reply with a name
         # https://regex101.com/r/4vSz5X/2
@@ -455,6 +449,8 @@ class AI(Cog):
             await self.bot.get_cog("Query").image(ctx, query=f"-c {args['count']} {args['query']}")
         elif item.name == "weather":
             response = get_weather(location=args["location"], return_json=True)
+        elif item.name == "remind":
+            await self.bot.get_cog("Reminders").remind(ctx, args=f"{args['when']} | {args['message']}")
 
         return response
 
@@ -506,12 +502,13 @@ class AI(Cog):
             content_blocks = []
 
             if content_text.strip():
-                content_blocks.append({"type": "output_text" if is_bot else "input_text",
+                content_blocks.append({"type": f"{'' if chat_completion else 'output_'}text" if is_bot else f"{'' if chat_completion else 'input_'}text",
                                        "text": content_text if is_bot else f"{message.author.display_name}:: {content_text}"})
 
             for attachment in message.attachments:
                 if attachment.content_type and attachment.content_type.startswith("image/"):
-                    content_blocks.append({"type": "input_image", "image_url": attachment.url})
+                    content_blocks.append({"type": "image_url", "image_url": {"url": attachment.url}} if chat_completion 
+                                          else {"type": "input_image", "image_url": attachment.url})
 
             if not content_blocks:
                 continue
@@ -680,28 +677,30 @@ class AI(Cog):
         # https://regex101.com/r/qA25Ux/1
         if search(r"[Kk]arn(?:\Z|[^+\-])", msg.clean_content):
             clean_lower = msg.clean_content.lower()
-            rude_messages = self.get_rude_messages(msg.guild.id)
+            
+            if msg.guild is not None:
+                rude_messages = self.get_rude_messages(msg.guild.id)
 
-            # If the message contains a rude phrase, reply with a response to rude messages
-            # https://regex101.com/r/isXc6g/1
-            if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE)
-                   for i in rude_messages):
-                reply = get_random_response(msg.guild.id, rude=True)
-                await msg.channel.send(reply)
-                await send_tts_if_in_vc(self.bot, msg.author, reply)
-                return
+                # If the message contains a rude phrase, reply with a response to rude messages
+                # https://regex101.com/r/isXc6g/1
+                if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE)
+                       for i in rude_messages):
+                    reply = get_random_response(msg.guild.id, rude=True)
+                    await msg.channel.send(reply)
+                    await send_tts_if_in_vc(self.bot, msg.author, reply)
+                    return
 
-            nice_messages = self.get_nice_messages(msg.guild.id)
+                nice_messages = self.get_nice_messages(msg.guild.id)
 
-            # If the message contains a nice phrase, reply with a response to nice messages
-            if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE)
-                   for i in nice_messages):
-                reply = get_random_response(msg.guild.id, rude=False)
-                await msg.channel.send(reply)
-                await send_tts_if_in_vc(self.bot, msg.author, reply)
-                return
+                # If the message contains a nice phrase, reply with a response to nice messages
+                if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE)
+                       for i in nice_messages):
+                    reply = get_random_response(msg.guild.id, rude=False)
+                    await msg.channel.send(reply)
+                    await send_tts_if_in_vc(self.bot, msg.author, reply)
+                    return
 
-            return await self.make_llm_request(msg.channel, author=msg.author)
+            return await self.make_llm_request(await self.bot.get_context(msg))
 
         # Don't respond to messages that are only one word
         if len(msg.clean_content.split()) <= 1:
@@ -742,7 +741,7 @@ class AI(Cog):
 
         # Random chance to respond to any given message
         if randint(1, REPLY_UPPER_LIMIT) <= self.reply_chance:
-            return await self.make_llm_request(msg.channel, author=msg.author, prompted=False)
+            return await self.make_llm_request(await self.bot.get_context(msg), author=msg.author, prompted=False)
 
         # Random chance to increase likelihood of responses in the future
         if not randint(0, self.reply_chance):

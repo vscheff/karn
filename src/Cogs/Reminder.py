@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from discord import TextChannel, Thread
 from discord.ext.commands import Cog, errors, hybrid_command
 from discord.ext.tasks import loop
+from re import match
 from zoneinfo import ZoneInfo
 
 from src.utils import get_cursor
@@ -161,6 +162,10 @@ class Reminders(Cog):
             return await ctx.send("You must provide both a time and a message: `$remind <when> | <message>`\n\n"
                                   "Please use `$help remind` for more information")
 
+        # Add "today" if user only specified a time
+        if match(r"^\s*\d{1,2}:\d{2}\s*$", when_text):
+            when_text = f"today {when_text}"
+
         tz_name = self.get_guild_tz(ctx.guild)
 
         if (remind_at_utc := self.parse_when(when_text, tz_name)) is None:
@@ -214,3 +219,4 @@ class Reminders(Cog):
             lines.append(f"**#{row['id']}** • {remind_local:%b %d %Y %I:%M %p} • <#{row['channel_id']}> • {msg}")
         
         await ctx.send("**Your upcoming reminders:**\n" + '\n'.join(lines))
+

@@ -66,6 +66,25 @@ tools = [
             "required": ["location"]
         }
     },
+    {
+        "type": "function",
+        "name": "remind",
+        "description": "Sets a reminder with a specified time and message. When the specified time is reached, the user will be pinged with the specified message",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "when": {
+                    "type": "string",
+                    "description": "The date and time at which the user will receive the reminder. This can be an absolute date and time (i.e. \"07/26/2026 16:20\"), or it can be a relative time (i.e. \"tomorrow at 4:20pm\")."
+                    },
+                "message": {
+                    "type": "string",
+                    "description": "The message that will be sent to the user at the specified date and time. This can include Discord-style user tages (i.e. \"<@Von\")."
+                    }
+                },
+            "required": ["when", "message"]
+        }
+    },
 ]
 
 FUNC_INIT = 10

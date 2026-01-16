@@ -125,7 +125,7 @@ All hat commands (excluding `$list` and `$set_default`) use the hat set as defau
 - `top` - Sends the highest rated items in the server. By default this command sends the five highest items. You can specify the number of items to send by including an integer argument: `$top 10`.
 
 ### Reminders
-- `remind` - Sets a reminder for a given time. This will ping the user who set the reminder at the given time with the provided message. The input time and message are seperated by the `|` character: `$remind <when> | <message`. The time can be given as an absolute time: `$remind 01/15/2026 12:30 | Birthday Party`, or as a relative time: `$remind tomorrow at noon | call my mom`. You can use the argument `list` to view all reminders you currently have set within the server: `$remind list`.
+- `remind` - Sets a reminder for a given time. This will ping the user who set the reminder at the given time with the provided message. The input time and message are seperated by the `|` character: `$remind <when> | <message>`. The time can be given as an absolute time: `$remind 01/15/2026 12:30 | Birthday Party`, or as a relative time: `$remind tomorrow at noon | call my mom`. You can use the argument `list` to view all reminders you currently have set within the server: `$remind list`.
 
 ### Terminal
 - `cat` - Sends the entire contents of a given file from the server's directory.
