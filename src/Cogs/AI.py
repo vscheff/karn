@@ -286,7 +286,7 @@ class AI(Cog):
             while ctx.message.guild.voice_client.is_playing():
                 await sleep(1)
 
-            await slee(1)
+            await sleep(1)
             await self.leave(ctx)
 
     @say.error
