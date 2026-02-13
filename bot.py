@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from mysql.connector.errors import InterfaceError
-from os import getenv
+from os import getenv, listdir
 from random import choice
 
 # env must be loaded before importing ./cogs.py
@@ -18,6 +18,7 @@ if TOKEN is None:
 from src.cogs import add_cogs
 from src.activities import activities
 from src.Cogs.Terminal import send_line
+from src.global_vars import FILE_ROOT_DIR, SEND_LINE_CHAR
 from src.help_command import CustomHelpCommand
 from src.sql import connect_to_sql_database
 from src.utils import make_guild_dir
@@ -93,6 +94,12 @@ async def on_message(msg):
 async def on_command_error(ctx, error):
     if hasattr(error, "handled") and error.handled:
         return
+
+    if isinstance(error, commands.CommandNotFound):
+        cmd = ctx.message.content.lstrip('$').lower()
+        if f"{cmd}.txt" in listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"):
+            return await ctx.send(f"Did you mean to use a line-response command? "
+                                  f"If you send `{SEND_LINE_CHAR}{cmd}`, I will respond with a random line from *{cmd}*.")
 
     try:
         author = f"{ctx.author} (a.k.a. {ctx.author.nick})"
