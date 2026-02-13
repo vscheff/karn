@@ -215,13 +215,23 @@ class AI(Cog):
         except AttributeError:
             return await ctx.send("You must currently be in a voice channel to use this command.")
         except ClientException:
-            return await ctx.send("I'm already in your channel!")
+            if ctx.author.voice.channel == ctx.guild.voice_client.channel:
+                return await ctx.send("I'm already in your channel!")
+            
+            await ctx.guild.voice_client.move_to(ctx.author.voice.channel)
        
+        if not self.check_empty_channel.is_running():
+            self.check_empty_channel.start()
+        
         if is_slash_command(ctx):
             await ctx.send(f"I have joined *{ctx.author.voice.channel.name}*", ephemeral=True)
 
-        if not self.check_empty_channel.is_running():
-            self.check_empty_channel.start()
+    async def join_voice_channel(self, channel):
+        try:
+            await channel.connect()
+        except ClientException:
+            await ctx.guild.voice_client.move_to(channel)
+
 
     @hybrid_command(help="Remove the bot from a voice channel",
                     brief="Remove bot from a voice channel")
@@ -254,40 +264,56 @@ class AI(Cog):
                     brief="Say something in a voice channel")
     async def say(self, ctx, *, content: str):
         if not ctx.author.voice:
-            await ctx.send("You must currently be in a voice channel to use this command.")
+            await ctx.send("You must currently be in a voice channel to use this command.", ephemeral=True)
             return
 
         flags, not_flags = get_flags(content, join=True, make_dic=True)
         voice = flags.get('v', DEFAULT_TTS_VOICE).lower()
 
         if voice not in SUPPORTED_VOICES:
-            await ctx.send("The selected voice is not supported.\nPlease use `$help say` for a list of supported voices.")
+            await ctx.send("The selected voice is not supported.\nPlease use `$help say` for a list of supported voices.", ephemeral=True)
             return
 
         try:
             speed = float(flags.get('s', DEFAULT_TTS_SPEED))
+        
+            if not SUPPORTED_SPEEDS[0] <= speed <= SUPPORTED_SPEEDS[1]:
+                raise ValueError
         except ValueError:
-            await ctx.send("You must use a real number in the range [0.25, 4.0] for speed.\nPlease use `$help say` for more information.")
+            await ctx.send("You must use a real number in the range [0.25, 4.0] for speed.\nPlease use `$help say` for more information.", ephemeral=True)
             return
 
-        if not SUPPORTED_SPEEDS[0] <= speed <= SUPPORTED_SPEEDS[1]:
-            await ctx.send("You must use a real number in the range [0.25, 4.0] for speed.\nPlease use `$help say` for more information.")
-            return
+        user_channel = ctx.author.voice.channel
+        v_client = ctx.guild.voice_client
+        prev_channel = v_client.channel if v_client else None
 
-        temp_join = False
-
-        if not ctx.message.guild.voice_client:
-            await self.join(ctx)
+        if not v_client:
+            v_client = await user_channel.connect()
             temp_join = True
+        elif v_client.channel != user_channel:
+            await v_client.move_to(user_channel)
+            temp_join = True
+        else:
+            temp_join = False
+
+        if is_slash_command(ctx):
+            await ctx.interaction.response.defer(ephemeral=True)
 
         await text_to_speech(not_flags, ctx.message.guild.voice_client, voice=voice, speed=speed)
 
         if temp_join:
-            while ctx.message.guild.voice_client.is_playing():
+            while v_client.is_playing():
                 await sleep(1)
 
             await sleep(1)
-            await self.leave(ctx)
+
+            if prev_channel:
+                await v_client.move_to(prev_channel)
+            else:
+                await v_client.disconnect()
+
+        if is_slash_command(ctx):
+            await ctx.send("Message succesfully played.", ephemeral=True)
 
     @say.error
     async def say_error(self, ctx, error):

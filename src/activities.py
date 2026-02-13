@@ -51,7 +51,7 @@ activities = [
         "Fighting off waves of Phyrexians",
         "Traveling to Shiv",
         "Returning to Elesh Norn",
-        "Witenssing the return of Elspeth",
+        "Witnessing the return of Elspeth",
         "Creating an improvised body",
         "Breaking my pacifist vows",
         "Executing Elesh Norn",
