@@ -96,8 +96,7 @@ async def on_command_error(ctx, error):
         return
 
     if isinstance(error, commands.CommandNotFound):
-        cmd = ctx.message.content.lstrip('$').lower()
-        if f"{cmd}.txt" in listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"):
+        if f"{(cmd := ctx.message.content.lstrip('$').lower())}.txt" in listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"):
             return await ctx.send(f"Did you mean to use a line-response command? "
                                   f"If you send `{SEND_LINE_CHAR}{cmd}`, I will respond with a random line from *{cmd}*.")
 
@@ -115,4 +114,5 @@ async def on_command_error(ctx, error):
 
 
 # Begin the bot's event loop
-bot.run(TOKEN)
+if __name__ == "__main__":
+    bot.run(TOKEN)

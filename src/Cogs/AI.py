@@ -526,6 +526,7 @@ class AI(Cog):
             content_text = sub(r"‐", '', content_text)
             is_bot = message.author == self.bot.user
             content_blocks = []
+            synthetic_user_image_blocks = []
 
             if content_text.strip():
                 content_blocks.append({"type": f"{'' if chat_completion else 'output_'}text" if is_bot else f"{'' if chat_completion else 'input_'}text",
@@ -533,21 +534,39 @@ class AI(Cog):
 
             for attachment in message.attachments:
                 if attachment.content_type and attachment.content_type.startswith("image/"):
-                    content_blocks.append({"type": "image_url", "image_url": {"url": attachment.url}} if chat_completion 
-                                          else {"type": "input_image", "image_url": attachment.url})
+                    if chat_completion:
+                        img = {"type": "image_url", "image_url": {"url": attachment.url}}
+                    else:
+                        img = {"type": "input_image", "image_url": attachment.url}
 
+                    if is_bot:
+                        synthetic_user_image_blocks.append(img)
+                    else:
+                        content_blocks.append(img)
+
+            if synthetic_user_image_blocks:
+                label = "(Image previously sent by the assistant)"
+                synthetic_blocks = [{"type": f"{'' if chat_completion else 'input_'}text", "text": label}] + synthetic_user_image_blocks
+                synthetic_msg = {"role": "user", "content": synthetic_blocks}
+
+                if (encoding_len := get_token_len(synthetic_msg)) + num_tokens > MAX_INPUT_TOKENS:
+                    break
+
+                num_tokens += encoding_len
+                context.append(synthetic_msg)
+            
             if not content_blocks:
                 continue
 
-            msg = {"role": "assistant" if is_bot else "user",
-                   "content": content_blocks}
-
+            msg = {"role": "assistant" if is_bot else "user", "content": content_blocks}
+            
             # Break the loop if adding the next messages pushes us past the token limit
             if (encoding_len := get_token_len(msg)) + num_tokens > MAX_INPUT_TOKENS:
                 break
 
             num_tokens += encoding_len
             context.append(msg)
+
 
         sys_msg.reverse()
         context.extend(sys_msg)

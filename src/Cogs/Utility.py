@@ -60,7 +60,7 @@ class Utility(Cog):
                          f"Additionally the constants `{'`, `'.join(CONST)}`, and the following functions are supported: `{'`, `'.join(FUNCS)}`\n"
                          "Example: `$calc sin(pi/2)`\n\n"
                          "**Note**: All trig functions take input in radians and output their result in radians. "
-                         "To input degrees into trig functions, use the `deg` function: `$calc sin(deg(90)`. "
+                         "To input degrees into trig functions, use the `deg` function: `$calc sin(deg(90))`. "
                          "Similarly, you can use the `deg` function to interpet the output of a trig function as degrees: `$calc deg(asin(1))`",
                     brief="Calculates the result of a mathematical expression")
     async def calc(self, ctx, *, expression:str):
