@@ -176,12 +176,17 @@ class Query(Cog):
             return await ctx.send(f"No results found for \"{search_query}\".")
 
         image_urls = [i["image"] for i in results]
+        img_sent = False
 
         for _ in range(sub_arg if sub_arg else DEFAULT_RESULT_COUNT):
             if img := get_supported_filetype(image_urls, randomize):
                 await ctx.send(img)
+                img_sent = True
             else:
                 break
+
+        if not img_sent:
+            return await ctx.send(f"No results found for \"{search_query}\".")
 
     @image.error
     async def image_error(self, ctx, error):

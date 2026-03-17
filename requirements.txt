@@ -14,5 +14,4 @@ randfacts
 requests
 tiktoken
 wikipedia
-wordle-python
 xkcd
