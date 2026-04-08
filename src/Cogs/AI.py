@@ -12,6 +12,7 @@ from random import choice, randint
 from re import IGNORECASE, search, sub
 from requests import get, post
 from tiktoken import encoding_for_model
+from zoneinfo import ZoneInfo
 
 
 # Local dependencies
@@ -59,12 +60,15 @@ MAXIMUM_FILE_LINES = 128
 
 # The default context message used to "prime" the language model in preparation for it to act as our AI assistant
 GENESIS_MESSAGE = {"role": "developer",
-                   "content": "You are a time-travelling golem named Karn. "
+                   "content": "You are the time-travelling golem named Karn from the Magic: the Gathering multiverse. "
                               "You are currently acting as an AI assistant for a Discord server. "
-                              "Message content from Discord will follow the format: \"Name:: Message\" "
-                              "where \"Name\" is the name of the user who sent the message, "
-                              "and \"Message\" is the message that was sent. Never prepend your own name to a response in this style. "
-                              "Markdown formatting is supported, so feel free to use it. "
+                              "Your context history will be a series of messages from the Discord server. "
+                              "Message content from Discord will follow the format:\n```\"time: [TIMESTAMP]\nspeaker: [USER]\nmessage: [MESSAGE]```\n"
+                              "`TIMESTAMP` will be a timestamp formated per ISO 8601. `USER` will be the name of the user who sent the message, or "
+                              "\"assistant\" if you sent the message. `MESSAGE` will be the actual text from the message. "
+                              "When responding, only reply with a text message. Never reply in the format listed above."
+                              "Markdown formatting is supported, so feel free to use it in your responses. "
+                              "You have additional functionality beyond the capabilities of this LLM that can be accessed by user commands. "
                               "If you are ever unable to fulfill a user's request, remind the user they can use the "
                               "`$help` command to access more of your features."
                    }
@@ -91,8 +95,6 @@ class AI(Cog):
     # param          bot - our client
     # param         conn - connection to the SQL database
     #  attr reply_chance - chance the bot will respond to a message unprompted [%]
-    #  attr   rude_mtime - last modification time of the "rude messages" file [ns]
-    #  attr   desc_mtime - last modification time of the descriptors file [ns]
     def __init__(self, bot: Bot, conn):
         self.bot = bot
         self.conn = conn
@@ -528,9 +530,12 @@ class AI(Cog):
             content_blocks = []
             synthetic_user_image_blocks = []
 
-            if content_text.strip():
-                content_blocks.append({"type": f"{'' if chat_completion else 'output_'}text" if is_bot else f"{'' if chat_completion else 'input_'}text",
-                                       "text": content_text if is_bot else f"{message.author.display_name}:: {content_text}"})
+            dt = message.created_at.astimezone(ZoneInfo("America/Detroit"))
+            timestamp = f"[{dt.month}-{dt.day}-{dt.year}T{dt.hour}:{dt.minute}:{dt.second}] "
+            content_blocks.append({"type": f"{'' if chat_completion else 'output_' if is_bot else 'input_'}text",
+                                   "text": f"time: {timestamp}\n"
+                                           f"speaker: {'assistant' if is_bot else message.author.display_name}\n"
+                                           f"message: {content_text.strip()}"})
 
             for attachment in message.attachments:
                 if attachment.content_type and attachment.content_type.startswith("image/"):
