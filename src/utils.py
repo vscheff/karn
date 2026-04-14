@@ -102,6 +102,10 @@ def get_json_from_socket(auth):
 
     return json_data["content"]
 
+def get_readme():
+    with open("README.md", 'r') as infile:
+        return infile.read()
+
 def get_supported_filetype(images, randomize=True):
     while True:
         if not images:

@@ -5,7 +5,7 @@ tools = [
     {
         "type": "function",
         "name": "generate",
-        "description": "Generates an image",
+        "description": "Generates an image and sends it to the channel",
         "parameters": {
             "type": "object",
             "properties": {
@@ -20,7 +20,7 @@ tools = [
     {
         "type": "function",
         "name": "card",
-        "description": "Returns the image of a Magic: the Gathering card.",
+        "description": "Sends the image of a Magic: the Gathering card and it's price to the channel",
         "parameters": {
             "type": "object",
             "properties": {
@@ -35,7 +35,7 @@ tools = [
     {
         "type": "function",
         "name": "image",
-        "description": "Searches the web for an image and returns one or more results",
+        "description": "Searches the web for an image and sends one or more results to the channel",
         "parameters": {
             "type": "object",
             "properties": {
@@ -79,11 +79,16 @@ tools = [
                     },
                 "message": {
                     "type": "string",
-                    "description": "The message that will be sent to the user at the specified date and time. This can include Discord-style user tages (i.e. \"<@Von\")."
+                    "description": "The message that will be sent to the user at the specified date and time. This can include Discord-style user tags (i.e. \"<@Von\")."
                     }
                 },
             "required": ["when", "message"]
         }
+    },
+    {
+        "type": "function",
+        "name": "readme",
+        "description": "Retrieves information on this bot's current capabilities, implemented commands (both slash and prefix), and other functionalities. This will give an explanation of all implementented commands, how to use them, any flags associated with the command, and any aliases for the command. Additionally, this function will explain all other functionalities beyond the commands that the bot has implemented (i.e. the rating system or the hat system). Call this function anytime a user is asking about commands the bot has, how to use the commands, or if a user is asking what the capabilities of the bot are."
     },
 ]
 
@@ -107,7 +112,7 @@ def get_tool_token_cost(tools, encoding):
             
         num_tokens += FUNC_INIT + FUNC_END + len(encoding.encode(f"{tool['name']}:{tool['description'].rstrip('.')}"))
         
-        if not len(tool["parameters"]["properties"]):
+        if "parameters" not in tool or not len(tool["parameters"]["properties"]):
             continue
 
         num_tokens += PROP_INIT

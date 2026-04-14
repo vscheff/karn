@@ -9,7 +9,7 @@ from openai import APIError, AsyncOpenAI
 from os import getenv, stat
 from os.path import exists
 from random import choice, randint
-from re import IGNORECASE, search, sub
+from re import DOTALL, IGNORECASE, search, sub
 from requests import get, post
 from tiktoken import encoding_for_model
 from zoneinfo import ZoneInfo
@@ -19,8 +19,8 @@ from zoneinfo import ZoneInfo
 from src.Cogs.Query import get_weather
 from src.global_vars import FILE_ROOT_DIR
 from src.utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES,             \
-                      get_cursor, get_flags, get_id_from_mention, get_json_from_socket, is_slash_command,   \
-                      package_message, send_tts_if_in_vc, smart_typing, text_to_speech
+                      get_cursor, get_flags, get_id_from_mention, get_json_from_socket, get_readme,         \
+                      is_slash_command, package_message, send_tts_if_in_vc, smart_typing, text_to_speech
 from src.tools import get_tool_token_cost, tools
 
 OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
@@ -36,11 +36,13 @@ MODEL = "gpt-5-mini"
 ENCODING = encoding_for_model(MODEL)
 TOKENS_PER_MESSAGE = 3  # Tokens required for each context message regardless of message length
 TOKENS_PER_REPLY = 3    # Tokens required for the response from OpenAI regardless of response length
+INPUT_COST = 0.25 / 1_000_000
+OUTPUT_COST = 2.00 / 1_000_000
 
 # Project specific constants
 MAX_INPUT_TOKENS = 40_000       # Maximum number of tokens for context and response from OpenAI
 MAX_OUTPUT_TOKENS = 5_000
-MAX_DAYS_OLD = 7
+MAX_DAYS_OLD = 256
 MIN_MESSAGE_LEN = 4                                     # Minimum message length bot will respond to
 RUDE_MESSAGES_FILENAME = "rude.txt"                     # File containing phrases the bot considers "rude"
 RUDE_RESPONSE_FILENAME = "respond_rude.txt"             # File containing responses to "rude" messages
@@ -57,6 +59,7 @@ ERROR_MESSAGE = "An error occured while trying to generate your message. Please 
 DEFAULT_REASONING = "low"
 DEFAULT_VERBOSITY = "low"
 MAXIMUM_FILE_LINES = 128
+TARGET_COST = 0.01
 
 # The default context message used to "prime" the language model in preparation for it to act as our AI assistant
 GENESIS_MESSAGE = {"role": "developer",
@@ -69,6 +72,7 @@ GENESIS_MESSAGE = {"role": "developer",
                               "When responding, only reply with a text message. Never reply in the format listed above."
                               "Markdown formatting is supported, so feel free to use it in your responses. "
                               "You have additional functionality beyond the capabilities of this LLM that can be accessed by user commands. "
+                              "A full breakdown of your capabilities can be accessed through the \"readme\" tool."
                               "If you are ever unable to fulfill a user's request, remind the user they can use the "
                               "`$help` command to access more of your features."
                    }
@@ -373,19 +377,21 @@ class AI(Cog):
 
             context, encoded_len = await self.build_context(channel, sys_msg, chat_completion, inp_msg)
 
+        max_output_tokens = int((TARGET_COST - encoded_len * INPUT_COST) / OUTPUT_COST)
+
         if chat_completion:
             openai_kwargs = {                "model": MODEL,
                                           "messages": context,
                                   "reasoning_effort": DEFAULT_REASONING,
                                          "verbosity": DEFAULT_VERBOSITY,
-                             "max_completion_tokens": MAX_OUTPUT_TOKENS
+                             "max_completion_tokens": max_output_tokens
                              } 
         else:
             openai_kwargs = {            "model": MODEL,
                                          "input": context,
                                      "reasoning": {"effort": DEFAULT_REASONING},
                                           "text": {"verbosity": DEFAULT_VERBOSITY},
-                             "max_output_tokens": MAX_OUTPUT_TOKENS,
+                             "max_output_tokens": max_output_tokens,
                                          "tools": tools
                              }
 
@@ -436,9 +442,9 @@ class AI(Cog):
                         r"\1 " + choice(descriptors),
                         reply)
         
-        # Ensure bot is not prefixing the reply with a name
-        # https://regex101.com/r/4vSz5X/2
-        reply = sub(r"\A(?:\w+::)|(?:Karn:)\s", '', reply)
+        # Ensure bot is not formatting the response with the input formatting
+        # https://regex101.com/r/Cuv7zX/1
+        reply = sub(r"time: .+message: ", '', reply, flags=DOTALL)
 
         # Send error message if OpenAI sent a blank response
         if not reply:
@@ -479,6 +485,8 @@ class AI(Cog):
             response = get_weather(location=args["location"], return_json=True)
         elif item.name == "remind":
             await self.bot.get_cog("Reminders").remind(ctx, args=f"{args['when']} | {args['message']}")
+        elif item.name == "readme":
+            response = get_readme()
 
         return response
 
@@ -520,6 +528,7 @@ class AI(Cog):
         num_tokens += get_token_len(inp_prompt) if inp_prompt is not None else 0
         context = [] if inp_prompt is None else [inp_prompt]
         after = datetime.now() - timedelta(days=MAX_DAYS_OLD)
+        target_input_cost = TARGET_COST / 2
 
         # Build the list of context messages
         async for message in channel.history(after=after, oldest_first=False):
@@ -531,7 +540,7 @@ class AI(Cog):
             synthetic_user_image_blocks = []
 
             dt = message.created_at.astimezone(ZoneInfo("America/Detroit"))
-            timestamp = f"[{dt.month}-{dt.day}-{dt.year}T{dt.hour}:{dt.minute}:{dt.second}] "
+            timestamp = f"{dt.month}-{dt.day}-{dt.year}T{dt.hour}:{dt.minute}:{dt.second} "
             content_blocks.append({"type": f"{'' if chat_completion else 'output_' if is_bot else 'input_'}text",
                                    "text": f"time: {timestamp}\n"
                                            f"speaker: {'assistant' if is_bot else message.author.display_name}\n"
@@ -554,7 +563,7 @@ class AI(Cog):
                 synthetic_blocks = [{"type": f"{'' if chat_completion else 'input_'}text", "text": label}] + synthetic_user_image_blocks
                 synthetic_msg = {"role": "user", "content": synthetic_blocks}
 
-                if (encoding_len := get_token_len(synthetic_msg)) + num_tokens > MAX_INPUT_TOKENS:
+                if ((encoding_len := get_token_len(synthetic_msg)) + num_tokens) * INPUT_COST > target_input_cost:
                     break
 
                 num_tokens += encoding_len
@@ -566,12 +575,11 @@ class AI(Cog):
             msg = {"role": "assistant" if is_bot else "user", "content": content_blocks}
             
             # Break the loop if adding the next messages pushes us past the token limit
-            if (encoding_len := get_token_len(msg)) + num_tokens > MAX_INPUT_TOKENS:
+            if ((encoding_len := get_token_len(msg)) + num_tokens) * INPUT_COST > target_input_cost:
                 break
 
             num_tokens += encoding_len
             context.append(msg)
-
 
         sys_msg.reverse()
         context.extend(sys_msg)

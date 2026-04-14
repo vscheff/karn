@@ -57,8 +57,9 @@ activities = [
         "Streaming Fishtank LIVE",
         "Mogging",
         "Applying to be a freeloader",
-        "Buying more shores of StoX",
-        "Selling all my shores of JDRA",
+        "Trading shores of StoX",
+        "Selling shores of JDRA",
+        "Buying shores of BASH",
         "Pumping and dumping TWIN",
         "Watching the Ball Brothers",
         "Playing Landon's song",
@@ -67,4 +68,5 @@ activities = [
         "Drafting my EDH Cube",
         "Drinking Zipp",
         "Netrunning",
+        "Making goo in the goo room",
 ]
