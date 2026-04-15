@@ -1,4 +1,4 @@
-from discord.ext.commands import Cog, command, errors, hybrid_command
+from discord.ext.commands import Cog, errors, hybrid_command
 from re import findall
 
 from src.utils import get_cursor, package_message

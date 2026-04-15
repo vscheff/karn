@@ -6,11 +6,10 @@ from discord.ext.tasks import loop
 from discord.ext.commands import Bot, Cog, Context, errors, hybrid_command
 from json import dumps, loads
 from openai import APIError, AsyncOpenAI
-from os import getenv, stat
-from os.path import exists
+from os import getenv
 from random import choice, randint
 from re import DOTALL, IGNORECASE, search, sub
-from requests import get, post
+from requests import post
 from tiktoken import encoding_for_model
 from zoneinfo import ZoneInfo
 
@@ -236,7 +235,7 @@ class AI(Cog):
         try:
             await channel.connect()
         except ClientException:
-            await ctx.guild.voice_client.move_to(channel)
+            await channel.guild.voice_client.move_to(channel)
 
 
     @hybrid_command(help="Remove the bot from a voice channel",
@@ -248,7 +247,7 @@ class AI(Cog):
             return await ctx.send("I am not currently in any voice channels. Try using `$join` first!")
 
         if is_slash_command(ctx):
-            await ctx.send(f"I have disconnected from the voice channel", ephemeral=True)
+            await ctx.send("I have disconnected from the voice channel", ephemeral=True)
 
     @loop(seconds=20)
     async def check_empty_channel(self):

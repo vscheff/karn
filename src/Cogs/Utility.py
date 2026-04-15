@@ -10,7 +10,7 @@ from random import choice
 from src.calculator import calculator, CONST, FUNCS
 from src.tips import TIP_LIST
 from src.utils import TEMP_DIR
-from src.utils import get_flags, get_id_from_mention, is_slash_command, package_message
+from src.utils import get_flags, get_id_from_mention, is_slash_command
 
 # Filename/path for temporary storage of QR image
 QR_FILEPATH = f"{TEMP_DIR}/temp_qr.png"
@@ -150,10 +150,10 @@ class Utility(Cog):
     @hybrid_command(help="Provides a brief synopsis of Karn, including a link to his Open Source code",
                     brief="Provides a brief synopsis of Karn")
     async def info(self, ctx):
-        await ctx.send(f"Hello! I am Karn, your friendly Time-Travelling Golem!\n"
-                       f"I was developed by Vertical Bar, and am hosted locally in Kalamazoo!\n"
-                       f"If you would like to know me more intimately my Open Source code can be found here:\n\n"
-                       f"https://github.com/vscheff/karn")
+        await ctx.send("Hello! I am Karn, your friendly Time-Travelling Golem!\n"
+                       "I was developed by Vertical Bar, and am hosted locally in Kalamazoo!\n"
+                       "If you would like to know me more intimately my Open Source code can be found here:\n\n"
+                       "https://github.com/vscheff/karn")
 
     @command(hidden=True)
     async def verticalbar(self, ctx):

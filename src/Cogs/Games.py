@@ -101,7 +101,7 @@ class WordRepository:
         self.valid_guesses = allowed | answers
 
         if not self.solution_words:
-            raise RunTimeError("No valid Wordle words could be loaded.")
+            raise RuntimeError("No valid Wordle words could be loaded.")
 
     def is_valid_guess(self, guess):
         return guess.lower() in self.valid_guesses

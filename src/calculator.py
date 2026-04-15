@@ -49,7 +49,7 @@ def calculator(expression):
         if token == '!':
             apply_operator(['!'], values)
             prev = "num"
-            continue;
+            continue
 
         if token == '(':
             ops.append(token)
@@ -139,53 +139,53 @@ def apply_operator(ops, values):
         return
 
     if op == "ln":
-        values.append(log(values.pop())); return
-    if op == "log":
-        values.append(log10(values.pop())); return
-    if op == "sin":
-        values.append(sin(values.pop())); return
-    if op == "cos":
-        values.append(cos(values.pop())); return
-    if op == "tan":
-        values.append(tan(values.pop())); return
-    if op == "asin":
-        values.append(asin(values.pop())); return
-    if op == "acos":
-        values.append(acos(values.pop())); return
-    if op == "atan":
-        values.append(atan(values.pop())); return
-    if op == "sqrt":
-        values.append(values.pop() ** 0.5); return
-    if op == "abs":
-        values.append(abs(values.pop())); return
-    if op == "rand":
-        values.append(random()); return
-    if op == "answer":
-        values.append(42); return
-    if op == "deg":
-        values.append(degrees(values.pop())); return
-    if op == "rad":
-        values.append(radians(values.pop())); return
-    if op == "u-":
-        values.append(-1 * values.pop()); return
-
-    right = values.pop()
-    left = values.pop()
-
-    if op == '+':
-        values.append(left + right)
-    elif op == '-':
-        values.append(left - right)
-    elif op == '*':
-        values.append(left * right)
-    elif op == '/':
-        values.append(left / right)
-    elif op == '^':
-        values.append(left ** right)
-    elif op == "%":
-        values.append(left % right)
+        values.append(log(values.pop()))
+    elif op == "log":
+        values.append(log10(values.pop()))
+    elif op == "sin":
+        values.append(sin(values.pop()))
+    elif op == "cos":
+        values.append(cos(values.pop()))
+    elif op == "tan":
+        values.append(tan(values.pop()))
+    elif op == "asin":
+        values.append(asin(values.pop()))
+    elif op == "acos":
+        values.append(acos(values.pop()))
+    elif op == "atan":
+        values.append(atan(values.pop()))
+    elif op == "sqrt":
+        values.append(values.pop() ** 0.5)
+    elif op == "abs":
+        values.append(abs(values.pop()))
+    elif op == "rand":
+        values.append(random())
+    elif op == "answer":
+        values.append(42)
+    elif op == "deg":
+        values.append(degrees(values.pop()))
+    elif op == "rad":
+        values.append(radians(values.pop()))
+    elif op == "u-":
+        values.append(-1 * values.pop())
     else:
-        raise ValueError(f"Unknown operator: {op}")
+        right = values.pop()
+        left = values.pop()
+
+        if op == '+':
+            values.append(left + right)
+        elif op == '-':
+            values.append(left - right)
+        elif op == '*':
+            values.append(left * right)
+        elif op == '/':
+            values.append(left / right)
+        elif op == '^':
+            values.append(left ** right)
+        elif op == "%":
+            values.append(left % right)
+        else:
+            raise ValueError(f"Unknown operator: {op}")
 
 def format_result(x, sig=15, eps=1e-12):
     if abs(x) < eps:

@@ -287,7 +287,7 @@ class Query(Cog):
             try:
                 result = page(choice(e.options))
             except DisambiguationError:
-                return await self.wiki(ctx, args)
+                return await self.wiki(ctx, query)
 
         if 'i' in flags:
             supported_images = []

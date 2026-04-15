@@ -21,17 +21,17 @@ class CustomHelpCommand(HelpCommand):
             
             cog_list[cog.qualified_name if cog else "Miscellaneous"] = commands
 
-        for command in self.context.bot.tree.get_commands():
-            if not hasattr(command, "binding"):
+        for cmd in self.context.bot.tree.get_commands():
+            if not hasattr(cmd, "binding"):
                 continue
 
-            if (cog_name := command.binding.__class__.__name__ if command.binding else "Miscellaneous") == "SlashHelp":
+            if (cog_name := cmd.binding.__class__.__name__ if cmd.binding else "Miscellaneous") == "SlashHelp":
                 continue       
 
             cog_list.setdefault(cog_name, [])
             
-            if not any(i.name == command.name for i in cog_list[cog_name]):
-                cog_list[cog_name].append(command)
+            if not any(i.name == cmd.name for i in cog_list[cog_name]):
+                cog_list[cog_name].append(cmd)
 
         command_list = [f"# {key}\n{self.get_command_list(val)}" for key, val in cog_list.items()]
         await package_message('\n'.join(command_list), self.get_destination(), multi_send=True)
@@ -57,17 +57,17 @@ class CustomHelpCommand(HelpCommand):
 
     # Called when user gives the $help {command_name} command
     # param command - the command that was requested for help
-    async def send_command_help(self, command):
-        if command.hidden:
+    async def send_command_help(self, cmd):
+        if cmd.hidden:
             return
-        await self.get_destination().send(f"# {command.name}\n{command.help}")
+        await self.get_destination().send(f"# {cmd.name}\n{cmd.help}")
 
     async def command_not_found(self, name):
-        for command in self.context.bot.tree.get_commands():
-            if command.name != name:
+        for cmd in self.context.bot.tree.get_commands():
+            if cmd.name != name:
                 continue
 
-            return f"# {name}\n{command.extras['help']}"
+            return f"# {name}\n{cmd.extras['help']}"
 
         for cog in self.context.bot.cogs.values():
             if cog.qualified_name.lower() == name:
@@ -78,17 +78,17 @@ class CustomHelpCommand(HelpCommand):
     def get_command_list(self, commands):
         ret_list = []
 
-        for command in commands:
-            if isinstance(command, Command):
-                if command.hidden:
+        for cmd in commands:
+            if isinstance(cmd, Command):
+                if cmd.hidden:
                     continue
                 
-                ret_list.append({"name": command.name, "brief": command.brief, "prefix": "$"})
+                ret_list.append({"name": cmd.name, "brief": cmd.brief, "prefix": "$"})
             else:
-                if command.extras.get("hidden"):
+                if cmd.extras.get("hidden"):
                     continue
 
-                ret_list.append({"name": command.name, "brief": command.extras.get("brief", ""), "prefix": "/"})
+                ret_list.append({"name": cmd.name, "brief": cmd.extras.get("brief", ""), "prefix": "/"})
         
         return "* " + "\n* ".join([f"`{i['prefix']}{i['name']}` - {i['brief']}" for i in sorted(ret_list, key=lambda x: x["name"])])
 

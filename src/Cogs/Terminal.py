@@ -90,7 +90,7 @@ class Terminal(Cog):
         try:
             num_lines = int(flags.get('c', DEFAULT_LINE_COUNT))
         except ValueError:
-            return await ctx.send(f"Bad argument, please only use valid integers.")
+            return await ctx.send("Bad argument, please only use valid integers.")
 
         if not num_lines:
             return
@@ -231,7 +231,7 @@ async def send_line(msg, bot):
         except FileNotFoundError:
             return match_obj[0]
 
-    response = sub(r"#\w+", sub_line, msg.clean_content)
+    response = sub(fr"{SEND_LINE_CHAR}\w+", sub_line, msg.clean_content)
     
     if not msg_altered:
         return False

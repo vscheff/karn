@@ -1,8 +1,6 @@
 from asyncio import get_running_loop, sleep
 import discord
-from gtts import gTTS
 from json import loads
-from math import pi, e
 from mysql.connector.errors import OperationalError
 from openai import OpenAI
 import os

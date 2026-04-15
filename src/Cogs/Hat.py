@@ -1,4 +1,4 @@
-from discord.ext.commands import Cog, command, hybrid_command, errors, MissingRequiredArgument
+from discord.ext.commands import Cog, hybrid_command, errors
 from random import randint
 
 from src.utils import get_cursor, get_flags, package_message
@@ -67,7 +67,7 @@ class Hat(Cog):
         cursor.execute("SELECT DISTINCT hat_name FROM Hat WHERE guild_id = %s", [ctx.guild.id])
 
         if not (result := cursor.fetchall()):
-            await ctx.send(f"No active hats found for this server. Try using the `$add` command first!")
+            await ctx.send("No active hats found for this server. Try using the `$add` command first!")
         else:
             await ctx.send("* " + "\n* ".join(i[0] for i in result))
 
@@ -152,7 +152,7 @@ class Hat(Cog):
         hat = get_hat(flags, arg, cursor, ctx.channel.id)
 
         if not arg:
-            await ctx.send(f"You must include an index to remove. Use `$view` to see the indexes.")
+            await ctx.send("You must include an index to remove. Use `$view` to see the indexes.")
             cursor.close()
             return
 

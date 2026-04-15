@@ -1,9 +1,7 @@
 # Cog that holds all commands related to RNG
 from discord.ext.commands import Bot, Cog, errors, hybrid_command
-from os import getenv
 from randfacts import get_fact
 from random import choice, randint, shuffle
-import discord
 
 from src.utils import get_flags, package_message
 

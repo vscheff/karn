@@ -204,31 +204,31 @@ class DailyLoop(Cog):
         await self.bot.wait_until_ready()
 
     async def daily_calvin(self, channel):
-        await channel.send(f"__**The Calvin and Hobbes strip of the day is:**__")
+        await channel.send("__**The Calvin and Hobbes strip of the day is:**__")
         await self.bot.get_command("comic")(channel, comic="calvinandhobbes")
 
     async def daily_card(self, channel):
-        await channel.send(f"__**The MtG card of the day is:**__")
+        await channel.send("__**The MtG card of the day is:**__")
         await self.bot.get_command("card")(channel, card="-r")
 
     async def daily_fact(self, channel):
-        await channel.send(f"__**The fact of the day is:**__")
+        await channel.send("__**The fact of the day is:**__")
         await self.bot.get_command("fact")(channel)
 
     async def daily_garfield(self, channel):
-        await channel.send(f"__**The Garfield strip of the day is:**__")
+        await channel.send("__**The Garfield strip of the day is:**__")
         await self.bot.get_command("comic")(channel, comic="garfield")
 
     async def daily_peanuts(self, channel):
-        await channel.send(f"__**The Peanuts strip of the day is:**__")
+        await channel.send("__**The Peanuts strip of the day is:**__")
         await self.bot.get_command("comic")(channel, comic="peanuts")
 
     async def daily_tip(self, channel):
-        await channel.send(f"__**The tip of the day is:**__")
+        await channel.send("__**The tip of the day is:**__")
         await package_message(choice(TIP_LIST), channel, multi_send=True)
 
     async def daily_wiki(self, channel):
-        await channel.send(f"__**The Wikipedia article of the day is:**__")
+        await channel.send("__**The Wikipedia article of the day is:**__")
         await self.bot.get_command("wiki")(channel, query="-r")
 
     async def daily_word(self, channel):
@@ -253,7 +253,7 @@ class DailyLoop(Cog):
                   f"Status Code: {response.status_code}\n")
 
     async def daily_xkcd(self, channel):
-        await channel.send(f"__**The xkcd comic of the day is:**__")
+        await channel.send("__**The xkcd comic of the day is:**__")
         await self.bot.get_command("xkcd")(channel, number="-r")
 
 
