@@ -13,6 +13,7 @@ from re import sub
 from wikipedia import DisambiguationError, page, PageError, random
 from xkcd import getComic, getLatestComic, getLatestComicNum, getRandomComic
 
+from src.global_vars import USER_AGENT
 from src.us_state_abbrev import abbrev_to_us_state as states
 from src.utils import TEMP_DIR
 from src.utils import get_flags, is_slash_command, is_supported_filetype, get_supported_filetype, package_message, run_blocking
@@ -45,17 +46,19 @@ class Query(Cog):
     async def card(self, ctx, *, card: str):
         flags, query = get_flags(card)
         card_name = ' '.join(query)
+        headers = {"User-Agent": USER_AGENT}
 
         if 'r' in flags:
-            card_json = get(f"{SCRYFALL_URL}/random", params={'q': "game:paper -stamp:acorn"})
-            card_json = card_json.json()
+            card_req = get(f"{SCRYFALL_URL}/random", params={'q': "game:paper -stamp:acorn"}, headers=headers)
+            card_json = card_req.json()
         else:
-            card_json = get(f"{SCRYFALL_URL}/named", params={"fuzzy": card_name}).json()
+            card_json = get(f"{SCRYFALL_URL}/named", params={"fuzzy": card_name}, headers=headers).json()
 
         if "status" not in card_json:
             await send_card(ctx, card_json)
         elif "type" in card_json:
-            card_json = get(f"{SCRYFALL_URL}/search", params={'q': f"{card_name} game:paper"}).json()
+            card_req = get(f"{SCRYFALL_URL}/search", params={'q': f"{card_name} game:paper"}, headers=headers)
+            card_json = card_req.json()
 
             if "status" in card_json:
                 return await ctx.send(card_json["details"])

@@ -743,6 +743,7 @@ class AI(Cog):
                 if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE)
                        for i in rude_messages):
                     reply = get_random_response(msg.guild.id, rude=True)
+                    await msg.add_reaction("\N{PENSIVE FACE}")
                     await msg.channel.send(reply)
                     await send_tts_if_in_vc(self.bot, msg.author, reply)
                     return
@@ -753,6 +754,7 @@ class AI(Cog):
                 if any(search(fr"(?:\A| ){i}(?:\Z| )", clean_lower, flags=IGNORECASE)
                        for i in nice_messages):
                     reply = get_random_response(msg.guild.id, rude=False)
+                    await msg.add_reaction("\N{PINK HEART}")
                     await msg.channel.send(reply)
                     await send_tts_if_in_vc(self.bot, msg.author, reply)
                     return

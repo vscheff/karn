@@ -88,7 +88,7 @@ tools = [
     {
         "type": "function",
         "name": "readme",
-        "description": "Retrieves information on this bot's current capabilities, implemented commands (both slash and prefix), and other functionalities. This will give an explanation of all implementented commands, how to use them, any flags associated with the command, and any aliases for the command. Additionally, this function will explain all other functionalities beyond the commands that the bot has implemented (i.e. the rating system or the hat system). Call this function anytime a user is asking about commands the bot has, how to use the commands, or if a user is asking what the capabilities of the bot are."
+        "description": "Retrieves information on this bot's current capabilities, implemented commands (both slash and prefix), and other functionalities. This will give an explanation of all implementented commands, how to use them, any flags associated with the command, and any aliases for the command. Additionally, this function will explain all other functionalities beyond the commands that the bot has implemented (i.e. the rating system or the hat system). Call this function anytime a user is asking about commands the bot has, how to use the commands, or if a user is asking what the capabilities/features of the bot are."
     },
 ]
 

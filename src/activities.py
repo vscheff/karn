@@ -69,4 +69,13 @@ activities = [
         "Drinking Zipp",
         "Netrunning",
         "Making goo in the goo room",
+        "Dying in a hang gliding accident",
+        "Goo wrestling with the Twins",
+        "Burting off",
+        "Paying the whisper tax",
+        "Doing the S.S.I.",
+        "Going infinite",
+        "Pushing the red button",
+        "Terraforming Mars",
+        "Chippin' In",
 ]
