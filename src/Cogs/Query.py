@@ -10,7 +10,7 @@ from PIL import Image
 from random import choice, randint
 from requests import get
 from re import sub
-from wikipedia import DisambiguationError, page, PageError, random
+from wikipedia import DisambiguationError, page, PageError, random, set_user_agent
 from xkcd import getComic, getLatestComic, getLatestComicNum, getRandomComic
 
 from src.global_vars import USER_AGENT
@@ -35,6 +35,8 @@ WORDNIK_URL = "https://api.wordnik.com/v4/word.json/"
 # $weather constants
 WEATHER_API_KEY = getenv("WEATHER_TOKEN")
 WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather?"
+
+set_user_agent(USER_AGENT)
 
 
 class Query(Cog):

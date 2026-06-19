@@ -57,6 +57,7 @@ async def on_ready():
         change_activity.start()
 
     print(f"\n{bot.user} is connected to the following guild(s):\n")
+    
     for guild in bot.guilds:
         print(f"{guild.name} (ID: {guild.id})\nGuild Members: {len(guild.members)}\n")
 
@@ -73,8 +74,12 @@ async def on_guild_join(guild):
 
 @bot.event
 async def on_message(msg):
-    if msg.author.bot or not msg.content:
-    #if msg.author == bot.user or not msg.content:
+    if msg.author == bot.user or not msg.content:
+        return
+
+    if msg.author.bot:
+        await bot.get_cog("AI").send_reply(msg)
+
         return
 
     if msg.content[0] == bot.command_prefix:

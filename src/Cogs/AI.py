@@ -20,6 +20,7 @@ from src.global_vars import FILE_ROOT_DIR
 from src.utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES,             \
                       get_cursor, get_flags, get_id_from_mention, get_json_from_socket, get_readme,         \
                       is_slash_command, package_message, send_tts_if_in_vc, smart_typing, text_to_speech
+from src.util_objects import BoTracker
 from src.tools import get_tool_token_cost, tools
 
 OPENAI_API_KEY = getenv("CHATGPT_TOKEN")
@@ -104,6 +105,7 @@ class AI(Cog):
         self.reply_chance = 1
         self.client = AsyncOpenAI(api_key=OPENAI_API_KEY, organization=OPENAI_ORGANIZATION)
         self.tools_token_cost = get_tool_token_cost(tools, ENCODING)
+        self.trackers = {}
 
         self.generate_menu = ContextMenu(name="Generate image", callback=self.generate_from_message)
         bot.tree.add_command(self.generate_menu)
@@ -328,6 +330,14 @@ class AI(Cog):
                            "Please use `$help say` for more information.")
             error.handled = True
 
+    def check_skip(self, ctx):
+        if ctx.message.author.id in self.trackers:
+            return self.trackers[ctx.message.author.id].check_skip()
+        
+        self.trackers[ctx.message.author.id] = BoTracker(ctx.message.author.id)
+        
+        return False
+
     # $prompt command for users to submit prompts to the language model
     # param   args - will contain the prompt to send
     # param author - used by `send_reply()` to forward author name from message
@@ -344,6 +354,9 @@ class AI(Cog):
         await self.make_llm_request(ctx, inp_prompt=inp_prompt if is_slash_command(ctx) else None)
 
     async def make_llm_request(self, ctx, **kwargs):
+        if ctx.message.author.bot and self.check_skip(ctx):
+            return
+
         self.reply_chance = 1
         
         if (inp_prompt := kwargs.get("inp_prompt", None)) is not None:
