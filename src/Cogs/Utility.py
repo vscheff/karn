@@ -2,25 +2,34 @@
 
 from discord.ext.commands import Bot, Cog, command, errors, has_permissions, hybrid_command
 from datetime import datetime, timedelta
+from dns.resolver import NXDOMAIN, NoAnswer, NoNameservers, Resolver
+from dns.exception import Timeout
 import discord
 import os
 import qrcode
 from random import choice
+from time import perf_counter
 
 from src.calculator import calculator, CONST, FUNCS
+from src.dig import dig
 from src.tips import TIP_LIST
 from src.utils import TEMP_DIR
-from src.utils import get_flags, get_id_from_mention, is_slash_command
+from src.utils import get_flags, get_id_from_mention, is_slash_command, package_message
 
 # Filename/path for temporary storage of QR image
 QR_FILEPATH = f"{TEMP_DIR}/temp_qr.png"
 
+VALID_RECORD_TYPES = {"A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "SRV", "CAA", "PTR"}
 
 class Utility(Cog):
 
     # attr bot - our client
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    @hybrid_command()
+    async def dig(self, ctx, *, query):
+        await dig(ctx, query)
 
     # $qr command used to generate QR code images
     # param arg - all user input following command-name

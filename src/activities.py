@@ -84,4 +84,7 @@ activities = [
         "Planeswalking",
         "Cursing Universes Beyond",
         "Praising horses",
+        "Moving like Dracula",
+        "Continuing to be Him",
+        "Blowing the Lord's bubbles",
 ]

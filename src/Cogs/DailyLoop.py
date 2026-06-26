@@ -208,8 +208,12 @@ class DailyLoop(Cog):
         await self.bot.get_command("comic")(channel, comic="calvinandhobbes")
 
     async def daily_card(self, channel):
-        await channel.send("__**The MtG card of the day is:**__")
-        await self.bot.get_command("card")(channel, card="-r")
+        msg = await channel.send("__**The MtG card of the day is:**__")
+        try:
+            await self.bot.get_command("card")(channel, card="-r")
+        except Exception as e:
+            await msg.delete()
+            print(f"Daily MtG card failed for channel {channel.name}.\n\nException:\n{e}")
 
     async def daily_fact(self, channel):
         await channel.send("__**The fact of the day is:**__")
