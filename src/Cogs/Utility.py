@@ -2,13 +2,10 @@
 
 from discord.ext.commands import Bot, Cog, command, errors, has_permissions, hybrid_command
 from datetime import datetime, timedelta
-from dns.resolver import NXDOMAIN, NoAnswer, NoNameservers, Resolver
-from dns.exception import Timeout
 import discord
 import os
 import qrcode
 from random import choice
-from time import perf_counter
 
 from src.calculator import calculator, CONST, FUNCS
 from src.dig import dig
@@ -19,7 +16,6 @@ from src.utils import get_flags, get_id_from_mention, is_slash_command, package_
 # Filename/path for temporary storage of QR image
 QR_FILEPATH = f"{TEMP_DIR}/temp_qr.png"
 
-VALID_RECORD_TYPES = {"A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "SRV", "CAA", "PTR"}
 
 class Utility(Cog):
 
@@ -27,7 +23,14 @@ class Utility(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @hybrid_command()
+    @hybrid_command(help="Perform a DNS lookup on a given address.\n"
+                         "Example: `$dig verticalbar.org`\n"
+                         "You can specify which nameserver to use by denoting it as an argument with a leading `@` symbol.\n"
+                         "Example: `$dig @8.8.8.8 verticalbar.org`\n"
+                         "By default this command queries for `A` records. "
+                         "To query for different record types include the record type as an argument.\n"
+                         "Example: `$dig verticalbar.org MX`",
+                    brief="Perform a DNS lookup")
     async def dig(self, ctx, *, query):
         await dig(ctx, query)
 

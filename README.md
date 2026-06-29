@@ -139,6 +139,7 @@ All hat commands (excluding `$list` and `$set_default`) use the hat set as defau
 
 ### Utility
 - `calc` - Sends the result of a mathematical expression. Supported operators are: `+`, `-`, `*`, `/`, `^`, and `%`. Supported constants are: `e`, `tau`, and `pi`. Supported functions are: `abs`, `acos`, `answer`, `asin`, `atan`, `cos`, `deg`, `ln`, `log`, `rand`, `rad`, `sin`, `sqrt`, `tan`. All trig functions take input in radians and output their result in radians. To input degrees into trig functions, use the `deg` function: `$cals sin(deg(90))`. Similarly, you can use the `deg` function to interpret the output of trig functions as degrees: `$calc deg(asin(1))`.
+- `dig` - Performs a domain lookup on a given URL. By default, this command only searches for `A` records. To search for other record types, include the desired record type as an argument: `$dig protonmail.com MX`. To query a nameserver other than the default nameserver, include the desired nameserver as an argument with a leading `@` symbol: `$dig @8.8.8.8 protonmail.com`.
 - `echo` - Echos a given string in your current text channel. You can use the `-c` command flag to echo the message in a different channel, for example: `$echo -c #general Send this message to the general chat`.
 - `info` - Sends a brief synopsis on Karn, including a link to his Open Source code on GitHub.
 - `ping` - Sends "pong" if the bot is online, as well as the round trip message time.

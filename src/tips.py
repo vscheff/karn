@@ -66,4 +66,5 @@ TIP_LIST = [
 "Need to solve a mathematical expression? Use the `$calc` command! This command supports basic operators, parenthesis, constants like pi and e, and several functions like log() and sin().\nUse `$help calc` for a full list of supported operators and functions.",
 "Want me to remind you for an upcoming event? Use the `$remind` command. For example, the command: `$remind tomorrow at noon | turn on the football game` will cause me to ping you the following day at noon to remind you about the football game.",
 "Curious what reminders you currently have set? Use the command `$remind list` to list all currently set reminders.",
+"Need to know what IP address a given URL belongs to? You can perform a domain name lookup with the `$dig` command: `$dig verticalbar.org`.",
 ]
