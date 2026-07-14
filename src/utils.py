@@ -37,7 +37,7 @@ def get_cursor(conn, dictionary=False):
         conn.connect()
         return conn.cursor(dictionary=dictionary)
 
-def get_flags(args, join=False, make_dic=False, no_args=None):
+def get_flags(args, join=False, make_dic=False, no_args=None, plus_args=False):
     if args is None:
         return [], []
 
@@ -57,6 +57,11 @@ def get_flags(args, join=False, make_dic=False, no_args=None):
                     return None, None
             else:
                 flags.extend([i.lower() for i in arg[1:]])
+        elif plus_args and arg[0] == '+':
+            if make_dic:
+                flag_dic[arg[1:]] = None
+            else:
+                flags.append(arg[1:])
         else:
             not_flags.append(arg)
 

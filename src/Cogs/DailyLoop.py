@@ -204,8 +204,13 @@ class DailyLoop(Cog):
         await self.bot.wait_until_ready()
 
     async def daily_calvin(self, channel):
-        await channel.send("__**The Calvin and Hobbes strip of the day is:**__")
-        await self.bot.get_command("comic")(channel, comic="calvinandhobbes")
+        msg = await channel.send("__**The Calvin and Hobbes strip of the day is:**__")
+        
+        try:
+            await self.bot.get_command("comic")(channel, comic="calvinandhobbes")
+        except Exception as e:
+            await msg.delete()
+            print(f"Daily comic failed for chanel {channel.name}.\n\nException:\n{e}")
 
     async def daily_card(self, channel):
         msg = await channel.send("__**The MtG card of the day is:**__")
@@ -220,12 +225,22 @@ class DailyLoop(Cog):
         await self.bot.get_command("fact")(channel)
 
     async def daily_garfield(self, channel):
-        await channel.send("__**The Garfield strip of the day is:**__")
-        await self.bot.get_command("comic")(channel, comic="garfield")
+        msg = await channel.send("__**The Garfield strip of the day is:**__")
+        
+        try:
+            await self.bot.get_command("comic")(channel, comic="garfield")
+        except Exception as e:
+            await msg.delete()
+            print(f"Daily comic failed for chanel {channel.name}.\n\nException:\n{e}")
 
     async def daily_peanuts(self, channel):
-        await channel.send("__**The Peanuts strip of the day is:**__")
-        await self.bot.get_command("comic")(channel, comic="peanuts")
+        msg = await channel.send("__**The Peanuts strip of the day is:**__")
+        
+        try:
+            await self.bot.get_command("comic")(channel, comic="garfield")
+        except Exception as e:
+            await msg.delete()
+            print(f"Daily comic failed for chanel {channel.name}.\n\nException:\n{e}")
 
     async def daily_tip(self, channel):
         await channel.send("__**The tip of the day is:**__")

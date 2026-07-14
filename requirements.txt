@@ -2,6 +2,7 @@ comics >= 0.7.0
 dateparser
 discord
 ddgs
+dnspython
 lxml
 mysql-connector-python
 openai
