@@ -23,17 +23,6 @@ class Utility(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @hybrid_command(help="Perform a DNS lookup on a given address.\n"
-                         "Example: `$dig verticalbar.org`\n"
-                         "You can specify which nameserver to use by denoting it as an argument with a leading `@` symbol.\n"
-                         "Example: `$dig @8.8.8.8 verticalbar.org`\n"
-                         "By default this command queries for `A` records. "
-                         "To query for different record types include the record type as an argument.\n"
-                         "Example: `$dig verticalbar.org MX`",
-                    brief="Perform a DNS lookup")
-    async def dig(self, ctx, *, query):
-        await dig(ctx, query)
-
     # $qr command used to generate QR code images
     # param arg - all user input following command-name
     @hybrid_command(help="Generate a QR code for input data\nExample: `$qr https://www.gnu.org/`",
@@ -53,7 +42,7 @@ class Utility(Cog):
     async def qr_error(self, ctx, error):
         if isinstance(error, errors.MissingRequiredArgument):
             await ctx.send("You must include a string of data with this command.\n"
-                           "Example: `$qr https://www.linux.org/`"
+                           "Example: `$qr https://www.linux.org/`\n\n"
                            "Please use `$help qr` for more information.")
             error.handled = True
 
@@ -171,32 +160,6 @@ class Utility(Cog):
     async def verticalbar(self, ctx):
         await ctx.send("01010110 01101111 01101110 "
                        "00100000 01010011 01100011 01101000 01100101 01100110 01100110 01101100 01100101 01110010")
-
-    @hybrid_command(help="Echoes a given string within your current text channel.\n"
-                         "Example: `/echo Repeat this back to me`\n\n"
-                         "This command has the following flags:\n"
-                         "* **-c**: Echoes the message in a different given channel\n"
-                         "\tExample: `$echo -c #general Repeat this in the general channel`",
-                    brief="Echoes a message.")
-    async def echo(self, ctx, *, message: str):
-        flags, message = get_flags(message, join=True, make_dic=True)
-        
-        if 'c' in flags:
-            if (channel_id := get_id_from_mention(flags['c'])) is None:
-                return await ctx.send("Invalid channel. Please send channel in the format: #channel\n"
-                                      "Please use `$help echo` for more information.")
-            if is_slash_command(ctx):
-                await ctx.send(f"Echoing your message in {flags['c']}", ephemeral=True)
-
-            return await self.bot.get_channel(int(channel_id)).send(message)
-
-        await ctx.send(message)
-
-    @echo.error
-    async def echo_error(self, ctx, error):
-        if isinstance(error, errors.MissingRequiredArgument):
-            await ctx.send("You must include a message to echo with this command.\nPlease use `$help echo` for more information.")
-            error.handled = True
 
 
 # Used by $qr to create a QR code image

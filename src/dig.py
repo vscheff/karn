@@ -1,4 +1,5 @@
 from asyncio import to_thread
+from dataclasses import dataclass
 from datetime import datetime
 from dns.exception import Timeout
 import dns.flags
@@ -10,7 +11,7 @@ import dns.rcode
 import dns.rdataclass
 import dns.rdatatype
 from ipaddress import ip_address
-from random import choice
+from random import shuffle
 from time import perf_counter
 
 from src.utils import get_flags, package_message
@@ -44,18 +45,23 @@ ROOT_SERVERS = [
 
 async def dig(ctx, user_query):
     flags, args = get_flags(user_query, make_dic=True, no_args=['x'], plus_args=True)
+
+    if not args:
+        await ctx.send("You must include a domain name to lookup. Use `$help dig` for more information.")
+        return
+
     arg = args.pop(0)
 
-    if not (default_nameserver_used := not arg[0] == '@'):
+    if default_nameserver_used := not arg[0] == '@':
+        nameserver = DEFAULT_NAMESERVER
+        domain = arg
+    else:   
         if not args:
             await ctx.send("You must include a domain name to lookup. Use `$help dig` for more information.")
             return
 
         nameserver = arg[1:]
         domain = args.pop(0)
-    else:
-        nameserver = DEFAULT_NAMESERVER
-        domain = arg
 
     if reverse_lookup := 'x' in flags:
         try:
@@ -67,10 +73,14 @@ async def dig(ctx, user_query):
     record_type = args.pop(0).upper() if args else REVERSE_RECORD_TYPE if reverse_lookup else DEFAULT_RECORD_TYPE
 
     if record_type not in VALID_RECORD_TYPES:
-        await ctx.send(f"Unsupported record type `{record_type}`.\nSupported types include: `{', '.join(VALID_RECORD_TYPES)}`.")
+        await ctx.send(f"Unsupported record type `{record_type}`.\nSupported types include: `{', '.join(sorted(VALID_RECORD_TYPES))}`.")
         return
+    
+    options = DigOptions()
+    options.set_flags(flags)
 
-    if (options := await build_options(ctx, flags)) is None:
+    if options.error_status:
+        await ctx.send(options.error_message)
         return
 
     await ctx.defer()
@@ -79,18 +89,15 @@ async def dig(ctx, user_query):
         rdtype = dns.rdatatype.from_text(record_type)
         
         if "trace" in flags:
-            output = await trace_lookup(domain, nameserver, rdtype, record_type, user_query, options, default_nameserver_used)
+            output = await trace_lookup(domain, nameserver, rdtype, user_query, options, default_nameserver_used)
         else:
-            query = make_query(qname=domain, rdtype=rdtype, use_edns=0, payload=512, want_dnssec=options["use_dnssec"])
-            start = perf_counter()
-            response = await send_dns_query(query, nameserver, options)
+            query = make_dig_query(domain, rdtype, options)
+            response, elapsed_ms = await send_timed_dns_query(query, nameserver, options)
             
             if response.rcode() == dns.rcode.NXDOMAIN:
                 await ctx.send(f"`{domain}` does not exist.")
                 return
 
-            elapsed_ms = round((perf_counter() - start) * 1000)
-            
             if "short" in flags:
                 output = format_short_answer(response)
             else:
@@ -104,7 +111,7 @@ async def dig(ctx, user_query):
                         options=options
                 )
     except Timeout:
-        await ctx.send(f"DNS lookup timeout out for `{domain}`.")
+        await ctx.send(f"DNS lookup timed out for `{domain}`.")
     except ValueError as e:
         await ctx.send(f"`{nameserver}` is not a valid DNS server address. Use an IPv4 or IPv6 address like `1.1.1.1` or `8.8.8.8`.")
     except Exception as e:
@@ -115,70 +122,26 @@ async def dig(ctx, user_query):
 
         await package_message(f"```text\n{output}\n```", ctx)
 
-async def build_options(ctx, flags):
-    no_all = "noall" in flags
+def make_dig_query(qname, rdtype, options, payload=512, use_recursion=None):
+    use_recursion = options.use_recursion if use_recursion is None else use_recursion
 
-    options = {
-            "port": DEFAULT_PORT,
-            "show_cmd": not no_all,
-            "show_comments": not no_all,
-            "show_question": not no_all,
-            "show_answer": not no_all,
-            "show_authority": not no_all,
-            "show_additional": not no_all,
-            "show_stats": not no_all,
-            "use_dnssec": False,
-            "use_tcp": False
-    }
+    query = make_query(qname=qname, rdtype=rdtype, use_edns=0, payload=payload, want_dnssec=options.use_dnssec)
 
-    if "cmd" in flags:
-        options["show_cmd"] = True
-    if "nocmd" in flags:
-        options["show_cmd"] = False
-    if "comments" in flags:
-        options["show_comments"] = True
-    if "nocomments" in flags:
-        options["show_comments"] = False
-    if "question" in flags:
-        options["show_question"] = True
-    if "noquestion" in flags:
-        options["show_question"] = False
-    if "answer" in flags:
-        options["show_answer"] = True
-    if "noanswer" in flags:
-        options["show_answer"] = False
-    if "authority" in flags:
-        options["show_authority"] = True
-    if "noauthority" in flags:
-        options["show_authority"] = False
-    if "additional" in flags:
-        options["show_additional"] = True
-    if "noadditional" in flags:
-        options["show_additional"] = False
-    if "stats" in flags:
-        options["show_stats"] = True
-    if "nostats" in flags:
-        options["show_stats"] = False
-    if "tcp" in flags:
-        options["use_tcp"] = True
-    if any(i in flags for i in ["trace", "dnssec", "do"]):
-        options["use_dnssec"] = True
-    if "nodnssec" in flags or "nodo" in flags:
-        options["use_dnssec"] = False
-    if "p" in flags:
-        try:
-            options["port"] = int(flags["p"])
+    if not use_recursion:
+        query.flags &= ~dns.flags.RD
 
-            if not 0 < options["port"] < 65535:
-                raise ValueError
-        except ValueError:
-            await ctx.send("Bad argument given for Port. Please use a valid integer in the range [0, 65535].")
-            
-            return None
+    if options.use_aaonly:
+        query.flags |= dns.flags.AA
 
-    return options
+    if options.use_adflag:
+        query.flags |= dns.flags.AD
 
-async def trace_lookup(domain, nameserver, rdtype, record_type, user_query, options, default_nameserver_used):
+    if options.use_cdflag:
+        query.flags |= dns.flags.CD
+
+    return query
+
+async def trace_lookup(domain, nameserver, rdtype, user_query, options, default_nameserver_used):
     qname = dns.name.from_text(domain)
     current_servers = ROOT_SERVERS[:]
     output_parts = []
@@ -187,16 +150,13 @@ async def trace_lookup(domain, nameserver, rdtype, record_type, user_query, opti
         output_parts.append(cmd_header)
 
     try:
-        root_response, elapsed_ms = await get_root_priming_response(nameserver, options)
+        root_response, elapsed_ms = await trace_query('.', dns.rdatatype.NS, nameserver, options)
         output_parts.append(format_trace_response(root_response, nameserver, elapsed_ms, options, include_additional=False))
-    except Exception:
-        pass
+    except Exception as e:
+        output_parts.append(f"; Root priming failed: {type(e).__name__}: {e}")
 
     for step in range(TRACE_MAX_STEPS):
-        server = choice(current_servers)
-
-        response, elapsed_ms = await trace_query(qname, rdtype, server, options)
-
+        response, elapsed_ms, server = await try_trace_servers(qname, rdtype, current_servers, options)
         output_parts.append(format_trace_response(response, server, elapsed_ms, options))
 
         if response.answer or response.rcode() != dns.rcode.NOERROR:
@@ -219,29 +179,38 @@ async def trace_lookup(domain, nameserver, rdtype, record_type, user_query, opti
     
     return "\n\n".join(output_parts)
 
-async def get_root_priming_response(nameserver, options):
-    query = make_query(qname='.', rdtype=dns.rdatatype.NS, use_edns=0, payload=1232, want_dnssec=options["use_dnssec"])
+async def try_trace_servers(qname, rdtype, servers, options):
+    candidates = servers[:]
+    shuffle(candidates)
+    last_error = None
 
-    start = perf_counter()
-    response = await send_dns_query(query, nameserver, options)
-    elapsed_ms = round((perf_counter() - start) * 1000)
+    for server in candidates:
+        try:
+            return *await trace_query(qname, rdtype, server, options), server
+        except Exception as e:
+            last_error = e
 
-    return response, elapsed_ms
+    if last_error:
+        raise last_error
+
+    raise RunTimeError("No trace servers available")
 
 async def trace_query(qname, rdtype, server, options):
-    query = make_query(qname=qname, rdtype=rdtype, use_edns=0, payload=1232, want_dnssec=options["use_dnssec"])
-    query.flags &= ~dns.flags.RD
+    query = make_dig_query(qname, rdtype, options, payload=1232)
     
+    return await send_timed_dns_query(query, server, options)
+
+async def send_dns_query(query, server, options, timeout=5):
+    query_func = tcp if options.use_tcp else udp
+
+    return await to_thread(query_func, query, server, timeout=timeout, port=options.port)
+
+async def send_timed_dns_query(query, server, options, timeout=5):
     start = perf_counter()
-    response = await send_dns_query(query, server, options)
+    response = await send_dns_query(query, server, options, timeout=timeout)
     elapsed_ms = round((perf_counter() - start) * 1000)
 
     return response, elapsed_ms
-
-async def send_dns_query(query, server, options, *, timeout=5):
-    query_func = tcp if options["use_tcp"] else udp
-
-    return await to_thread(query_func, query, server, timeout=timeout, port=options["port"])
 
 def format_rrset_lines(rrset):
     name = rrset.name.to_text()
@@ -274,7 +243,7 @@ async def resolve_nameserver_addresses(ns_names, nameserver, options):
 
     for ns_name in ns_names:
         try:
-            query = make_query(qname=ns_name, rdtype=rdtype, use_edns=0, payload=1232, want_dnssec=options["use_dnssec"])
+            query = make_dig_query(ns_name, rdtype, options, payload=1232, use_recursion=True)
             response = await send_dns_query(query, nameserver, options)
 
             for rrset in response.answer:
@@ -303,16 +272,9 @@ def format_trace_response(response, server, elapsed_ms, options, include_additio
         status = dns.rcode.to_text(response.rcode())
         lines.append(f";; status: {status}")
 
-    lines.append(f";; Received {len(response.to_wire())} bytes from {server}#{options['port']}({server}) in {elapsed_ms} ms")
+    lines.append(f";; Received {len(response.to_wire())} bytes from {server}#{options.port}({server}) in {elapsed_ms} ms")
 
     return "\n".join(lines)
-
-def format_rrset_lines(rrset):
-    name = rrset.name.to_text()
-    rdclass = dns.rdataclass.to_text(rrset.rdclass)
-    rdtype = dns.rdatatype.to_text(rrset.rdtype)
-
-    return [f"{name:<{NAME_WIDTH}} {rrset.ttl:<{DATA_WIDTH}} {rdclass:<{DATA_WIDTH}} {rdtype:<{DATA_WIDTH}} {i.to_text()}" for i in rrset]
 
 def get_reverse_lookup_name(address):
     try:
@@ -334,7 +296,7 @@ def format_short_answer(response):
 def get_cmd_header(user_query, options, default_nameserver_used):
     parts = []
 
-    if options["show_cmd"]:
+    if options.show_cmd:
         parts.append(f"{HEADER_LINE}{user_query}")
 
         if not default_nameserver_used:
@@ -352,7 +314,7 @@ def build_dig_output(*, user_query, default_nameserver_used, query, response, se
     answer_count = section_rr_count(response.answer)
     authority_count = section_rr_count(response.authority)
     additional_count = section_rr_count(response.additional) + (1 if response.opt else 0)
-    when = datetime.now().strftime("%a %b %d %H:%M:%S %Z %Y")
+    when = datetime.now().astimezone().strftime("%a %b %d %H:%M:%S %Z %Y")
     msg_size = len(response.to_wire())
 
     parts = []
@@ -360,7 +322,7 @@ def build_dig_output(*, user_query, default_nameserver_used, query, response, se
     if cmd_header := get_cmd_header(user_query, options, default_nameserver_used):
         parts.append(cmd_header)
 
-    if options["show_comments"]:
+    if options.show_comments:
         parts.extend(
             [
                 ";; Got answer:",
@@ -376,48 +338,48 @@ def build_dig_output(*, user_query, default_nameserver_used, query, response, se
             ]
         )
 
-    if (opt_section := format_opt_pseudosection(response)) and options["show_comments"]:
+    if (opt_section := format_opt_pseudosection(response)) and options.show_comments:
         parts.append(opt_section)
 
-    if options["show_question"]:
-        parts.append(format_question_section(response, options["show_comments"]))
+    if options.show_question:
+        parts.append(format_question_section(response, options.show_comments))
         
-        if options["show_comments"]:
+        if options.show_comments:
             parts.append('')
 
-    if options["show_answer"] and \
-       (answer_section := format_rrset_section("ANSWER", response.answer, options["show_comments"])):
+    if options.show_answer and \
+       (answer_section := format_rrset_section("ANSWER", response.answer, options.show_comments)):
         
         parts.append(answer_section)
         
-        if options["show_comments"]:
+        if options.show_comments:
             parts.append('')
 
-    if options["show_authority"] and \
-       (authority_section := format_rrset_section("AUTHORITY", response.authority, options["show_comments"])):
+    if options.show_authority and \
+       (authority_section := format_rrset_section("AUTHORITY", response.authority, options.show_comments)):
         
         parts.append(authority_section)
         
-        if options["show_comments"]:
+        if options.show_comments:
             parts.append('')
 
     filtered_additional = [i for i in response.additional if i.rdtype != dns.rdatatype.OPT]
 
-    if options["show_additional"] and \
-       (additional_section := format_rrset_section("ADDITIONAL", filtered_additional, options["show_comments"])):
+    if options.show_additional and \
+       (additional_section := format_rrset_section("ADDITIONAL", filtered_additional, options.show_comments)):
         
         parts.append(additional_section)
         
-        if options["show_comments"]:
+        if options.show_comments:
             parts.append('')
 
-    if options["show_stats"]:
-        transport = "TCP" if options["use_tcp"] else "UDP"
+    if options.show_stats:
+        transport = "TCP" if options.use_tcp else "UDP"
 
         parts.extend(
             [
                 f";; Query time: {elapsed_ms} msec",
-                f";; SERVER: {server}#{options['port']}({server}) ({transport})",
+                f";; SERVER: {server}#{options.port}({server}) ({transport})",
                 f";; WHEN: {when}",
                 f";; MSG SIZE  rcvd: {msg_size}"
             ]
@@ -467,3 +429,92 @@ def format_rrset_section(title, section, show_comments):
         lines.extend(f"{name:<{NAME_WIDTH}} {rrset.ttl:<{DATA_WIDTH}} {rdclass:<{DATA_WIDTH}} {rdtype:<{DATA_WIDTH}} {i.to_text()}" for i in rrset)
 
     return '\n'.join(lines)
+
+
+@dataclass
+class DigOptions:
+    port: int = DEFAULT_PORT
+    show_cmd: bool = True
+    show_comments: bool = True
+    show_question: bool = True
+    show_answer: bool = True
+    show_authority: bool = True
+    show_additional: bool = True
+    show_stats: bool = True
+    use_aaonly: bool = False
+    use_adflag: bool = False
+    use_cdflag: bool = False
+    use_dnssec: bool = False
+    use_recursion: bool = True
+    use_tcp: bool = False
+    error_status: bool = False
+    error_message: str = ''
+
+    def set_flags(self, flags):
+        if "noall" in flags:
+            self.show_cmd = False
+            self.show_comments = False
+            self.show_question = False
+            self.show_answer = False
+            self.show_authority = False
+            self.show_additional = False
+            self.show_stats = False
+        if "cmd" in flags:
+            self.show_cmd = True
+        if "nocmd" in flags:
+            self.show_cmd = False
+        if "comments" in flags:
+            self.show_comments = True
+        if "nocomments" in flags:
+            self.show_comments = False
+        if "question" in flags:
+            self.show_question = True
+        if "noquestion" in flags:
+            self.show_question = False
+        if "answer" in flags:
+            self.show_answer = True
+        if "noanswer" in flags:
+            self.show_answer = False
+        if "authority" in flags:
+            self.show_authority = True
+        if "noauthority" in flags:
+            self.show_authority = False
+        if "additional" in flags:
+            self.show_additional = True
+        if "noadditional" in flags:
+            self.show_additional = False
+        if "stats" in flags:
+            self.show_stats = True
+        if "nostats" in flags:
+            self.show_stats = False
+        if "tcp" in flags:
+            self.use_tcp = True
+        if any(i in flags for i in ["trace", "dnssec", "do"]):
+            self.use_dnssec = True
+        if "nodnssec" in flags or "nodo" in flags:
+            self.use_dnssec = False
+        if "recurse" in flags:
+            self.use_recursion = True
+        if "norecurse" in flags:
+            self.use_recursion = False
+        if "aaonly" in flags:
+            self.use_aaonly = True
+        if "noaaonly" in flags:
+            self.use_aaonly = False
+        if "adflag" in flags:
+            self.use_adflag = True
+        if "noadflag" in flags:
+            self.use_adflag = False
+        if "cdflag" in flags:
+            self.use_cdflag = True
+        if "nocdflag" in flags:
+            self.use_cdflag = False
+        if "p" in flags:
+            try:
+                self.port = int(flags["p"])
+
+                if not 0 < self.port < 65535:
+                    raise ValueError
+            except ValueError:
+                self.error_status = True
+                self.error_message = "Bad argument given for Port. Please use a valid integer in the range [0, 65535]."

@@ -36,6 +36,51 @@ class Terminal(Cog):
                            "Please use `$help cat` for more information.")
             error.handled = True
 
+    @hybrid_command(help="Perform a DNS lookup on a given address.\n"
+                    "Example: `$dig verticalbar.org`\n"
+                    "You can specify which nameserver to use by denoting it as an argument with a leading `@` symbol.\n"
+                    "Example: `$dig @8.8.8.8 verticalbar.org`\n"
+                    "By default this command queries for `A` records. "
+                    "To query for different record types include the record type as an argument.\n"
+                    "Example: `$dig verticalbar.org MX`",
+                    brief="Perform a DNS lookup")
+    async def dig(self, ctx, *, query):
+        await dig(ctx, query)
+
+    @dig.error
+    async def dig_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include a domain name to lookup.\n"
+                           "Exampe: `$dig gnu.org`\n\n"
+                           "Please use `$help dig` for more usage information on this command.")
+            error.handled = True
+
+    @hybrid_command(help="Echoes a given string within your current text channel.\n"
+                    "Example: `/echo Repeat this back to me`\n\n"
+                    "This command has the following flags:\n"
+                    "* **-c**: Echoes the message in a different given channel\n"
+                    "\tExample: `$echo -c #general Repeat this in the general channel`",
+                    brief="Echoes a message.")
+    async def echo(self, ctx, *, message: str):
+        flags, message = get_flags(message, join=True, make_dic=True)
+
+        if 'c' in flags:
+            if (channel_id := get_id_from_mention(flags['c'])) is None:
+                return await ctx.send("Invalid channel. Please send channel in the format: #channel\n"
+                                      "Please use `$help echo` for more information.")
+            if is_slash_command(ctx):
+                await ctx.send(f"Echoing your message in {flags['c']}", ephemeral=True)
+
+            return await self.bot.get_channel(int(channel_id)).send(message)
+
+        await ctx.send(message)
+
+    @echo.error
+    async def echo_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include a message to echo with this command.\nPlease use `$help echo` for more information.")
+            error.handled = True
+
     @hybrid_command(help="Return lines from a file that match a given pattern string\n"
                          "Example: `grep parody_bands Von`",
                     brief="Search a file")
