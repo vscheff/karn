@@ -8,7 +8,6 @@ import qrcode
 from random import choice
 
 from src.calculator import calculator, CONST, FUNCS
-from src.dig import dig
 from src.tips import TIP_LIST
 from src.utils import TEMP_DIR
 from src.utils import get_flags, get_id_from_mention, is_slash_command, package_message

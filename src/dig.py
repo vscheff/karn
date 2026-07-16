@@ -44,40 +44,7 @@ ROOT_SERVERS = [
 ]
 
 async def dig(ctx, user_query):
-    flags, args = get_flags(user_query, make_dic=True, no_args=['x'], plus_args=True)
-
-    if not args:
-        await ctx.send("You must include a domain name to lookup. Use `$help dig` for more information.")
-        return
-
-    arg = args.pop(0)
-
-    if default_nameserver_used := not arg[0] == '@':
-        nameserver = DEFAULT_NAMESERVER
-        domain = arg
-    else:   
-        if not args:
-            await ctx.send("You must include a domain name to lookup. Use `$help dig` for more information.")
-            return
-
-        nameserver = arg[1:]
-        domain = args.pop(0)
-
-    if reverse_lookup := 'x' in flags:
-        try:
-            domain = get_reverse_lookup_name(domain)
-        except ValueError as e:
-            await ctx.send(str(e))
-            return
-
-    record_type = args.pop(0).upper() if args else REVERSE_RECORD_TYPE if reverse_lookup else DEFAULT_RECORD_TYPE
-
-    if record_type not in VALID_RECORD_TYPES:
-        await ctx.send(f"Unsupported record type `{record_type}`.\nSupported types include: `{', '.join(sorted(VALID_RECORD_TYPES))}`.")
-        return
-    
-    options = DigOptions()
-    options.set_flags(flags)
+    options = DigOptions(user_query)
 
     if options.error_status:
         await ctx.send(options.error_message)
@@ -86,34 +53,20 @@ async def dig(ctx, user_query):
     await ctx.defer()
 
     try:
-        rdtype = dns.rdatatype.from_text(record_type)
-        
-        if "trace" in flags:
-            output = await trace_lookup(domain, nameserver, rdtype, user_query, options, default_nameserver_used)
+        if options.trace:
+            output = await trace_lookup(options)
         else:
-            query = make_dig_query(domain, rdtype, options)
-            response, elapsed_ms = await send_timed_dns_query(query, nameserver, options)
+            query = make_dig_query(options.domain, options.rdtype, options)
+            response, elapsed_ms = await send_timed_dns_query(query, options.nameserver, options)
             
-            if response.rcode() == dns.rcode.NXDOMAIN:
-                await ctx.send(f"`{domain}` does not exist.")
-                return
-
-            if "short" in flags:
+            if options.short:
                 output = format_short_answer(response)
             else:
-                output = build_dig_output(
-                        user_query=user_query,
-                        default_nameserver_used=default_nameserver_used,
-                        query=query,
-                        response=response,
-                        server=nameserver,
-                        elapsed_ms=elapsed_ms,
-                        options=options
-                )
+                output = build_dig_output(response, elapsed_ms, options)
     except Timeout:
-        await ctx.send(f"DNS lookup timed out for `{domain}`.")
+        await ctx.send(f"DNS lookup timed out for `{options.domain}`.")
     except ValueError as e:
-        await ctx.send(f"`{nameserver}` is not a valid DNS server address. Use an IPv4 or IPv6 address like `1.1.1.1` or `8.8.8.8`.")
+        await ctx.send(f"`{options.nameserver}` is not a valid DNS server address. Use an IPv4 or IPv6 address like `1.1.1.1` or `8.8.8.8`.")
     except Exception as e:
         await ctx.send(f"DNS lookup failed: `{type(e).__name__}: {e}`")
     else:
@@ -141,22 +94,22 @@ def make_dig_query(qname, rdtype, options, payload=512, use_recursion=None):
 
     return query
 
-async def trace_lookup(domain, nameserver, rdtype, user_query, options, default_nameserver_used):
-    qname = dns.name.from_text(domain)
+async def trace_lookup(options):
+    qname = dns.name.from_text(options.domain)
     current_servers = ROOT_SERVERS[:]
     output_parts = []
     
-    if cmd_header := get_cmd_header(user_query, options, default_nameserver_used):
+    if cmd_header := get_cmd_header(options):
         output_parts.append(cmd_header)
 
     try:
-        root_response, elapsed_ms = await trace_query('.', dns.rdatatype.NS, nameserver, options)
-        output_parts.append(format_trace_response(root_response, nameserver, elapsed_ms, options, include_additional=False))
+        root_response, elapsed_ms = await get_root_priming_response(options)
+        output_parts.append(format_trace_response(root_response, options.nameserver, elapsed_ms, options, include_additional=False))
     except Exception as e:
         output_parts.append(f"; Root priming failed: {type(e).__name__}: {e}")
 
     for step in range(TRACE_MAX_STEPS):
-        response, elapsed_ms, server = await try_trace_servers(qname, rdtype, current_servers, options)
+        response, elapsed_ms, server = await try_trace_servers(qname, current_servers, options)
         output_parts.append(format_trace_response(response, server, elapsed_ms, options))
 
         if response.answer or response.rcode() != dns.rcode.NOERROR:
@@ -168,7 +121,7 @@ async def trace_lookup(domain, nameserver, rdtype, user_query, options, default_
             return "\n\n".join(output_parts)
 
         if not (next_servers := get_glue_addresses(response)):
-            if not (next_servers := await resolve_nameserver_addresses(ns_names, nameserver, options)):
+            if not (next_servers := await resolve_nameserver_addresses(ns_names, options)):
                     output_parts.append("; Trace stopped: could not resolve next nameserver addresses.")
                     
                     return "\n\n".join(output_parts)
@@ -179,24 +132,30 @@ async def trace_lookup(domain, nameserver, rdtype, user_query, options, default_
     
     return "\n\n".join(output_parts)
 
-async def try_trace_servers(qname, rdtype, servers, options):
+async def try_trace_servers(qname, servers, options):
     candidates = servers[:]
     shuffle(candidates)
     last_error = None
 
     for server in candidates:
         try:
-            return *await trace_query(qname, rdtype, server, options), server
+            response, elapsed_ms = await trace_query(qname, options.rdtype, server, options)
+            return response, elapsed_ms, server
         except Exception as e:
             last_error = e
 
     if last_error:
         raise last_error
 
-    raise RunTimeError("No trace servers available")
+    raise RuntimeError("No trace servers available")
+
+async def get_root_priming_response(options):
+    query = make_dig_query('.', dns.rdatatype.NS, options, payload=1232, use_recursion=True)
+
+    return await send_timed_dns_query(query, options.nameserver, options)
 
 async def trace_query(qname, rdtype, server, options):
-    query = make_dig_query(qname, rdtype, options, payload=1232)
+    query = make_dig_query(qname, rdtype, options, payload=1232, use_recursion=False)
     
     return await send_timed_dns_query(query, server, options)
 
@@ -237,20 +196,20 @@ def get_glue_addresses(response):
 
     return addresses
 
-async def resolve_nameserver_addresses(ns_names, nameserver, options):
+async def resolve_nameserver_addresses(ns_names, options):
     addresses = []
     rdtype = dns.rdatatype.from_text("A")
 
     for ns_name in ns_names:
         try:
             query = make_dig_query(ns_name, rdtype, options, payload=1232, use_recursion=True)
-            response = await send_dns_query(query, nameserver, options)
+            response = await send_dns_query(query, options.nameserver, options)
 
             for rrset in response.answer:
                 if rrset.rdtype == dns.rdatatype.A:
                     addresses.extend(i.address for i in rrset)
-        except Exception:
-            continue
+        except Exception as e:
+            print(f"Nameserver resolution failed\n{ns_name}: {type(e).__name__}: {e}")
 
     return addresses
 
@@ -293,20 +252,20 @@ def format_short_answer(response):
 
     return '\n'.join(lines) or "No Answer"
 
-def get_cmd_header(user_query, options, default_nameserver_used):
+def get_cmd_header(options):
     parts = []
 
     if options.show_cmd:
-        parts.append(f"{HEADER_LINE}{user_query}")
+        parts.append(f"{HEADER_LINE}{options.user_query}")
 
-        if not default_nameserver_used:
+        if not options.default_nameserver_used:
             parts.append("; (1 server found)")
 
         parts.append(";; global options: +cmd")
 
     return '\n'.join(parts)
 
-def build_dig_output(*, user_query, default_nameserver_used, query, response, server, elapsed_ms, options):
+def build_dig_output(response, elapsed_ms, options):
     opcode = dns.opcode.to_text(response.opcode())
     status = dns.rcode.to_text(response.rcode())
     flags = format_flags(response.flags)
@@ -319,7 +278,7 @@ def build_dig_output(*, user_query, default_nameserver_used, query, response, se
 
     parts = []
 
-    if cmd_header := get_cmd_header(user_query, options, default_nameserver_used):
+    if cmd_header := get_cmd_header(options):
         parts.append(cmd_header)
 
     if options.show_comments:
@@ -379,7 +338,7 @@ def build_dig_output(*, user_query, default_nameserver_used, query, response, se
         parts.extend(
             [
                 f";; Query time: {elapsed_ms} msec",
-                f";; SERVER: {server}#{options.port}({server}) ({transport})",
+                f";; SERVER: {options.nameserver}#{options.port}({options.nameserver}) ({transport})",
                 f";; WHEN: {when}",
                 f";; MSG SIZE  rcvd: {msg_size}"
             ]
@@ -433,7 +392,18 @@ def format_rrset_section(title, section, show_comments):
 
 @dataclass
 class DigOptions:
+    user_query: str
+    error_status: bool = False
+    error_message: str = ''
+    
+    default_nameserver_used: bool = True
+    nameserver: str = DEFAULT_NAMESERVER
+    domain: str = ''
+    rdtype: dns.rdatatype.RdataType | None = None
     port: int = DEFAULT_PORT
+    reverse_lookup: bool = False
+    
+    short: bool = False
     show_cmd: bool = True
     show_comments: bool = True
     show_question: bool = True
@@ -441,16 +411,82 @@ class DigOptions:
     show_authority: bool = True
     show_additional: bool = True
     show_stats: bool = True
+    trace: bool = False
     use_aaonly: bool = False
     use_adflag: bool = False
     use_cdflag: bool = False
     use_dnssec: bool = False
     use_recursion: bool = True
     use_tcp: bool = False
-    error_status: bool = False
-    error_message: str = ''
+
+    def __post_init__(self):
+        self.parse_query()
+
+    def parse_query(self):
+        flags, args = get_flags(self.user_query, make_dic=True, no_args=['x'], plus_args=True)
+
+        if not args:
+            self.error_status = True
+            self.error_message = "You must include a domain name to lookup. Use `$help dig` for more information."
+            return
+
+        arg = args.pop(0)
+        self.default_nameserver_used = not arg[0] == '@'
+
+        if self.default_nameserver_used:
+            self.domain = arg
+        else:   
+            if not args:
+                self.error_status = True
+                self.error_message = "You must include a domain name to lookup. Use `$help dig` for more information."
+                return
+
+            self.nameserver = arg[1:]
+            self.domain = args.pop(0)
+
+        self.set_flags(flags)
+
+        if self.error_status:
+            return
+
+        record_type = args.pop(0).upper() if args else REVERSE_RECORD_TYPE if self.reverse_lookup else DEFAULT_RECORD_TYPE
+
+        if record_type not in VALID_RECORD_TYPES:
+            self.error_status = True
+            self.error_message = f"Unsupported record type `{record_type}`.\nSupported types include: `{', '.join(sorted(VALID_RECORD_TYPES))}`."
+            return
+
+        self.rdtype = dns.rdatatype.from_text(record_type)
 
     def set_flags(self, flags):
+        if 'p' in flags:
+            try:
+                self.port = int(flags['p'])
+
+                if not 0 < self.port < 65535:
+                    raise ValueError
+            except ValueError:
+                self.error_status = True
+                self.error_message = "Bad argument given for Port. Please use a valid integer in the range [0, 65535]."
+       
+        self.reverse_lookup = 'x' in flags
+
+        if self.reverse_lookup:
+            try:
+                self.domain = get_reverse_lookup_name(self.domain)
+            except ValueError as e:
+                self.error_status = True
+                self.error_message = str(e)
+                return
+
+        if "all" in flags:
+            self.show_cmd = True
+            self.show_comments = True
+            self.show_question = True
+            self.show_answer = True
+            self.show_authority = True
+            self.show_additional = True
+            self.show_stats = True
         if "noall" in flags:
             self.show_cmd = False
             self.show_comments = False
@@ -459,18 +495,19 @@ class DigOptions:
             self.show_authority = False
             self.show_additional = False
             self.show_stats = False
-        if "cmd" in flags:
-            self.show_cmd = True
-        if "nocmd" in flags:
-            self.show_cmd = False
-        if "comments" in flags:
-            self.show_comments = True
-        if "nocomments" in flags:
-            self.show_comments = False
-        if "question" in flags:
-            self.show_question = True
-        if "noquestion" in flags:
-            self.show_question = False
+        
+        if "aaonly" in flags or "aaflag" in flags:
+            self.use_aaonly = True
+        if "noaaonly" in flags or "noaaflag" in flags:
+            self.use_aaonly = False
+        if "additional" in flags:
+            self.show_additional = True
+        if "noadditional" in flags:
+            self.show_additional = False
+        if "adflag" in flags:
+            self.use_adflag = True
+        if "noadflag" in flags:
+            self.use_adflag = False
         if "answer" in flags:
             self.show_answer = True
         if "noanswer" in flags:
@@ -479,42 +516,43 @@ class DigOptions:
             self.show_authority = True
         if "noauthority" in flags:
             self.show_authority = False
-        if "additional" in flags:
-            self.show_additional = True
-        if "noadditional" in flags:
-            self.show_additional = False
+        if "cdflag" in flags or "cd" in flags:
+            self.use_cdflag = True
+        if "nocdflag" in flags:
+            self.use_cdflag = False
+        if "cmd" in flags:
+            self.show_cmd = True
+        if "nocmd" in flags:
+            self.show_cmd = False
+        if "comments" in flags:
+            self.show_comments = True
+        if "nocomments" in flags:
+            self.show_comments = False
+        if "trace" in flags:
+            self.trace = True
+        if "notrace" in flags:
+            self.trace = False
+        if any(i in flags for i in ["trace", "dnssec", "do"]):
+            self.use_dnssec = True
+        if "nodnssec" in flags or "nodo" in flags:
+            self.use_dnssec = False
+        if "question" in flags:
+            self.show_question = True
+        if "noquestion" in flags:
+            self.show_question = False
+        if "recurse" in flags:
+            self.use_recursion = True
+        if "norecurse" in flags or "trace" in flags:
+            self.use_recursion = False
+        if "short" in flags:
+            self.short = True
+        if "noshort" in flags:
+            self.short = False
         if "stats" in flags:
             self.show_stats = True
         if "nostats" in flags:
             self.show_stats = False
         if "tcp" in flags:
             self.use_tcp = True
-        if any(i in flags for i in ["trace", "dnssec", "do"]):
-            self.use_dnssec = True
-        if "nodnssec" in flags or "nodo" in flags:
-            self.use_dnssec = False
-        if "recurse" in flags:
-            self.use_recursion = True
-        if "norecurse" in flags:
-            self.use_recursion = False
-        if "aaonly" in flags:
-            self.use_aaonly = True
-        if "noaaonly" in flags:
-            self.use_aaonly = False
-        if "adflag" in flags:
-            self.use_adflag = True
-        if "noadflag" in flags:
-            self.use_adflag = False
-        if "cdflag" in flags:
-            self.use_cdflag = True
-        if "nocdflag" in flags:
-            self.use_cdflag = False
-        if "p" in flags:
-            try:
-                self.port = int(flags["p"])
-
-                if not 0 < self.port < 65535:
-                    raise ValueError
-            except ValueError:
-                self.error_status = True
-                self.error_message = "Bad argument given for Port. Please use a valid integer in the range [0, 65535]."
+        if "notcp" in flags:
+            self.use_tcp = False

@@ -3,7 +3,9 @@ from os import listdir, remove
 from random import choice
 from re import search, sub
 
+from src.dig import dig
 from src.global_vars import FILE_ROOT_DIR, SEND_LINE_CHAR
+import src.help_messages as hlp
 from src.utils import get_flags, package_message, send_tts_if_in_vc
 
 
@@ -36,13 +38,7 @@ class Terminal(Cog):
                            "Please use `$help cat` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Perform a DNS lookup on a given address.\n"
-                    "Example: `$dig verticalbar.org`\n"
-                    "You can specify which nameserver to use by denoting it as an argument with a leading `@` symbol.\n"
-                    "Example: `$dig @8.8.8.8 verticalbar.org`\n"
-                    "By default this command queries for `A` records. "
-                    "To query for different record types include the record type as an argument.\n"
-                    "Example: `$dig verticalbar.org MX`",
+    @hybrid_command(help=hlp.DIG_FULL,
                     brief="Perform a DNS lookup")
     async def dig(self, ctx, *, query):
         await dig(ctx, query)

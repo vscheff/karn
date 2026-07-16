@@ -60,7 +60,7 @@ class CustomHelpCommand(HelpCommand):
     async def send_command_help(self, cmd):
         if cmd.hidden:
             return
-        await self.get_destination().send(f"# {cmd.name}\n{cmd.help}")
+        await package_message(f"# {cmd.name}\n{cmd.help}", self.get_destination(), multi_send=True)
 
     async def command_not_found(self, name):
         for cmd in self.context.bot.tree.get_commands():

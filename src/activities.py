@@ -87,4 +87,5 @@ activities = [
         "Moving like Dracula",
         "Continuing to be Him",
         "Blowing the Lord's bubbles",
+        "Arguing with Marvin",
 ]
