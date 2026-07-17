@@ -13,8 +13,7 @@ DEFAULT_LINE_COUNT = 10
 
 class Terminal(Cog):
 
-    @hybrid_command(help="Returns the entire contents of a given text file\n"
-                         "Example: `cat parody_bands`",
+    @hybrid_command(help=hlp.CAT_FULL,
                     brief="Read from a file")
     async def cat(self, ctx, filename: str):
         if search(r"\W", filename):
@@ -51,11 +50,7 @@ class Terminal(Cog):
                            "Please use `$help dig` for more usage information on this command.")
             error.handled = True
 
-    @hybrid_command(help="Echoes a given string within your current text channel.\n"
-                    "Example: `/echo Repeat this back to me`\n\n"
-                    "This command has the following flags:\n"
-                    "* **-c**: Echoes the message in a different given channel\n"
-                    "\tExample: `$echo -c #general Repeat this in the general channel`",
+    @hybrid_command(help=hlp.ECHO_FULL,
                     brief="Echoes a message.")
     async def echo(self, ctx, *, message: str):
         flags, message = get_flags(message, join=True, make_dic=True)
@@ -77,8 +72,7 @@ class Terminal(Cog):
             await ctx.send("You must include a message to echo with this command.\nPlease use `$help echo` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Return lines from a file that match a given pattern string\n"
-                         "Example: `grep parody_bands Von`",
+    @hybrid_command(help=hlp.GREP_FULL,
                     brief="Search a file")
     async def grep(self, ctx, filename: str, *, pattern: str):
         if search(r"\W", filename):
@@ -105,22 +99,12 @@ class Terminal(Cog):
                            "Please use `$help grep` for more information.")
             error.handled = True
 
-    @hybrid_command(help=f"Returns the first {DEFAULT_LINE_COUNT} lines of a given file.\n"
-                         f"Example: `$head fleshsim`\n"
-                         f"You can include multiple filenames with this command"
-                         f"This command has the following flags\n"
-                         f"* **-c**: Specifies the number of lines to return\n"
-                         f"\tExample: `$head -c 5 johnny`",
+    @hybrid_command(help=hlp.HEAD_FULL.format(line_count=DEFAULT_LINE_COUNT),
                     brief=f"Returns the first {DEFAULT_LINE_COUNT} lines of a given file.")
     async def head(self, ctx, *, filename: str):
         await self.get_lines(ctx, filename, reverse=False)
 
-    @hybrid_command(help=f"Returns the last {DEFAULT_LINE_COUNT} lines of a given file.\n"
-                         f"Example: `$tail silverhand`\n"
-                         f"You can include multiple filenames with this command"
-                         f"This command has the following flags\n"
-                         f"* **-c**: Specifies the number of lines to return\n"
-                         f"\tExample: `$tail -c 5 dracula`",
+    @hybrid_command(help=hlp.TAIL_FULL.format(line_count=DEFAULT_LINE_COUNT),
                     brief=f"Returns the last {DEFAULT_LINE_COUNT} lines of a given file.")
     async def tail(self, ctx, *, filename: str):
         await self.get_lines(ctx, filename, reverse=True)
@@ -152,7 +136,7 @@ class Terminal(Cog):
         
         await package_message(''.join(response), ctx)
 
-    @hybrid_command(help="Lists the text files currently present in the directory",
+    @hybrid_command(help=hlp.LS_FULL,
                     brief="Lists present text files")
     async def ls(self, ctx):
         file_names = sorted(listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"))
@@ -163,7 +147,7 @@ class Terminal(Cog):
 
         await ctx.send(f"```\n{files}\n```")
 
-    @hybrid_command(help="Removes a text file from the directory",
+    @hybrid_command(help=hlp.RM_FULL,
                     brief="Remove a text file")
     async def rm(self, ctx, filename: str):
         filename = filename.lower()
@@ -183,8 +167,7 @@ class Terminal(Cog):
                            "Please use `$help grep` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Writes user input into a given text file\n"
-                         "Example: `tee parody_bands Jon Von Jovi`",
+    @hybrid_command(help=hlp.TEE_FULL,
                     brief="Write to a file")
     async def tee(self, ctx, filename: str, *, data: str):
         if search(r"\W", filename):
@@ -205,17 +188,7 @@ class Terminal(Cog):
                            "Please use `$help tee` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Returns the line count, word count, and character count for a given file. "
-                         "Multiple files can be specified in the same command.\n\n"
-                         "This command has the following flags:\n"
-                         "* **-c**: Return the number of bytes in the file\n"
-                         "\tExample: `$wc -c dracula`\n"
-                         "* **-l**: Return the line count for the file\n"
-                         "\tExample: `$wc -l johnny`\n"
-                         "* **-m**: Return the character count for the file\n"
-                         "\tExample: `$wc -m silverhand`\n"
-                         "* **-w**: Return the word count for the file\n"
-                         "\tExample: `$wc -w jules`",
+    @hybrid_command(help=hlp.WC_FULL,
                     brief="Returns various counts for a file")
     async def wc(self, ctx, *, args: str):
         flags, files = get_flags(args)

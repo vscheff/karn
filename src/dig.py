@@ -16,7 +16,7 @@ from time import perf_counter
 
 from src.utils import get_flags, package_message
 
-HEADER_LINE = "; <<>> DiG-ish Karn Edition <<>> "
+HEADER_LINE = "; <<>> Domain information Groper (Karn Style) <<>> "
 VALID_RECORD_TYPES = {"A", "AAAA", "ANY", "CAA", "CNAME", "DNSKEY", "DS", "MX", "NAPTR", "NS", "PTR", "SOA", "SRV", "TXT", "TLSA", "URI"}
 DEFAULT_RECORD_TYPE = "A"
 REVERSE_RECORD_TYPE = "PTR"
@@ -209,7 +209,7 @@ async def resolve_nameserver_addresses(ns_names, options):
                 if rrset.rdtype == dns.rdatatype.A:
                     addresses.extend(i.address for i in rrset)
         except Exception as e:
-            print(f"Nameserver resolution failed\n{ns_name}: {type(e).__name__}: {e}")
+            print(f"Nameserver resolution failed for {ns_name}: {type(e).__name__}: {e}")
 
     return addresses
 
@@ -272,7 +272,8 @@ def build_dig_output(response, elapsed_ms, options):
     query_count = len(response.question)
     answer_count = section_rr_count(response.answer)
     authority_count = section_rr_count(response.authority)
-    additional_count = section_rr_count(response.additional) + (1 if response.opt else 0)
+    additional_rrs = [i for i in response.additional if rrset.rdtype != dns.rdatatype.OPT]
+    additional_count = section_rr_count(additional_rrs) + (1 if response.opt else 0)
     when = datetime.now().astimezone().strftime("%a %b %d %H:%M:%S %Z %Y")
     msg_size = len(response.to_wire())
 
@@ -322,10 +323,8 @@ def build_dig_output(response, elapsed_ms, options):
         if options.show_comments:
             parts.append('')
 
-    filtered_additional = [i for i in response.additional if i.rdtype != dns.rdatatype.OPT]
-
     if options.show_additional and \
-       (additional_section := format_rrset_section("ADDITIONAL", filtered_additional, options.show_comments)):
+       (additional_section := format_rrset_section("ADDITIONAL", additional_rrs, options.show_comments)):
         
         parts.append(additional_section)
         
@@ -542,7 +541,7 @@ class DigOptions:
             self.show_question = False
         if "recurse" in flags:
             self.use_recursion = True
-        if "norecurse" in flags or "trace" in flags:
+        if "norecurse" in flags or self.trace:
             self.use_recursion = False
         if "short" in flags:
             self.short = True

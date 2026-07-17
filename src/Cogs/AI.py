@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 # Local dependencies
 from src.Cogs.Query import get_weather
 from src.global_vars import FILE_ROOT_DIR
+import src.help_messages as hlp
 from src.utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES,             \
                       get_cursor, get_flags, get_id_from_mention, get_json_from_socket, get_readme,         \
                       is_slash_command, package_message, send_tts_if_in_vc, smart_typing, text_to_speech
@@ -139,17 +140,7 @@ class AI(Cog):
         ctx.message = message
         await self.generate(ctx, query=message.content)
 
-    @hybrid_command(help="Generate an image from a given prompt\n"
-                         "Example: `$generate a presidential election in minecraft`\n"
-                         "Note: By default this command will use AI to \"enhance\" your prompt by adding more detail and context.\n\n"
-                         "This command has the following flags:\n"
-                         "* **-c**: Specify the number of images to generate. Must be in range [1, 8].\n"
-                         "\tExample: `$generate -c 3 two cat scientists discovering a new element`\n"
-                         "* **-p**: Use the raw prompt text for generation without any prompt enhancement.\n"
-                         "\tExample: `$generate -p a hand with seven fingers`\n"
-                         "* **-v**: Response will include the prompt used for generation. "
-                         "If used with the `-p` command flag, this will simply be the query itself.\n"
-                         "\tExample: `$generate -v a white horse`",
+    @hybrid_command(help=hlp.GENERATE_FULL,
                     brief="Generate an image",
                     aliases=["gen"])
     async def generate(self, ctx, *, query: str):
@@ -214,7 +205,7 @@ class AI(Cog):
                            "Please use `$help generate` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Adds the bot to your current voice channel",
+    @hybrid_command(help=hlp.JOIN_FULL,
                     brief="Add bot to your voice channel")
     async def join(self, ctx):
         try:
@@ -240,7 +231,7 @@ class AI(Cog):
             await channel.guild.voice_client.move_to(channel)
 
 
-    @hybrid_command(help="Remove the bot from a voice channel",
+    @hybrid_command(help=hlp.LEAVE_FULL,
                     brief="Remove bot from a voice channel")
     async def leave(self, ctx):
         try:
@@ -261,13 +252,7 @@ class AI(Cog):
             if len(client.channel.members) < 2:
                 await client.disconnect()
 
-    @hybrid_command(help=f"Command the bot to say something in your voice channel.\n"
-                         f"Example: `$say Life is Mizzy`\n\n"
-                         f"This command has the following flags:\n"
-                         f"* **-s**: Specify the playback speed. Must be in range [0.25, 4.0].\n"
-                         f"\tExample: `$say -s 1.33 Say this faster`\n"
-                         f"* **-v**: Specify the voice to use. Supported voices include: {', '.join(SUPPORTED_VOICES)}.\n"
-                         f"\tExample: `$say -v shimmer I sound... different somehow`",
+    @hybrid_command(help=hlp.SAY_FULL.format(voices=', '.join(SUPPORTED_VOICES)),
                     brief="Say something in a voice channel")
     async def say(self, ctx, *, content: str):
         if not ctx.author.voice:
