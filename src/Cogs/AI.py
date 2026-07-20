@@ -326,13 +326,7 @@ class AI(Cog):
     # $prompt command for users to submit prompts to the language model
     # param   args - will contain the prompt to send
     # param author - used by `send_reply()` to forward author name from message
-    @hybrid_command(help="Generates natural language or code from a given prompt.\n"
-                         "Example: `$prompt Tell me story about a man who wanted to be a hockey player, but played golf instead`\n\n"
-                         "This command has the following flags:\n"
-                         "* **-c**: Generate a response using Chat Completions instead of Responses\n"
-                         "\tExample: `$prompt -c What is the answer to Life, the Universe, and Everything?`\n"
-                         "* **-f**: Generate a response in the style of an input file\n"
-                         "\tExample: `$prompt -f dracula`",
+    @hybrid_command(help=hlp.PROMPT_FULL,
                     brief="Generates natural language",
                     aliases=["chat", "promt"])
     async def prompt(self, ctx, *, inp_prompt: str=None):
@@ -585,14 +579,7 @@ class AI(Cog):
         return context, num_tokens
 
     # $set_context command used to set the genesis message of a channel
-    @hybrid_command(help="Set the genesis system context message for this channel. "
-                         "This \"primes\" the bot to behave in a desired manner.\n"
-                         "Example: `$set_context you must answer all prompts in J. R. R. Tolkien's writing style`\n\n"
-                         "This command has the following flags:\n"
-                         "* **-c**: Clears the current system context message and resets it to the default system context message.\n"
-                         "\tExample: `$set_context -c`"
-                         "* **-o**: Overwrite the default genesis message for the bot.\n"
-                         "\tExample: `$set_context -o You are a depressed and bored robot named Marvin the Paranoid Android`",
+    @hybrid_command(help=hlp.SET_CONTEXT_FULL,
                     brief="Set a new genesis message",
                     aliases=["context"])
     async def set_context(self, ctx, *, message: str=None):
@@ -618,9 +605,7 @@ class AI(Cog):
         self.conn.commit()
         cursor.close()
 
-    @hybrid_command(help="Add additional system context messages for this channel. "
-                         "This can help get the bot to behave in a more specific manner."
-                         "Example: `$add_context You always talk about baseball, even if it doesn't fit the conversation.`",
+    @hybrid_command(help=hlp.ADD_CONTEXT_FULL,
                     brief="Add additional system context")
     async def add_context(self, ctx, *, message: str):
         if (token_len := get_token_len({"role": "system", "content": message})) > MAX_INPUT_TOKENS:
@@ -643,7 +628,7 @@ class AI(Cog):
                            "Please use `$help add_context` for more information.")
             error.handled = True
 
-    @hybrid_command(help="View the system context message(s) for this channel.",
+    @hybrid_command(help=hlp.VIEW_CONTEXT_FULL,
                     brief="View system context messages")
     async def view_context(self, ctx):
         cursor = get_cursor(self.conn)
@@ -658,12 +643,7 @@ class AI(Cog):
 
         cursor.close()
 
-    @hybrid_command(help="Toggle whether the bot should respond to your messages without being prompted. "
-                         "The bot will still respond if your message contain its name, or if you use the `$prompt` command.\n\n"
-                         "This command has the following flags:\n"
-                         "* **-c**: Toggle whether the bot should respond to messages in the current channel without being prompted. "
-                         "You can specify a channel other than the current channel by including the channel mention as an argument.\n"
-                         "\tExample: `$ignore -c #general`",
+    @hybrid_command(help=hlp.IGNORE_FULL,
                     brief="Toggle unprompted responses")
     async def ignore(self, ctx, *, args: str=None):
         flags, args = get_flags(args)

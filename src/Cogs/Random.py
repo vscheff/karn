@@ -1,8 +1,9 @@
 # Cog that holds all commands related to RNG
 from discord.ext.commands import Bot, Cog, errors, hybrid_command
 from randfacts import get_fact
-from random import choice, randint, shuffle
+from random import randint, shuffle
 
+import src.help_messages as hlp
 from src.utils import get_flags, package_message
 
 
@@ -14,10 +15,7 @@ class Random(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @hybrid_command(help="Returns a randomly selected fact\n\n"
-                         "This command has the following flags:\n"
-                         "* **-n**: Returns only not safe for work facts"
-                         "\tExample: `$fact -n`",
+    @hybrid_command(help=hlp.FACT_FULL,
                     brief="Returns a random fact")
     async def fact(self, ctx, *, args: str=None):
         flags, = get_flags(args.lower()) if args is not None else [],
@@ -25,9 +23,7 @@ class Random(Cog):
         await ctx.send(get_fact(filter_enabled=False, only_unsafe='n' in flags))
 
     # $flip command sends either "heads" or "tails" in the channel
-    @hybrid_command(help="Returns either \"heads\" or \"tails\" via random selection.\n"
-                         "To flip multiple coins simultaneously, include an integer argument.\n"
-                         "Example: `$flip 3`",
+    @hybrid_command(help=hlp.FLIP_FULL,
                     brief="Returns either \"heads\" or \"tails\"")
     async def flip(self, ctx, *, num: int=None):
         if num is None:
@@ -45,11 +41,7 @@ class Random(Cog):
             error.handled = True
 
     # $number command used to generate a random integer within a given range
-    @hybrid_command(help="Returns a randomly chosen number between two given integers\n"
-                         "Example: `$number 1 10`\n\n"
-                         "If only one integer is given, "
-                         "then a number between 1 and that integer will be chosen\n"
-                         "Example: `$number 10`",
+    @hybrid_command(help=hlp.NUMBER_FULL,
                     brief="Returns a random number")
     async def number(self, ctx, lower: int, upper: int = None):
         if upper is None:
@@ -74,12 +66,29 @@ class Random(Cog):
 
     # $choice command used to randomly select one item from a list
     # param arg - all user input following command-name
-    @hybrid_command(help="Returns 1 chosen item from a given list\n"
-                         "The list can be of any size, with each item seperated by a comma\n"
-                         "Example: `$choice Captain Kirk, Captain Picard, Admiral Adama`",
+    @hybrid_command(help=hlp.CHOICE_FULL,
                     brief="Returns 1 randomly chosen item")
     async def choice(self, ctx, *, items: str):
-        await ctx.send(choice([item.strip() for item in items.split(',') if item]))
+        flags, args = get_flags(items, join=True, make_dic=True)
+        lst = [i.strip() for i in args.split(',') if i]
+        count = 1
+
+        if 'c' in flags:
+            try:
+                count = int(flags['c'])
+
+                if count < 1:
+                    raise ValueError
+            except ValueError:
+                await ctx.send("You must input a valid nonnegative integer when using the `-c` command flag.\n"
+                               "Please use `$help choice` for more usage information.")
+                return
+
+            count = min(count, len(lst))
+
+        shuffle(lst)
+
+        await ctx.send(', '.join(lst[:count]))
 
     # Called if $choice encounters an unhandled exception
     @choice.error
@@ -90,9 +99,7 @@ class Random(Cog):
                            "Please use `$help choice` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Returns a given list in a randomized order.\n"
-                         "The list can be of any size, with each item seperated by a comma\n"
-                         "Example: `$shuffle Cryzel Rosechu, Magi-Chan, Mewtwo, Sylvana`",
+    @hybrid_command(help=hlp.SHUFFLE_FULL,
                     brief="Randomizes a given list")
     async def shuffle(self, ctx, *, items: str):
         lst = [item.strip() for item in items.split(',') if item]
@@ -109,15 +116,7 @@ class Random(Cog):
 
     # $roll command used to simulate the rolling of dice
     # param dice - string representing dice to be rolled in xDn format
-    @hybrid_command(help="Rolls any number of n-sided dice in the classic \"xDn\" format.\n"
-                         "Where *x* is the quantity of dice being rolled, "
-                         "and *n* is the number of sides on the die.\n"
-                         "Example: `$roll 3d20`\n"
-                         "If rolling only one die, you may ommit the '1'.\n"
-                         "Example: `$roll d6`\n\n"
-                         "This command has the following flags:\n"
-                         "* **-m**: Indicates your argument is a comma-seperated list of dice.\n"
-                         "\tExample: `$roll -m 4d20, d3, 6d9`",
+    @hybrid_command(help=hlp.ROLL_FULL,
                     brief="Rolls dice in the classic \"xDn\" format")
     async def roll(self, ctx, *, dice: str):
         flags, query = get_flags(dice, True)

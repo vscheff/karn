@@ -7,6 +7,7 @@ from discord.ext.tasks import loop
 from re import match
 from zoneinfo import ZoneInfo
 
+import src.help_messages as hlp
 from src.utils import get_cursor
 
 
@@ -140,11 +141,7 @@ class Reminders(Cog):
         
         return rows
 
-    @hybrid_command(help="Sets a reminder for a given time. You can specify an exact time, or a time relative to now. Examples:\n"
-                    "\t`$remind in 1 hour | call mom`\n"
-                    "\t`$remind tomorrow at this time | time to raid`\n"
-                    "\t`$remind 2026-01-15 14:30 | party time!`\n\n"
-                    "You can use `$remind list` to view your current reminders.",
+    @hybrid_command(help=hlp.REMIND_FULL,
                     brief="Sets a reminder for a given time",
                     aliases=["remindme", "reminder"])
     async def remind(self, ctx, *, args):

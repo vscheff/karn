@@ -14,6 +14,7 @@ from wikipedia import DisambiguationError, page, PageError, random, set_user_age
 from xkcd import getComic, getLatestComic, getLatestComicNum, getRandomComic
 
 from src.global_vars import USER_AGENT
+import src.help_messages as hlp
 from src.us_state_abbrev import abbrev_to_us_state as states
 from src.utils import TEMP_DIR
 from src.utils import get_flags, is_slash_command, is_supported_filetype, get_supported_filetype, package_message, run_blocking
@@ -40,10 +41,7 @@ set_user_agent(USER_AGENT)
 
 
 class Query(Cog):
-    @hybrid_command(help="Returns Scryfall data for a given MtG card"
-                         "\n\nThis command has the following flags:\n"
-                         "* **-r**: Returns a random MtG card.\n"
-                         "\tExample: `$card -r`\n",
+    @hybrid_command(help=hlp.CARD_FULL,
                     brief="Returns data of an MtG card")
     async def card(self, ctx, *, card: str):
         flags, query = get_flags(card)
@@ -83,11 +81,7 @@ class Query(Cog):
                            "Please use `$help card` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Returns a random comic strip from a given Comic name.\n"
-                         "Example: `$comic Garfield`\n\n"
-                         "This command has the following flags:\n"
-                         "* **l**: Lists available comics\n"
-                         "\tExample: `$comic -l`",
+    @hybrid_command(help=hlp.COMIC_FULL,
                     brief="Returns a random comic strip")
     async def comic(self, ctx, *, comic: str):
         flags, query = get_flags(comic, join=True)
@@ -118,7 +112,7 @@ class Query(Cog):
                            "Please use `$help comic` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Returns definitions for a given word\nExample: `$define love`",
+    @hybrid_command(help=hlp.DEFINE_FULL,
                     brief="Returns definitions for a given word")
     async def define(self, ctx, word: str):
         params = {"limit": MAX_DEFINITIONS, "sourceDictionaries": "wiktionary",
@@ -161,13 +155,7 @@ class Query(Cog):
                            "Please use `$help define` for more information.")
             error.handled = True
 
-    @hybrid_command(help=f"Returns images relevant to a given query\n"
-                         f"Example: `$image Grant MacDonald`\n\n"
-                         f"This command has the following flags:\n"
-                         f"* **-c**: Specify a number of images to return [default={DEFAULT_RESULT_COUNT}].\n"
-                         f"\tExample: `$image -c 10 Margaery Tyrell`\n"
-                         f"* **-r**: Return randomly selected images from the search instead of the most relevant images.\n"
-                         f"\tExample: `$image -r Cressida`",
+    @hybrid_command(help=hlp.IMAGE_FULL.format(count=DEFAULT_RESULT_COUNT),
                     brief="Search the web for an image",
                     aliases=["images", "imagine"])
     async def image(self, ctx, *, query: str):
@@ -201,11 +189,7 @@ class Query(Cog):
                            "Please use `$help image` for more information.")
             error.handled = True
 
-    @hybrid_command(help=f"Search the web with a given query"
-                         f"Example: `$search Chris Chan`\n\n"
-                         f"This command has the following flags:\n"
-                         f"* **-c**: Specify a number of results to return [default={DEFAULT_RESULT_COUNT}].\n"
-                         f"\tExample: `search -c 10 Sam Hyde`\n",
+    @hybrid_command(help=hlp.SEARCH_FULL.format(count=DEFAULT_RESULT_COUNT),
                     brief="Search the web")
     async def search(self, ctx, *, query: str):
         flags, query = get_flags(query)
@@ -231,11 +215,7 @@ class Query(Cog):
                            "Please use `$help search` for more information.")
             error.handled = True
 
-    @hybrid_command(help=f"Search the web for videos with a given query"
-                         f"Example: `$search Dizaster - Love Me Long Time`\n\n"
-                         f"This command has the following flags:\n"
-                         f"* **-c**: Specify a number of results to return [default={DEFAULT_RESULT_COUNT}].\n"
-                         f"\tExample: `search -c 10 Fishtank`\n",
+    @hybrid_command(help=hlp.VIDEO_FULL.format(count=DEFAULT_RESULT_COUNT),
                     brief="Search the web for videos")
     async def video(self, ctx, *, query: str):
         flags, query = get_flags(query)
@@ -257,16 +237,7 @@ class Query(Cog):
                            "Please use `$help video` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Returns the summary of a given Wikipedia article\nExample: `$wiki Thelema`\n\n"
-                         "This command has the following flags:\n"
-                         "* **-f**: Used to retrieve the full text of the given article.\n"
-                         "\tExample: `$wiki -f Jack Parsons`\n"
-                         "* **-i**: Used to retrieve all images from the given article.\n"
-                         "\tExample: `$wiki -i L. Ron Hubbard`\n"
-                         "\tOptionally, you may provide an integer sub-argument to limit the number of images sent.\n"
-                         "\tExample: `$wiki -i 3 L. Ron Hubbard` will only result in three images sent.\n"
-                         "* **-r**: Used to retrieve a random Wikipedia article.\n"
-                         "\tExample: `$wiki -r`",
+    @hybrid_command(help=hlp.WIKI_FULL,
                     brief="Search for a Wikipedia article")
     async def wiki(self, ctx, *, query: str):
         flags, query = get_flags(query)
@@ -340,10 +311,7 @@ class Query(Cog):
                            "Please use `$help wiki` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Returns the current weather for a given city\n"
-                         "The city can be input in any of the following formats: "
-                         "kalamazoo; kalamazoo, mi; kalamazoo, michigan; 49006\n"
-                         "Example: $weather 49078",
+    @hybrid_command(help=hlp.WEATHER_FULL,
                     brief="Returns the weather of a city")
     async def weather(self, ctx, *, location: str):
         await ctx.send(get_weather(location))
@@ -356,10 +324,7 @@ class Query(Cog):
                            "Please use `$help weather` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Returns the XKCD comic of a given comic number.\n\n"
-                         "This command has the following flags:\n"
-                         "* **-r**: Returns a random XKCD comic\n"
-                         "* **-l**: Returns the latest XKCD comic",
+    @hybrid_command(help=hlp.XKCD_FULL,
                     brief="Return an XKCD comic")
     async def xkcd(self, ctx, number: str="-l"):
         flags, arg = get_flags(number)

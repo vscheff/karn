@@ -1,6 +1,7 @@
 from discord.ext.commands import Cog, errors, hybrid_command
 from re import findall
 
+import src.help_messages as hlp
 from src.utils import get_cursor, package_message
 
 
@@ -11,18 +12,12 @@ class Rating(Cog):
     def __init__(self, conn):
         self.conn = conn
 
-    @hybrid_command(help=f"Returns the least voted items\n\n"
-                         f"Include an integer argument to specify the number of "
-                         f"results to return (default={DEFAULT_RATING_COUNT})\n"
-                         f"Example: `$bot 3`",
+    @hybrid_command(help=hlp.BOT_FULL.format(count=DEFAULT_RATING_COUNT),
                     brief="Show the least voted items")
     async def bot(self, ctx, num: int=DEFAULT_RATING_COUNT):
         await self.send_ratings(ctx, num, False)
 
-    @hybrid_command(help=f"Returns the top voted items\n\n"
-                         f"Include an integer argument to specify the number of "
-                         f"results to return (default={DEFAULT_RATING_COUNT})\n"
-                         f"Example: `$top 3`",
+    @hybrid_command(help=hlp.TOP_FULL.format(count=DEFAULT_RATING_COUNT),
                     brief="Show the top voted items",
                     aliases=["scores"])
     async def top(self, ctx, num: int=DEFAULT_RATING_COUNT):
@@ -54,8 +49,7 @@ class Rating(Cog):
                            "Please use `$help top` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Show the score for a given item.\n"
-                         "Example: `$show linux`",
+    @hybrid_command(help=hlp.SHOW_FULL,
                     brief="Show the score for an item")
     async def show(self, ctx, *, item: str):
         if not item:

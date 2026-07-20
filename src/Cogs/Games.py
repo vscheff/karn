@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from discord.ext.commands import Cog, hybrid_command
 from random import choice
 
+import src.help_messages as hlp
 from src.utils import get_flags
 
 
@@ -115,10 +116,7 @@ class Games(Cog):
         self.wordle_games = {}
         self.word_repo = WordRepository()
     
-    @hybrid_command(help="Starts a new game of Wordle in the chat.\n\n"
-                         "This command has the following flags:\n"
-                         "* **-n**: Quits an ongoing game and starts a new game of Wordle.\n"
-                         "* **-q**: Quits an ongoing game of Wordle.",
+    @hybrid_command(help=hlp.WORDLE_FULL,
                     brief="Play a game of Wordle")
     async def wordle(self, ctx, *, flags: str=''):
         flags, _  = get_flags(flags)

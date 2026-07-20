@@ -7,6 +7,7 @@ from random import choice, sample
 from requests import get
 from re import sub
 
+import src.help_messages as hlp
 from src.utils import get_cursor, get_flags, get_id_from_mention, package_message
 from src.tips import TIP_LIST
 
@@ -37,31 +38,7 @@ class DailyLoop(Cog):
 
         self.daily_loop.start()
 
-    @hybrid_command(help="Have daily messages sent to this channel.\n"
-                         "Message categories include:\n"
-                         "* *calvin*: Sends a random Calvin & Hobbes comic\n"
-                         "* *card*: Sends a random Magic: The Gathering card\n"
-                         "* *fact*: Sends a random fact\n"
-                         "* *garfield*: Sends a random Garfield comic\n"
-                         "* *peanuts*: Sends a random Peantus comic\n"
-                         "* *tip*: Sends a tip for using Karn\n"
-                         "* *wiki*: Sends a random Wikipedia article\n"
-                         "* *word*: Sends a random word and its definition\n"
-                         "* *xkcd*: Sends a random XKCD comic\n"
-                         "Example: `$daily fact`\n\n"
-                         "This command has the following flags:\n"
-                         "* **-a**: Instructs the command to use all available categories\n"
-                         "\tExample: `$daily -a`\n"
-                         "* **-c**: Change options for a different given channel\n"
-                         "\tExample: `$daily -c #general garfield`\n"
-                         "* **-d**: Stop sending messages from the given category\n"
-                         "\tExample: `$daily -d word`\n"
-                         "* **-l**: List the categories currently being sent to this channel\n"
-                         "\tExample: `$daily -l`\n"
-                         "* **-m**: Add multiple categories in a comma-seperated list.\n"
-                         "\tExample: `$daily -m fact, wiki, word, xkcd`\n"
-                         "* **-t**: Trigger the immediate retrieval of a daily item in this channel.\n"
-                         "\tExample: `$daily -t`",
+    @hybrid_command(help=hlp.DAILY_FULL,
                     brief="Send daily messages to a channel")
     async def daily(self, ctx, *, category: str):
         flags, args = get_flags(category.lower())

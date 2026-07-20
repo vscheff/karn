@@ -1,6 +1,7 @@
 from discord.ext.commands import Cog, hybrid_command, errors
 from random import randint
 
+import src.help_messages as hlp
 from src.utils import get_cursor, get_flags, package_message
 
 
@@ -11,13 +12,7 @@ class Hat(Cog):
     def __init__(self, conn):
         self.conn = conn
 
-    @hybrid_command(help="Add an item to the hat.\n"
-                         "Example: `$add The Room`\n\n"
-                         "This command has the following flags:\n"
-                         "* **-h**: Used to specify a hat other than the channel's default hat.\n"
-                         "\tExample: `$add -h movies Troll 2`\n"
-                         "* **-m**: Indicates your subcommand argument is a comma-seperated list of elements.\n"
-                         "\tExample: `$add -m Monster a Go-Go, Birdemic, Batman & Robin`",
+    @hybrid_command(help=hlp.ADD_FULL,
                     brief="Add an item to the hat")
     async def add(self, ctx, *, item: str):
         cursor = get_cursor(self.conn)
@@ -43,9 +38,7 @@ class Hat(Cog):
                            "Please use `$help add` for more information.")
             error.handled = True
 
-    @hybrid_command(help="Clear all items from the hat.\n\n"
-                         "To clear a hat other than the channel's default hat, include it as an argument:\n"
-                         "Example: `$clear movies`",
+    @hybrid_command(help=hlp.CLEAR_FULL,
                     brief="Clear all items from the hat")
     async def clear(self, ctx, hat: str=None):
         cursor = get_cursor(self.conn)
@@ -59,7 +52,7 @@ class Hat(Cog):
         self.conn.commit()
         cursor.close()
 
-    @hybrid_command(help="List all active hats for this server.\n\n",
+    @hybrid_command(help=hlp.LIST_FULL,
                     brief="List all active hats for this server")
     async def list(self, ctx):
         cursor = get_cursor(self.conn)
@@ -73,22 +66,12 @@ class Hat(Cog):
 
         cursor.close()
 
-    @hybrid_command(help="Randomly picks an item from the hat.\n\n"
-                         "To pick more than one item, include the desired number of items as an argument:\n"
-                         "Example: `$pick 3`\n\n"
-                         "This command has the following flags:\n"
-                         "* **-h**: Used to specify a hat other than the channel's default hat.\n"
-                         "\tExample: `$pick -h movies`\n",
+    @hybrid_command(help=hlp.PICK_FULL,
                     brief="Pick an item from the hat")
     async def pick(self, ctx, *, args: str=None):
         await self.choose(ctx, args, False)
 
-    @hybrid_command(help="Randomly chose and remove an item from the hat.\n\n"
-                         "To pop more than one item, include the desired number of items as an argument:\n"
-                         "Example: `$pop 3`\n\n"
-                         "This command has the following flags:\n"
-                         "* **-h**: Used to specify a hat other than the channel's default hat.\n"
-                         "\tExample: `$pop -h movies`\n",
+    @hybrid_command(help=hlp.POP_FULL,
                     brief="Pick and remove an item from the hat")
     async def pop(self, ctx, *, args: str=None):
         await self.choose(ctx, args, True)
@@ -139,12 +122,7 @@ class Hat(Cog):
         self.conn.commit()
         cursor.close()
 
-    @hybrid_command(help="Remove an item from the hat.\n"
-                         "Example: `$remove 3`\n"
-                         "To view the indexes for a hat, use the `$view` command.\n\n"
-                         "This command has the following flags:\n"
-                         "* **-h**: Used to specify a hat other than the channel's default hat.\n"
-                         "\tExample: `$remove -h movies 3`\n",
+    @hybrid_command(help=hlp.REMOVE_FULL,
                     brief="Remove an item from the hat")
     async def remove(self, ctx, *, num: str):
         cursor = get_cursor(self.conn)
@@ -188,9 +166,7 @@ class Hat(Cog):
                            "Please use `$help remove` for more information.")
             error.handled = True
 
-    @hybrid_command(help="View all items in the hat.\n\n"
-                         "To view a hat other than the channel's default hat, include it as an argument:\n"
-                         "Example: `$view movies`",
+    @hybrid_command(help=hlp.VIEW_FULL,
                     brief="View all items from the hat")
     async def view(self, ctx, hat: str=None):
         cursor = get_cursor(self.conn)
@@ -207,8 +183,7 @@ class Hat(Cog):
 
         cursor.close()
 
-    @hybrid_command(help="Set the default hat for this channel.\n"
-                         "Example: `$set_default movies`",
+    @hybrid_command(help=hlp.SET_DEFAULT_FULL,
                     brief="Set the default hat")
     async def set_default(self, ctx, hat: str=DEFAULT_HAT):
         cursor = get_cursor(self.conn)

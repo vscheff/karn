@@ -8,6 +8,7 @@ import qrcode
 from random import choice
 
 from src.calculator import calculator, CONST, FUNCS
+import src.help_messages as hlp
 from src.tips import TIP_LIST
 from src.utils import TEMP_DIR
 from src.utils import get_flags, get_id_from_mention, is_slash_command, package_message
@@ -24,7 +25,7 @@ class Utility(Cog):
 
     # $qr command used to generate QR code images
     # param arg - all user input following command-name
-    @hybrid_command(help="Generate a QR code for input data\nExample: `$qr https://www.gnu.org/`",
+    @hybrid_command(help=hlp.QR_FULL,
                     brief="Generate a QR code")
     async def qr(self, ctx, *, data: str, hidden: bool=False):
         img = make_qr(data)
@@ -46,22 +47,14 @@ class Utility(Cog):
             error.handled = True
 
     # $ping command used to test bot readiness and latency
-    @hybrid_command(help="Returns \"pong\" and the round-trip latency if the bot is online.",
+    @hybrid_command(help=hlp.PING_FULL,
                     brief="Returns \"pong\" if the bot is online.")
     async def ping(self, ctx):
         await ctx.send(f"pong (*{self.bot.latency * 1000:.0f}ms*)")
 
     # $calc command used for calculating the result of mathematical expressions
     # param args - all user input following the command name
-    @hybrid_command(help="Returns the result of a mathematical expression.\n"
-                         "Example: `$calc 6 * 7`\n"
-                         "This function supports, addition `+`, subtraction `-`, multiplication `*`, division `/`, "
-                         "modulation `%`, exponentiation `^`, factorials `!`, and parenthesis `()`.\n"
-                         f"Additionally the constants `{'`, `'.join(CONST)}`, and the following functions are supported: `{'`, `'.join(FUNCS)}`\n"
-                         "Example: `$calc sin(pi/2)`\n\n"
-                         "**Note**: All trig functions take input in radians and output their result in radians. "
-                         "To input degrees into trig functions, use the `deg` function: `$calc sin(deg(90))`. "
-                         "Similarly, you can use the `deg` function to interpet the output of a trig function as degrees: `$calc deg(asin(1))`",
+    @hybrid_command(help=hlp.CALC_FULL.format(constants="`, `".join(CONST), functions="`, `".join(FUNCS)),
                     brief="Calculates the result of a mathematical expression")
     async def calc(self, ctx, *, expression:str):
         await ctx.send(calculator(expression))
@@ -87,7 +80,7 @@ class Utility(Cog):
             error.handled = True
 
     # $ready command used as a "all-systems-go" check for the bot
-    @hybrid_command(help="Performs an \"All-Systems-Go\" check for the bot, and returns a status report.",
+    @hybrid_command(help=hlp.READY_FULL,
                     brief="Check for \"All-Systems-Go\"")
     async def ready(self, ctx):
         await ctx.send(f"Websocket closed: {self.bot.is_closed()}\n"
@@ -98,13 +91,7 @@ class Utility(Cog):
     # $purge command used to bulk delete messages from a text channel
     # param before - int representing the number of days, before which messages will be deleted
     # param  after - int representing the number of days, before which messages will NOT be deleted
-    @hybrid_command(help="Delete all messages in a channel older than a given number of days.\n"
-                         "Example: `$purge 3`\n"
-                         "That command will delete all messages older than 3 days.\n\n"
-                         "Alternatively, you can include two integers to declare a range.\n"
-                         "Example: `$purge 3 42`\n"
-                         "That command will delete all messages older than 3 days, "
-                         "but not older than 42 days.\n\n",
+    @hybrid_command(help=hlp.PURGE_FULL,
                     brief="Bulk delete messages in current channel")
     @has_permissions(manage_messages=True)
     async def purge(self, ctx, before: int, after: int = None):
@@ -141,13 +128,13 @@ class Utility(Cog):
         else:
             error.handled = False
 
-    @hybrid_command(help="Sends a random bot usage tip",
+    @hybrid_command(help=hlp.TIP_FULL,
                     brief="Sends a random bot usage tip")
     async def tip(self, ctx):
         await ctx.send(choice(TIP_LIST))
 
     # $info command used to provide some info on this bot
-    @hybrid_command(help="Provides a brief synopsis of Karn, including a link to his Open Source code",
+    @hybrid_command(help=hlp.INFO_FULL,
                     brief="Provides a brief synopsis of Karn")
     async def info(self, ctx):
         await ctx.send("Hello! I am Karn, your friendly Time-Travelling Golem!\n"
