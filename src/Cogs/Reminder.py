@@ -11,6 +11,7 @@ import src.help_messages as hlp
 from src.utils import get_cursor
 
 
+DELIMETER = '/'
 DEFAULT_TZ = "America/Detroit"
 DEFAULT_REMIND_LIMIT = 50
 DEFAULT_LIST_LIMIT = 10
@@ -141,22 +142,22 @@ class Reminders(Cog):
         
         return rows
 
-    @hybrid_command(help=hlp.REMIND_FULL,
+    @hybrid_command(help=hlp.REMIND_FULL.format(delimeter=DELIMETER),
                     brief="Sets a reminder for a given time",
                     aliases=["remindme", "reminder"])
     async def remind(self, ctx, *, args):
-        if "|" not in args:
+        if DELIMETER not in args:
             if "list" in args.lower():
                 return await self.remind_list(ctx)
 
-            return await ctx.send("You must include a time to remind and a message to remind with, separated by the `|` character.\n"
-                                  "Example: `$remind tomorrow at noon | watch fishtank`\n\n"
+            return await ctx.send(f"You must include a time to remind and a message to remind with, separated by the `{DELIMETER}` character.\n"
+                                  f"Example: `$remind tomorrow at noon {DELIMETER} watch fishtank`\n\n"
                                   "Please use `$help remind` for more information.")
 
-        when_text, message = [i.strip() for i in args.split('|', 1)]
+        when_text, message = [i.strip() for i in args.split(DELIMETER, 1)]
         
         if not when_text or not message:
-            return await ctx.send("You must provide both a time and a message: `$remind <when> | <message>`\n\n"
+            return await ctx.send("You must provide both a time and a message: `$remind <when> DELIMETER <message>`\n\n"
                                   "Please use `$help remind` for more information")
 
         # Add "today" if user only specified a time
@@ -190,7 +191,7 @@ class Reminders(Cog):
     @remind.error
     async def remind_error(self, ctx, error):
         if isinstance(error, errors.MissingRequiredArgument):
-            await ctx.send("Usage: `$remind <when> | <message>` or `$remind list`\n"
+            await ctx.send(f"Usage: `$remind <when> {DELIMETER} <message>` or `$remind list`\n"
                            "Please use `$help remind` for more information.")
             error.handled = True
 

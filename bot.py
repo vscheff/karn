@@ -20,6 +20,7 @@ from src.activities import activities
 from src.Cogs.Terminal import send_line
 from src.global_vars import FILE_ROOT_DIR, SEND_LINE_CHAR
 from src.help_command import CustomHelpCommand
+from src.pipeline import run_pipeline
 from src.sql import connect_to_sql_database
 from src.utils import make_guild_dir
 
@@ -83,11 +84,14 @@ async def on_message(msg):
         return
 
     if msg.content[0] == bot.command_prefix:
-        if "--help" not in msg.content:
-            return await bot.process_commands(msg)
+        if "--help" in msg.content:
+            msg.content = f"$help {msg.content.split()[0][1:]}"
 
-        msg.content = f"$help {msg.content.split()[0][1:]}"
-
+        if '|' in msg.content:
+            ctx = await bot.get_context(msg)
+            result = await run_pipeline(ctx, msg.content)
+            return await result.send(ctx)
+        
         return await bot.process_commands(msg)
     
     if not await send_line(msg, bot):

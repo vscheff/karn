@@ -1,6 +1,8 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from random import randint
 
+from src.utils import package_message
 
 MAX_TIME = timedelta(hours = 1)
 
@@ -27,3 +29,21 @@ class BoTracker:
             return False
 
         return True
+
+
+@dataclass(slots=True)
+class TerminalResult:
+    stdout: str = ''
+    stderr: str = ''
+    exit_code: int = 0
+    multi_send = False
+
+    @property
+    def succeeded(self):
+        return self.exit_code == 0
+
+    async def send(self, ctx):
+        if self.stderr:
+            await package_message(self.stderr, ctx, self.multi_send)
+        elif self.stdout:
+            await package_message(self.stdout, ctx, self.multi_send)

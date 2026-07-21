@@ -171,8 +171,8 @@ You can include multiple filenames with this command.
 Example: `$head nice rude
 
 This command has the following flags
-* **-c**: Specifies the number of lines to return
-\tExample: `$head -c 5 johnny`'''
+* **-n**: Specifies the number of lines to return
+\tExample: `$head -n 5 johnny`'''
 
 IGNORE_FULL = \
 '''Toggle whether the bot should respond to your messages without being prompted. The bot will still respond if your message contain its name, or if you use the `$prompt` command.
@@ -260,9 +260,9 @@ READY_FULL = "Performs an \"All-Systems-Go\" check for the bot, and returns a st
 
 REMIND_FULL = \
 '''Sets a reminder for a given time. You can specify an exact time, or a time relative to now. Examples:
-\t`$remind in 1 hour | call mom`
-\t`$remind tomorrow at this time | time to raid`
-\t`$remind 2026-01-15 14:30 | party time!`
+\t`$remind in 1 hour {delimeter} call mom`
+\t`$remind tomorrow at this time {delimeter} time to raid`
+\t`$remind 2026-01-15 14:30 {delimeter} party time!`
 
 You can use `$remind list` to view your current reminders.'''
 
@@ -336,8 +336,8 @@ You can include multiple filenames with this command.
 Example: `$tail respond_nice response_rude`
 
 This command has the following flags
-* **-c**: Specifies the number of lines to return
-\tExample: `$tail -c 5 dracula`'''
+* **-n**: Specifies the number of lines to return
+\tExample: `$tail -n 5 dracula`'''
 
 TEE_FULL = \
 '''Writes user input into a given text file from your server's directory.
