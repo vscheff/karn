@@ -1,22 +1,20 @@
 from discord.ext.commands import Cog, errors, hybrid_command
-from os import listdir, remove
+from os import remove
 from random import choice
-from re import search, sub
+from re import sub
 
-from src.dig import dig
+from src.functions.dig import dig
 from src.functions.terminal import *
 from src.global_vars import FILE_ROOT_DIR, SEND_LINE_CHAR
 import src.help_messages as hlp
-from src.utils import get_flags, package_message, send_tts_if_in_vc
+from src.utils import get_flags, send_tts_if_in_vc
 
-
-DEFAULT_LINE_COUNT = 10
 
 class Terminal(Cog):
 
     @hybrid_command(help=hlp.CAT_FULL,
                     brief="Read from a file")
-    async def cat(self, ctx, filename: str):
+    async def cat(self, ctx, *, filename: str):
         result = cat(ctx.guild.id, filename)
 
         await result.send(ctx)
@@ -32,7 +30,11 @@ class Terminal(Cog):
     @hybrid_command(help=hlp.DIG_FULL,
                     brief="Perform a DNS lookup")
     async def dig(self, ctx, *, query):
-        await dig(ctx, query)
+        await ctx.defer()
+        
+        result = await dig(query)
+
+        await result.send(ctx)
 
     @dig.error
     async def dig_error(self, ctx, error):
@@ -88,13 +90,9 @@ class Terminal(Cog):
     @hybrid_command(help=hlp.LS_FULL,
                     brief="Lists present text files")
     async def ls(self, ctx):
-        file_names = sorted(listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"))
-        files = '\n'.join(i.replace(".txt", '') for i in file_names if i[0] != '.')
-        
-        if not files:
-            return await ctx.send("No files exist in your server's directory. Try using `$tee` first!")
+        result = ls(ctx.guild.id)
 
-        await ctx.send(f"```\n{files}\n```")
+        await result.send(ctx)
 
     @hybrid_command(help=hlp.RM_FULL,
                     brief="Remove a text file")
@@ -116,10 +114,24 @@ class Terminal(Cog):
                            "Please use `$help grep` for more information.")
             error.handled = True
 
+    @hybrid_command(help=hlp.SORT_FULL,
+                    brief="Sort the lines from a file")
+    async def sort(self, ctx, *, args: str):
+        result = sort(ctx.guild.id, args)
+
+        await result.send(ctx)
+
     @hybrid_command(help=hlp.TEE_FULL,
                     brief="Write to a file")
     async def tee(self, ctx, filename: str, *, data: str):
         result = tee(ctx.guild.id, filename, data)
+
+        await result.send(ctx)
+
+    @hybrid_command(help=hlp.UNIQ_FULL,
+                    brief="Returns or omits repeated lines")
+    async def uniq(self, ctx, *, args: str):
+        result = uniq(ctx.guild.id, args)
 
         await result.send(ctx)
 

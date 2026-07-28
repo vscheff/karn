@@ -35,6 +35,7 @@ class BoTracker:
 class TerminalResult:
     stdout: str = ''
     stderr: str = ''
+    formatted_output: str = ''
     exit_code: int = 0
     multi_send = False
 
@@ -45,5 +46,7 @@ class TerminalResult:
     async def send(self, ctx):
         if self.stderr:
             await package_message(self.stderr, ctx, self.multi_send)
+        elif self.formatted_output:
+            await package_message(self.formatted_output, ctx, self.multi_send)
         elif self.stdout:
             await package_message(self.stdout, ctx, self.multi_send)

@@ -329,6 +329,20 @@ SHUFFLE_FULL = \
 The list can be of any size, with each item seperated by a comma
 Example: `$shuffle Cryzel Rosechu, Magi-Chan, Mewtwo, Sylvana`'''
 
+SORT_FULL = \
+'''Alphabetically sorts a file from your server's directory.
+Example: `$sort dracula`
+
+This command has the following flags:
+* **-f**: Ignore uppercase and lowercase differences.
+\tExample: `$sort -f dracula`
+* **-n**: Compare lines numerically
+\tExample: `$sort -n dracula`
+* **-r**: Reverse the sorting order
+\tExample: `$sort -r dracula`
+* **-u**: Remove duplicate lines
+\tExample: `$sort -u dracula`'''
+
 TAIL_FULL = \
 '''Returns the last {line_count} lines of a given file.
 Example: `$tail silverhand`
@@ -350,6 +364,20 @@ TOP_FULL = \
 
 Include an integer argument to specify the number of results to return (default={count}).
 Example: `$top 3`'''
+
+UNIQ_FULL = \
+'''Filters adjacent matching lines from a file in your server's directory.
+Example: `$uniq dracula`
+
+This command has the following flags:
+* **-c**: Prefixes each line by the number of occurences.
+\tExample: `$uniq -c dracula`
+* **-d**: Print only the duplicated lines, one for each group.
+\tExample: `$uniq -d dracula`
+* **-i**: Ignore differences in case when comparing.
+\tExample: `$uniq -i dracula`
+* **-u**: Print only the unique lines.
+\tExample: `$uniq -u dracula`'''
 
 VIDEO_FULL = \
 '''Search the web for videos with a given query

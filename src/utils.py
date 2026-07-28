@@ -72,7 +72,7 @@ def get_flags(args, join=False, make_dic=False, no_args=None, plus_args=False):
         return flag_dic, not_flags
 
     return flags, not_flags
-    
+
 def get_id_from_mention(mention):
     # regex101.com/r/OeJ1dG/1
     if not (match := search(r"<#(\d+)>", mention)):
@@ -87,7 +87,7 @@ def get_json_from_socket(auth):
         sock.listen(1)
         data = []
         conn, addr = sock.accept()
-        
+
         with conn:
             while True:
                 if (message := conn.recv(SOCKET_BUFF_SIZE)):
@@ -179,7 +179,7 @@ def smart_typing(ctx):
 
 async def text_to_speech(text, client, voice=DEFAULT_TTS_VOICE, speed=DEFAULT_TTS_SPEED):
     response = OPENAI_CLIENT.audio.speech.create(model="tts-1", input=text, voice=voice, speed=speed)
-    
+
     filename = f"output_{''.join(choices(ascii_letters + digits, k=TTS_RAND_STR_LEN))}.mp3"
     TTS_TEMP_FILE = f"{TEMP_DIR}/{filename}"
 

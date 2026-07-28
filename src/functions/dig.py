@@ -14,7 +14,9 @@ from ipaddress import ip_address
 from random import shuffle
 from time import perf_counter
 
-from src.utils import get_flags, package_message
+from src.utils import get_flags
+from src.util_objects import TerminalResult as TR
+
 
 HEADER_LINE = "; <<>> Domain information Groper (Karn Style) <<>> "
 VALID_RECORD_TYPES = {"A", "AAAA", "ANY", "CAA", "CNAME", "DNSKEY", "DS", "MX", "NAPTR", "NS", "PTR", "SOA", "SRV", "TXT", "TLSA", "URI"}
@@ -43,14 +45,11 @@ ROOT_SERVERS = [
     "202.12.27.33",     # m.root-servers.net
 ]
 
-async def dig(ctx, user_query):
+async def dig(user_query):
     options = DigOptions(user_query)
 
     if options.error_status:
-        await ctx.send(options.error_message)
-        return
-
-    await ctx.defer()
+        return TR(stderr=options.error_message, exit_code=1)
 
     try:
         if options.trace:
@@ -64,16 +63,19 @@ async def dig(ctx, user_query):
             else:
                 output = build_dig_output(response, elapsed_ms, options)
     except Timeout:
-        await ctx.send(f"DNS lookup timed out for `{options.domain}`.")
+        return TR(stderr=f"DNS lookup timed out for `{options.domain}`.", exit_code=2)
     except ValueError as e:
-        await ctx.send(f"`{options.nameserver}` is not a valid DNS server address. Use an IPv4 or IPv6 address like `1.1.1.1` or `8.8.8.8`.")
+        return TR(
+                stderr=f"`{options.nameserver}` is not a valid DNS server address. Use an IPv4 or IPv6 address like `1.1.1.1` or `8.8.8.8`.",
+                exit_code=3
+                )
     except Exception as e:
-        await ctx.send(f"DNS lookup failed: `{type(e).__name__}: {e}`")
+        return TR(stderr=f"DNS lookup failed: `{type(e).__name__}: {e}`", exit_code=3)
     else:
         if not output:
-            return
+            return TR(exit_code=0)
 
-        await package_message(f"```text\n{output}\n```", ctx)
+        return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
 def make_dig_query(qname, rdtype, options, payload=512, use_recursion=None):
     use_recursion = options.use_recursion if use_recursion is None else use_recursion
