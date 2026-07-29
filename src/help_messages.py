@@ -37,7 +37,13 @@ This command has the following flags:
 
 CAT_FULL = \
 '''Returns the entire contents of a given text file from your server's directory.
-Example: `$cat parody_bands`'''
+Example: `$cat parody_bands`
+
+This command has the following flags:
+* **-b**: Number nonblank output lines.
+\tExample: `$cat -b dracula`
+* **-n**: Number all output lines.
+\tExample: `$cat -n dracula`'''
 
 CHOICE_FULL = \
 '''Returns one chosen item from a given list. The list can be of any size, with each item seperated by a comma.
@@ -354,8 +360,14 @@ This command has the following flags
 \tExample: `$tail -n 5 dracula`'''
 
 TEE_FULL = \
-'''Writes user input into a given text file from your server's directory.
-Example: `tee parody_bands Jon Von Jovi`'''
+'''Writes user input into a given text file from your server's directory. By default, this command appends the data to the end of the given file.
+Example: `tee parody_bands Jon Von Jovi`
+
+This command has the following flags:
+* **-b**: Inserts a blank line before the appeneded line of data (or just a blank line if no data is provided).
+\tExample: `$tee -n test Add a line before this data` or `$tee -n test`
+* **-o**: Overwrites all existing data in the file with the provided data.
+\tExample: `$tee -o test This line will be the only line in this file now`'''
 
 TIP_FULL = "Sends a random bot usage tip."
 

@@ -56,7 +56,7 @@ def get_flags(args, join=False, make_dic=False, no_args=None, plus_args=False):
                 except IndexError:
                     return None, None
             else:
-                flags.extend([i.lower() for i in arg[1:]])
+                flags.extend(arg[1:])
         elif plus_args and arg[0] == '+':
             if make_dic:
                 flag_dic[arg[1:]] = None

@@ -28,7 +28,7 @@ async def run_pipeline(ctx, pipeline):
 
         stdin = result.stdout
 
-    return TR(stdout=stdin, exit_code=0)
+    return TR(stdout=stdin, formatted_output=result.formatted_output, exit_code=0)
 
 def split_pipeline(command):
     segments = []
@@ -95,15 +95,7 @@ def parse_arguments(raw_arguments):
 async def process_command(ctx, command_name, raw_arguments, stdin):
     match command_name:
         case "cat":
-            try:
-                arguments = shlex.split(raw_arguments)
-            except ValueError as e:
-                return TR(stderr=f"shell: {e}", exit_code=1)
-
-            if len(arguments) != 1:
-                return TR(stderr="usage: `cat <filename>`", exit_code=2)
-
-            return cat(ctx.guild.id, arguments[0], stdin=stdin)
+            return cat(ctx.guild.id, raw_arguments, stdin=stdin)
 
         case "dig":
             try:
@@ -123,16 +115,7 @@ async def process_command(ctx, command_name, raw_arguments, stdin):
             if not raw_arguments:
                 return TR(stderr="usage: `grep [filename] <pattern>`", exit_code=1)
 
-            if stdin:
-                filename = None
-                pattern = raw_arguments
-            else:
-                filename, pattern = split_first_argument(raw_arguments)
-
-                if not pattern:
-                    return TR(stderr="usage `grep [filename] <pattern>`", exit_code=1)
-
-            return grep(ctx.guild.id, filename, pattern, stdin=stdin)
+            return grep(ctx.guild.id, raw_arguments, stdin=stdin)
 
         case "ls":
             return ls(ctx.guild.id, stdin=stdin)

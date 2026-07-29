@@ -10,37 +10,48 @@ from src.util_objects import TerminalResult as TR
 DEFAULT_LINE_COUNT = 10
 
 
-def cat(guild_id, args, stdin=None):
-    flags, args = get_flags(args)
-    response = get_lines_from_file(guild_id, args[0], join=False, stdin=stdin)
+def cat(guild_id, arguments, stdin=None):
+    flags, args = get_flags(arguments)
+    response = get_lines_from_file(guild_id, None if stdin else args[0], join=False, stdin=stdin)
 
     if not response.succeeded:
         return response
 
-    if 'n' in flags:
-        output = ''.join(f"{number:6} {line}" for number, line in enumerate(response.stdout, start=1))
-    else:
-        output = ''.join(response.stdout)
+    skip_blank = 'b' in flags
+
+    output_lines = number_lines(response.stdout, 'n' in flags or skip_blank, skip_blank, 's' in flags)
+
+    if 'E' in flags:
+        output_lines = [f"{i[:-1]}$\n" if i.endswith('\n') else f"{i}$" for i in output_lines]
+
+    output = ''.join(output_lines)
 
     return TR(stdout=output, formatted_output=f"```text\n{output}```", exit_code=0)
 
-def grep(guild_id, filename, pattern, stdin=None):
-    if not stdin:
-        if search(r"\W", filename):
-            return TR(stderr=f"Invalid filename: {filename}\nPlease only use word characters.", exit_code=1)
+def grep(guild_id, arguments, stdin=None):
+    flags, args = get_flags(arguments)
 
-        filename = filename.lower()
-
-        try:
-            with open(f"{FILE_ROOT_DIR}/{guild_id}/{filename}.txt", "r") as in_file:
-                lines = [i.rstrip('\n') for i in in_file.readlines()]
-        except FileNotFoundError:
-            return TR(stderr=f"No file named \"{filename}\" found! Try using `$tee` first.", exit_code=2)
+    if len(args) < 2:
+        if stdin and args:
+            filename = None
+            pattern = args[0]
+        else:
+            return TR(stderr="usage: `$grep [filename] <pattern>`", exit_code=1)
     else:
-        lines = stdin.split('\n')
+        filename = args[0]
+        pattern = ' '.join(args[1:])
+
+    response = get_lines_from_file(guild_id, filename, join=False, stdin=stdin)
+    
+    if not response.succeeded:
+        return response
+
+    lines = response.stdout
 
     if matches := [i for i in lines if search(pattern, i)]:
-        return TR(stdout='\n'.join(matches), exit_code=0)
+        output = ''.join(matches)
+
+        return TR(stdout=output, formatted_output=f"```text\n{output}```", exit_code=0)
 
     return TR(stderr=f"No matches found in `{'stdin' if stdin else filename}`", exit_code=3)
 
@@ -135,18 +146,27 @@ def sort(guild_id, args, stdin=None):
 
     return TR(stdout=''.join(lines), exit_code=0)
 
-def tee(guild_id, filename, data, stdin=None):
-	if search(r"\W", filename):
-		return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=1)
-	
-	data = stdin if stdin else data
-	num_lines = len(data.split('\n'))
-	filename = filename.lower()
+def tee(guild_id, arguments, stdin=None):
+    flags, args = get_flags(arguments)
 
-	with open(f"{FILE_ROOT_DIR}/{guild_id}/{filename}.txt", "a") as out_file:
-		out_file.write(f"{data}\n")
-	
-	return TR(stdout=f"Successfully wrote {num_lines} line{'' if num_lines == 1 else 's'} into `{filename}`", exit_code=0) 
+    blank_line = 'b' in flags
+
+    if not args or (len(args) < 2 and not blank_line):
+        return TR(stderr="Usage: `$tee [filename] [data]`", exit_code=1)
+
+    filename = args[0]
+
+    if search(r"\W", filename):
+        return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=2)
+
+    data = stdin if stdin else f"{'\n' if blank_line else ''}{' '.join(args[1:])}" if len(args) > 1 else ''
+    num_lines = len(data.split('\n'))
+    filename = filename.lower()
+
+    with open(f"{FILE_ROOT_DIR}/{guild_id}/{filename}.txt", 'w' if 'o' in flags else 'a') as out_file:
+        out_file.write(f"{data}\n")
+
+    return TR(stdout=f"Successfully wrote {num_lines} line{'' if num_lines == 1 else 's'} into `{filename}`", exit_code=0) 
 
 def uniq(guild_id, args, stdin=None):
     flags, args = get_flags(args)
@@ -244,10 +264,10 @@ def get_lines_from_file(guild_id, filename, join=False, stdin=None):
         if not filename:
             return TR(stderr="You must include a filename with this command.\nUse `$help uniq` for more usage information.")
 
+        filename = filename.lower()
+
         if search(r"\W", filename):
             return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=1)
-
-        filename = filename.lower()
 
         try:
             with open(f"{FILE_ROOT_DIR}/{guild_id}/{filename}.txt", "r") as in_file:
@@ -258,3 +278,25 @@ def get_lines_from_file(guild_id, filename, join=False, stdin=None):
         lines = stdin.splitlines(keepends=True)
 
     return TR(stdout=''.join(lines) if join else lines, exit_code=0)
+
+def number_lines(lines, number=True, number_nonblank=False, squeeze_blank=False):
+    output = []
+    count = 1
+    previous_blank = False
+
+    for line in lines:
+        is_blank = not line.strip()
+
+        if is_blank and squeeze_blank and previous_blank:
+            continue
+
+        if number and not (number_nonblank and is_blank):
+            output.append(f"{count:6} {line}")
+            count += 1
+        else:
+            output.append(line)
+
+        previous_blank = is_blank
+
+    return output
+

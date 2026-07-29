@@ -68,10 +68,18 @@ class Terminal(Cog):
 
     @hybrid_command(help=hlp.GREP_FULL,
                     brief="Search a file")
-    async def grep(self, ctx, filename: str, *, pattern: str):
-        result = grep(ctx.guild.id, filename, pattern)
+    async def grep(self, ctx, *, arguments: str):
+        result = grep(ctx.guild.id, arguments)
 
         await result.send(ctx)
+
+    @grep.error
+    async def grep_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include a filename and search pattern with this command.\n"
+                           "Example: `$grep dracula [Hh]im`\n\n"
+                           "Please use `$help grep` for more information.")
+            error.handled = True
 
     @hybrid_command(help=hlp.HEAD_FULL.format(line_count=DEFAULT_LINE_COUNT),
                     brief=f"Returns the first {DEFAULT_LINE_COUNT} lines of a given file.")
@@ -123,8 +131,8 @@ class Terminal(Cog):
 
     @hybrid_command(help=hlp.TEE_FULL,
                     brief="Write to a file")
-    async def tee(self, ctx, filename: str, *, data: str):
-        result = tee(ctx.guild.id, filename, data)
+    async def tee(self, ctx, *, arguments: str):
+        result = tee(ctx.guild.id, arguments)
 
         await result.send(ctx)
 
