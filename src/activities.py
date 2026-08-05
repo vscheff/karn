@@ -88,4 +88,5 @@ activities = [
         "Continuing to be Him",
         "Blowing the Lord's bubbles",
         "Arguing with Marvin",
+        "Piping commands",
 ]

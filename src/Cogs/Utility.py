@@ -4,10 +4,12 @@ from discord.ext.commands import Bot, Cog, command, errors, has_permissions, hyb
 from datetime import datetime, timedelta
 import discord
 import os
+from pathlib import Path
 import qrcode
 from random import choice
 
 from src.calculator import calculator, CONST, FUNCS
+from src.count_project_lines import count_project_lines
 import src.help_messages as hlp
 from src.tips import TIP_LIST
 from src.utils import TEMP_DIR
@@ -22,6 +24,7 @@ class Utility(Cog):
     # attr bot - our client
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.proj_info = count_project_lines(Path(__file__).resolve().parents[2])
 
     # $qr command used to generate QR code images
     # param arg - all user input following command-name
@@ -138,7 +141,9 @@ class Utility(Cog):
                     brief="Provides a brief synopsis of Karn")
     async def info(self, ctx):
         await ctx.send("Hello! I am Karn, your friendly Time-Travelling Golem!\n"
-                       "I was developed by Vertical Bar, and am hosted locally in Kalamazoo!\n"
+                       "I was developed by Vertical Bar, and am hosted locally in Kalamazoo.\n"
+                       f"My current version has {self.proj_info[0]} source files with {self.proj_info[1]:,} lines of code "
+                       f"({self.proj_info[2]:,} significant lines).\n"
                        "If you would like to know me more intimately my Open Source code can be found here:\n\n"
                        "https://github.com/vscheff/karn")
 

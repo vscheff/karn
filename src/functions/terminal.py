@@ -26,7 +26,7 @@ def cat(guild_id, arguments, stdin=None):
 
     output = ''.join(output_lines)
 
-    return TR(stdout=output, formatted_output=f"```text\n{output}```", exit_code=0)
+    return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
 def grep(guild_id, arguments, stdin=None):
     flags, args = get_flags(arguments)
@@ -51,7 +51,7 @@ def grep(guild_id, arguments, stdin=None):
     if matches := [i for i in lines if search(pattern, i)]:
         output = ''.join(matches)
 
-        return TR(stdout=output, formatted_output=f"```text\n{output}```", exit_code=0)
+        return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
     return TR(stderr=f"No matches found in `{'stdin' if stdin else filename}`", exit_code=3)
 
@@ -96,7 +96,7 @@ def ls(guild_id, stdin=None):
 	if not files:
 		return TR(stderr="No files exist in your server's directory. Try using `$tee` first!", exit_code=1)
 
-	return TR(stdout=files, formatted_output=f"```\n{files}\n```", exit_code=0)
+	return TR(stdout=files, formatted_output=f"```text\n{files}\n```", exit_code=0)
 
 def sort(guild_id, args, stdin=None):
     def numeric_sort(line):
@@ -111,26 +111,12 @@ def sort(guild_id, args, stdin=None):
    
     ignore_case = 'f' in flags
     key = numeric_sort if 'n' in flags else str.casefold if ignore_case else None
-
-    if not stdin:
-        if not args:
-            return TR(stderr="You must include a filename with this command.\nUse `$help sort` for more usage information.")
-
-        filename = args[0]
-        
-        if search(r"\W", filename):
-            return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=1)
-
-        filename = filename.lower()
-
-        try:
-            with open(f"{FILE_ROOT_DIR}/{guild_id}/{filename}.txt", "r") as in_file:
-                lines = in_file.readlines()
-        except FileNotFoundError:
-            return TR(stderr=f"No file named \"{filename}\" found! Try using `$tee` first.", exit_code=2)
-    else:
-        lines = [i + '\n' for i in stdin.split('\n')]
-
+    response = get_lines_from_file(guild_id, None if stdin else args[0], join=False, stdin=stdin)
+    
+    if not response.succeeded:
+        return response
+    
+    lines = response.stdout
     lines.sort(key=key, reverse='r' in flags)
 
     if 'u' in flags:
@@ -143,8 +129,8 @@ def sort(guild_id, args, stdin=None):
                 previous_key = current_key
 
         lines = unique_lines
-
-    return TR(stdout=''.join(lines), exit_code=0)
+    output = ''.join(lines)
+    return TR(stdout=output, formatted_output=f"```text\n{output}\n", exit_code=0)
 
 def tee(guild_id, arguments, stdin=None):
     flags, args = get_flags(arguments)
@@ -180,25 +166,12 @@ def uniq(guild_id, args, stdin=None):
 
         return (not (repeated_only or unique_only)) or (repeated_only and count > 1) or (unique_only and count == 1)
 
-    if not stdin:
-        if not args:
-            return TR(stderr="You must include a filename with this command.\nUse `$help uniq` for more usage information.")
-
-        filename = args[0]
-        
-        if search(r"\W", filename):
-            return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=1)
-
-        filename = filename.lower()
-
-        try:
-            with open(f"{FILE_ROOT_DIR}/{guild_id}/{filename}.txt", "r") as in_file:
-                lines = in_file.readlines()
-        except FileNotFoundError:
-            return TR(stderr=f"No file named \"{filename}\" found! Try using `$tee` first.", exit_code=2)
-    else:
-        lines = [i + '\n' for i in stdin.split('\n')]
-
+    response = get_lines_from_file(guild_id, None if stdin else args[0], join=False, stdin=stdin)
+    
+    if not response.succeeded:
+        return response
+    
+    lines = response.stdout
     output_lines = []
 
     for _, group in groupby(lines, key=str.casefold if 'i' in flags else None):
@@ -213,7 +186,7 @@ def uniq(guild_id, args, stdin=None):
 
     output = ''.join(output_lines)
 
-    return TR(stdout=output, formatted_output=f"```text\n{output}```", exit_code=0)
+    return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
 
 def wc(guild_id, args, stdin=None):
@@ -257,7 +230,9 @@ def wc(guild_id, args, stdin=None):
     else:
         response = get_response_string(flags, [i + '\n' for i in stdin.split('\n') if i], '')
 
-    return TR(stdout=response[:-1], exit_code=0)
+    output = response[:-1]
+
+    return TR(stdout=output, formatted_response=f"```text\n{formatted_response}\n```", exit_code=0)
 
 def get_lines_from_file(guild_id, filename, join=False, stdin=None):
     if not stdin:

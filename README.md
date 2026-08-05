@@ -69,6 +69,9 @@ Karn will search through all messages to detect the usage of both `++` and `--`,
 ### Line Response
 Through the use of the `$tee` command you can add lines into arbitary files. For example, using the command `$tee test This is a test line` will add "This is a test line" into a file named `test.txt`. If `test.txt` doesn't already exist, the file will be created and filled with this line. Any future `$tee` commands that specify `test` will simply append the line to the bottom of `test.txt`. The real power of this is utilized by sending the message `#test`. Doing so will cause Karn to reply with a random line from the "test" file. This allows users to dynamically create "call and response" style commands. For example, your users could append several "Good Morning" messages to a file named `gm`, then they could receive these "Good Morning" messages by sending `#gm`. All instances of `#filename` in your messages will be replaced. For example, the message `I want to say #gm then start to run a #test` can result in the response `I want to say Good Morning then start to run a This is a test line`.
 
+### Pipeline
+Many commands feature Pipeline support, allowing you to "pipe" the output from one command into another command. Commands that support this will declare so in the full command list below, as well as their respective help strings. To pipe the output from one command into another, simply seperate the commands with the `|` character. For example: `$grep dracula [Hh]im | uniq`. You may provide additional arguments to the commands receiving piped output.
+
 ## Full Command List
 Contained here is an exhaustive explanation of Karn's standard commands (excluding hidden commands) sorted by category.
 
@@ -125,19 +128,19 @@ All hat commands (excluding `$list` and `$set_default`) use the hat set as defau
 - `top` - Sends the highest rated items in the server. By default this command sends the five highest items. You can specify the number of items to send by including an integer argument: `$top 10`.
 
 ### Reminders
-- `remind` - Sets a reminder for a given time. This will ping the user who set the reminder at the given time with the provided message. The input time and message are seperated by the `|` character: `$remind <when> | <message>`. The time can be given as an absolute time: `$remind 01/15/2026 12:30 | Birthday Party`, or as a relative time: `$remind tomorrow at noon | call my mom`. You can use the argument `list` to view all reminders you currently have set within the server: `$remind list`.
+- `remind` - Sets a reminder for a given time. This will ping the user who set the reminder at the given time with the provided message. The input time and message are seperated by the `/` character: `$remind <when> / <message>`. The time can be given as an absolute time: `$remind 01/15/2026 12:30 / Birthday Party`, or as a relative time: `$remind tomorrow at noon / call my mom`. You can use the argument `list` to view all reminders you currently have set within the server: `$remind list`.
 
 ### Terminal
-- `cat` - Sends the entire contents of a given file from the server's directory.
-- `dig` - Performs a domain lookup on a given URL. By default, this command only searches for `A` records. To search for other record types, include the desired record type as an argument: `$dig protonmail.com MX`. To query a nameserver other than the default nameserver, include the desired nameserver as an argument with a leading `@` symbol: `$dig @8.8.8.8 protonmail.com`. To perform a reverse domain lookup, use the `-x` command flag: `$dig -x 1.1.1.1`. To specify a port for the query, use the `-p` command flag: `$dig -p 5353 linux.die.net`. The following command options are implemented: `+aaflag, +noaaflag, +aaonly, +noaaonly, +additional, +noadditional, +adflag, +noadflag, +all, +noall, +answer, +noanswer, +authority, +noauthority, +cd, +cdflag, +nocdflag, +cmd, +nocmd, +comments, +nocomments, +dnssec, +do, +nodnssec, +nodo, +question, +noquestion, +recurse, +norecurse, +short, +noshort, +stats, +nostats, +tcp, +notcp, +trace, +notrace`. Refer to the Linux Man pages for more information on these options.
-- `echo` - Echos a given string in your current text channel. You can use the `-c` command flag to echo the message in a different channel, for example: `$echo -c #general Send this message to the general chat`.
-- `grep` - Sends all lines from a given file from the server's directory that match a given search string. The search string supports Regular Expressions. For example, to find lines that contain a simple URL for a file named `websites`: `$grep websites www.\w+.com`.
-- `head` - Sends the first 10 lines of a given file from the server's directory. To retrieve a different number of lines, use the `-c` command flag. For example, the command `$head -c 3 dracula` will send the first three lines of the "dracula" file.
+- `cat` - Sends the entire contents of a given file from the server's directory. This command has pipeline support.
+- `dig` - Performs a domain lookup on a given URL. By default, this command only searches for `A` records. To search for other record types, include the desired record type as an argument: `$dig protonmail.com MX`. To query a nameserver other than the default nameserver, include the desired nameserver as an argument with a leading `@` symbol: `$dig @8.8.8.8 protonmail.com`. To perform a reverse domain lookup, use the `-x` command flag: `$dig -x 1.1.1.1`. To specify a port for the query, use the `-p` command flag: `$dig -p 5353 linux.die.net`. The following command options are implemented: `+aaflag, +noaaflag, +aaonly, +noaaonly, +additional, +noadditional, +adflag, +noadflag, +all, +noall, +answer, +noanswer, +authority, +noauthority, +cd, +cdflag, +nocdflag, +cmd, +nocmd, +comments, +nocomments, +dnssec, +do, +nodnssec, +nodo, +question, +noquestion, +recurse, +norecurse, +short, +noshort, +stats, +nostats, +tcp, +notcp, +trace, +notrace`. Refer to the Linux Man pages for more information on these options. This command has pipeline support.
+- `echo` - Echos a given string in your current text channel. You can use the `-c` command flag to echo the message in a different channel, for example: `$echo -c #general Send this message to the general chat`. This command has pipeline support.
+- `grep` - Sends all lines from a given file from the server's directory that match a given search string. The search string supports Regular Expressions. For example, to find lines that contain a simple URL for a file named `websites`: `$grep we This command has pipeline support.bsites www.\w+.com`.
+- `head` - Sends the first 10 lines of a given file from the server's directory. To retrieve a different number of lines, use the `-c` command flag. For example, the command `$head -c 3 dracula` will send the first three lines of the "dracula" file. This command has pipeline support.
 - `ls` - Sends all files present in the server's directory.
 - `rm` - Removes a given file from the server's directory.
-- `tail` - Sends the last 10 lines of a given file from the server's directory. To retrieve a different number of lines, use the `-c` command flag. For example, the command `$tail -c 3 johnny` will send the last three lines of the "johnny" file.
-- `tee` - Writes a given input string into a file in the server's directory. For example, to write "This is a test" into `test`: `$tee test This is a test`. If the given filename doesn't exist, this will create a new file with that name. Otherwise, the input string will be appended to the end of the existing file.
-- `wc` - Returns the line count, word count, and character count for a given file. To return the number of bytes in a file, use the `-c` command flag: `$wc -c jokes`. To return *only* the line count, character count, or word count use the `-l`, `-m`, or `-w` command flag, respectively.
+- `tail` - Sends the last 10 lines of a given file from the server's directory. To retrieve a different number of lines, use the `-c` command flag. For example, the command `$tail -c 3 johnny` will send the last three lines of the "johnny" file. This command has pipeline support.
+- `tee` - Writes a given input string into a file in the server's directory. For example, to write "This is a test" into `test`: `$tee test This is a test`. If the given filename doesn't exist, this will create a new file with that name. Otherwise, the input string will be appended to the end of the existing file. This command has pipeline support.
+- `wc` - Returns the line count, word count, and character count for a given file. To return the number of bytes in a file, use the `-c` command flag: `$wc -c jokes`. To return *only* the line count, character count, or word count use the `-l`, `-m`, or `-w` command flag, respectively. This command has pipeline support.
 
 ### Utility
 - `calc` - Sends the result of a mathematical expression. Supported operators are: `+`, `-`, `*`, `/`, `^`, and `%`. Supported constants are: `e`, `tau`, and `pi`. Supported functions are: `abs`, `acos`, `answer`, `asin`, `atan`, `cos`, `deg`, `ln`, `log`, `rand`, `rad`, `sin`, `sqrt`, `tan`. All trig functions take input in radians and output their result in radians. To input degrees into trig functions, use the `deg` function: `$cals sin(deg(90))`. Similarly, you can use the `deg` function to interpret the output of trig functions as degrees: `$calc deg(asin(1))`.
@@ -172,7 +175,7 @@ Karn steals his name from a [time-travelling silver golem](https://mtg.wiki/page
 - [ ] Add argument descriptions
 - [ ] Move file directories into SQL tables
 - [ ] Make blank `$prompt` command work better
-- [ ] Code Wordle game to remove it as a dependency
+- [x] Code Wordle game to remove it as a dependency
 - [ ] Configurable webserver settings
 - [ ] Configurable SQL database name
 - [ ] Allow for remote SQL Server
@@ -181,4 +184,6 @@ Karn steals his name from a [time-travelling silver golem](https://mtg.wiki/page
 - [ ] Configurable command prefix
 - [ ] Configurable bot name
 - [ ] Create setup script that disables unused/inaccessible features
-- [ ] Reduce Karn's required scope
+- [x] Reduce Karn's required scope
+- [ ] Implement Pipeline support across all applicable commands
+- [ ] Extract Discord API from all implemented functions
