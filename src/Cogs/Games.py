@@ -167,7 +167,7 @@ class Games(Cog):
         formatted, won, lost = game.submit_guess(guess)
 
         if won:
-            await msg.channel.send(f"Correct! You succesfully found the word using {len(game.individual_guesses)} guesses.")
+            await msg.channel.send(f"Correct! You succesfully found the word using {len(game.guesses)} guesses.")
             self.wordle_games.pop(msg.channel.id, None)
             
             return True

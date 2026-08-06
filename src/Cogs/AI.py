@@ -482,6 +482,9 @@ class AI(Cog):
         return response
 
     def build_context_from_file(self, guild_id, filename):
+        if search(r"\W", filename):
+            raise FileNotFoundError
+
         filepath = f"{FILE_ROOT_DIR}/{guild_id}/{filename.lower()}.txt"
 
         with open(filepath, "r") as in_file:
