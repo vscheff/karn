@@ -2,6 +2,7 @@ import shlex
 
 from src.functions.dig import dig
 from src.functions.terminal import *
+from src.response_strings import NO_DM_SUPPORT
 from src.util_objects import TerminalResult as TR
 
 async def run_pipeline(ctx, pipeline):
@@ -15,13 +16,15 @@ async def run_pipeline(ctx, pipeline):
 
     stdin = ''
 
+    guild_id = None if ctx.guild is None else ctx.guild.id
+
     for segment in segments:
         command_name, raw_arguments = split_command(segment)
 
         if not command_name:
             continue
 
-        result = await process_command(ctx, command_name, raw_arguments, stdin)
+        result = await process_command(guild_id, command_name, raw_arguments, stdin)
 
         if not result.succeeded:
             return result
@@ -92,10 +95,13 @@ def split_first_argument(raw_arguments):
 def parse_arguments(raw_arguments):
     return shlex.split(raw_arguments)
 
-async def process_command(ctx, command_name, raw_arguments, stdin):
+async def process_command(guild_id, command_name, raw_arguments, stdin):
     match command_name:
         case "cat":
-            return cat(ctx.guild.id, raw_arguments, stdin=stdin)
+            if guild_id is None and not stdin:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return cat(guild_id, raw_arguments, stdin=stdin)
 
         case "dig":
             try:
@@ -112,36 +118,66 @@ async def process_command(ctx, command_name, raw_arguments, stdin):
             return TR(stdout=raw_arguments, exit_code=0)
 
         case "grep":
+            if guild_id is None and not stdin:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
             if not raw_arguments:
                 return TR(stderr="usage: `grep [filename] <pattern>`", exit_code=1)
 
-            return grep(ctx.guild.id, raw_arguments, stdin=stdin)
+            return grep(guild_id, raw_arguments, stdin=stdin)
 
         case "ls":
-            return ls(ctx.guild.id, stdin=stdin)
+            if guild_id is None:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return ls(guild_id, stdin=stdin)
 
         case "head":
-            return get_lines(ctx.guild.id, raw_arguments, reverse=False, stdin=stdin)
+            if guild_id is None and not stdin:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return get_lines(guild_id, raw_arguments, reverse=False, stdin=stdin)
+
+        case "nl":
+            if guild_id is None and not stdin:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return nl(guild_id, raw_arguments, stdin=stdin)
 
         case "sort":
-            return sort(ctx.guild.id, raw_arguments, stdin=stdin)
+            if guild_id is None and not stdin:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return sort(guild_id, raw_arguments, stdin=stdin)
 
         case "tail":
-            return get_lines(ctx.guild.id, raw_arguments, reverse=True, stdin=stdin)
+            if guild_id is None and not stdin:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return get_lines(guild_id, raw_arguments, reverse=True, stdin=stdin)
       
         case "uniq":
-            return uniq(ctx.guild.id, raw_arguments, stdin=stdin)
+            if guild_id is None and not stdin:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return uniq(guild_id, raw_arguments, stdin=stdin)
 
         case "tee":
+            if guild_id is None:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
             filename, data = split_first_argument(raw_arguments)
 
             if not filename:
                 return TR(stderr="usage: `tee <filename> [data]`", exit_code=1)
 
-            return tee(ctx.guild.id, filename, data, stdin=stdin) 
+            return tee(guild_id, filename, data, stdin=stdin) 
 
         case "wc":
-            return wc(ctx.guild.id, raw_arguments, stdin=stdin)
+            if guild_id is None and not stdin:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return wc(guild_id, raw_arguments, stdin=stdin)
 
         case _:
             return TR(stderr=f"`{command_name}` does not have pipeline support.", exit_code=2)

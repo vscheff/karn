@@ -1,4 +1,4 @@
-from discord.ext.commands import Cog, errors, hybrid_command
+from discord.ext.commands import Cog, errors, guild_only, hybrid_command
 from os import remove
 from random import choice
 from re import sub
@@ -12,6 +12,7 @@ from src.utils import get_flags, send_tts_if_in_vc
 
 class Terminal(Cog):
 
+    @guild_only()
     @hybrid_command(help=hlp.CAT_FULL,
                     brief="Read from a file")
     async def cat(self, ctx, *, filename: str):
@@ -66,6 +67,7 @@ class Terminal(Cog):
             await ctx.send("You must include a message to echo with this command.\nPlease use `$help echo` for more information.")
             error.handled = True
 
+    @guild_only()
     @hybrid_command(help=hlp.GREP_FULL,
                     brief="Search a file")
     async def grep(self, ctx, *, arguments: str):
@@ -81,6 +83,7 @@ class Terminal(Cog):
                            "Please use `$help grep` for more information.")
             error.handled = True
 
+    @guild_only()
     @hybrid_command(help=hlp.HEAD_FULL.format(line_count=DEFAULT_LINE_COUNT),
                     brief=f"Returns the first {DEFAULT_LINE_COUNT} lines of a given file.")
     async def head(self, ctx, *, filename: str):
@@ -88,6 +91,15 @@ class Terminal(Cog):
 
         await result.send(ctx)
 
+    @guild_only()
+    @hybrid_command(help='',
+                    brief=f"Outputs the lines of a given file with prefixed line numbers.")
+    async def nl(self, ctx, *, filename: str):
+        result = nl(ctx.guild.id, filename)
+
+        await result.send(ctx)
+
+    @guild_only()
     @hybrid_command(help=hlp.TAIL_FULL.format(line_count=DEFAULT_LINE_COUNT),
                     brief=f"Returns the last {DEFAULT_LINE_COUNT} lines of a given file.")
     async def tail(self, ctx, *, filename: str):
@@ -95,6 +107,7 @@ class Terminal(Cog):
     
         await result.send(ctx)
 
+    @guild_only()
     @hybrid_command(help=hlp.LS_FULL,
                     brief="Lists present text files")
     async def ls(self, ctx):
@@ -102,6 +115,7 @@ class Terminal(Cog):
 
         await result.send(ctx)
 
+    @guild_only()
     @hybrid_command(help=hlp.RM_FULL,
                     brief="Remove a text file")
     async def rm(self, ctx, filename: str):
@@ -122,6 +136,7 @@ class Terminal(Cog):
                            "Please use `$help grep` for more information.")
             error.handled = True
 
+    @guild_only()
     @hybrid_command(help=hlp.SORT_FULL,
                     brief="Sort the lines from a file")
     async def sort(self, ctx, *, args: str):
@@ -129,17 +144,11 @@ class Terminal(Cog):
 
         await result.send(ctx)
 
+    @guild_only()
     @hybrid_command(help=hlp.TEE_FULL,
                     brief="Write to a file")
     async def tee(self, ctx, *, arguments: str):
         result = tee(ctx.guild.id, arguments)
-
-        await result.send(ctx)
-
-    @hybrid_command(help=hlp.UNIQ_FULL,
-                    brief="Returns or omits repeated lines")
-    async def uniq(self, ctx, *, args: str):
-        result = uniq(ctx.guild.id, args)
 
         await result.send(ctx)
 
@@ -151,6 +160,15 @@ class Terminal(Cog):
                            "Please use `$help tee` for more information.")
             error.handled = True
 
+    @guild_only()
+    @hybrid_command(help=hlp.UNIQ_FULL,
+                    brief="Returns or omits repeated lines")
+    async def uniq(self, ctx, *, args: str):
+        result = uniq(ctx.guild.id, args)
+
+        await result.send(ctx)
+
+    @guild_only()
     @hybrid_command(help=hlp.WC_FULL,
                     brief="Returns various counts for a file")
     async def wc(self, ctx, *, args: str):

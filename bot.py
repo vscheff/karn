@@ -21,6 +21,7 @@ from src.Cogs.Terminal import send_line
 from src.global_vars import FILE_ROOT_DIR, SEND_LINE_CHAR
 from src.help_command import CustomHelpCommand
 from src.pipeline import run_pipeline
+from src.response_strings import NO_DM_SUPPORT
 from src.sql import connect_to_sql_database
 from src.utils import make_guild_dir
 
@@ -104,6 +105,9 @@ async def on_message(msg):
 async def on_command_error(ctx, error):
     if hasattr(error, "handled") and error.handled:
         return
+
+    if isinstance(error, commands.NoPrivateMessage):
+        return await ctx.send(NO_DM_SUPPORT)
 
     if isinstance(error, commands.CommandNotFound):
         if ctx.guild and f"{(cmd := ctx.message.content.lstrip('$').lower())}.txt" in listdir(f"{FILE_ROOT_DIR}/{ctx.guild.id}"):

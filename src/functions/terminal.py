@@ -8,6 +8,8 @@ from src.util_objects import TerminalResult as TR
 
 
 DEFAULT_LINE_COUNT = 10
+DEFAULT_NUMBER_WIDTH = 6
+DEFAULT_NUMBER_SEP = ' '
 
 
 def cat(guild_id, arguments, stdin=None):
@@ -24,6 +26,46 @@ def cat(guild_id, arguments, stdin=None):
     if 'E' in flags:
         output_lines = [f"{i[:-1]}$\n" if i.endswith('\n') else f"{i}$" for i in output_lines]
 
+    output = ''.join(output_lines)
+
+    return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
+
+def nl(guild_id, arguments, stdin=None):
+    flags, args = get_flags(arguments, make_dic=True)
+
+    if len(args) < 1 and not stdin:
+        return TR(stderr="You must include a filename with this command.\nUse `$help nl` for more information.", exit_code=1)
+
+    response = get_lines_from_file(guild_id, None if stdin else args[0], join=False, stdin=stdin)
+
+    if not response.succeeded:
+        return response
+
+    number_nonblank = True
+    number_blank = False
+    separator = flags['s'] if 's' in flags else DEFAULT_NUMBER_SEP
+    width = DEFAULT_NUMBER_WIDTH
+
+    if 'b' in flags:
+        for char in flags['b']:
+            match char:
+                case 'a':
+                    number_nonblank = number_blank = True
+                case 't':
+                    number_nonblank = True
+                    number_blank = False
+                case 'n':
+                    number_nonblank = number_blank = False
+
+    if 'w' in flags:
+        try:
+            if (width := int(flags['w'])) < 0:
+                raise ValueError
+        except ValueError:
+            return TR(stderr="Bad subargument given for number width. Please only use valid nonnegative integers.\nUse `$help nl` for more information.",
+                      exit_code=2)
+
+    output_lines = number_lines(response.stdout, number_nonblank=number_nonblank, number_blank=number_blank, width=width, separator=separator)
     output = ''.join(output_lines)
 
     return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
@@ -130,7 +172,7 @@ def sort(guild_id, args, stdin=None):
 
         lines = unique_lines
     output = ''.join(lines)
-    return TR(stdout=output, formatted_output=f"```text\n{output}\n", exit_code=0)
+    return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
 def tee(guild_id, arguments, stdin=None):
     flags, args = get_flags(arguments)
@@ -254,7 +296,7 @@ def get_lines_from_file(guild_id, filename, join=False, stdin=None):
 
     return TR(stdout=''.join(lines) if join else lines, exit_code=0)
 
-def number_lines(lines, number=True, number_nonblank=False, squeeze_blank=False):
+def number_lines(lines, number_nonblank=True, number_blank=False, squeeze_blank=False, width=DEFAULT_NUMBER_WIDTH, separator=DEFAULT_NUMBER_SEP):
     output = []
     count = 1
     previous_blank = False
@@ -265,8 +307,8 @@ def number_lines(lines, number=True, number_nonblank=False, squeeze_blank=False)
         if is_blank and squeeze_blank and previous_blank:
             continue
 
-        if number and not (number_nonblank and is_blank):
-            output.append(f"{count:6} {line}")
+        if (number_nonblank and not is_blank) or (number_blank and is_blank):
+            output.append(f"{count:{width}}{separator}{line}")
             count += 1
         else:
             output.append(line)
