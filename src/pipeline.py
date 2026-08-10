@@ -103,6 +103,12 @@ async def process_command(guild_id, command_name, raw_arguments, stdin):
 
             return cat(guild_id, raw_arguments, stdin=stdin)
 
+        case "diff":
+            if guild_id is None and not stdin:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return diff(guild_id, raw_arguments, stdin=stdin)
+
         case "dig":
             try:
                 arguments = shlex.split(raw_arguments)

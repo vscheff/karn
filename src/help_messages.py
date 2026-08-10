@@ -5,7 +5,7 @@ Example: `$add The Room`
 This command has the following flags:
 * **-h**: Used to specify a hat other than the channel's default hat.
 \tExample: `$add -h movies Troll 2`
-* **-m**: Indicates your subcommand argument is a comma-seperated list of elements.
+* **-m**: Indicates your subcommand argument is a comma-separated list of elements.
 \tExample: `$add -m Monster a Go-Go, Birdemic, Batman & Robin`'''
 
 ADD_CONTEXT_FULL = \
@@ -43,10 +43,12 @@ This command has the following flags:
 * **-b**: Number nonblank output lines.
 \tExample: `$cat -b dracula`
 * **-n**: Number all output lines.
-\tExample: `$cat -n dracula`'''
+\tExample: `$cat -n dracula`
+
+This command features pipeline support.'''
 
 CHOICE_FULL = \
-'''Returns one chosen item from a given list. The list can be of any size, with each item seperated by a comma.
+'''Returns one chosen item from a given list. The list can be of any size, with each item separated by a comma.
 Example: `$choice Captain Kirk, Captain Picard, Admiral Adama`
 
 This command has the following flags:
@@ -89,7 +91,7 @@ This command has the following flags:
 \tExample: `$daily -d word`
 * **-l**: List the categories currently being sent to this channel.
 \tExample: `$daily -l`
-* **-m**: Add (or delete) multiple categories given in a comma-seperated list.
+* **-m**: Add (or delete) multiple categories given in a comma-separated list.
 \tExample: `$daily -m fact, wiki, word, xkcd`
 * **-t**: Trigger the immediate retrieval of a daily item in this channel.
 \tExample: `$daily -t`'''
@@ -131,7 +133,9 @@ This command has the following options:
 * **+tcp, +notcp:** This option  indicates  whether  to use TCP when querying name servers.  The default behavior is to use UDP.
 * **+trace, +notrace:** This option  toggles tracing of the delegation path from the root name servers for the name being looked up. Tracing is disabled by default. When tracing is enabled, dig makes iterative queries to resolve the name being looked up. It  follows  referrals  from  the  root servers, showing the answer from each server that was used to resolve the lookup. If **@server** is also specified, it affects only the initial query for the root zone name servers. **+dnssec** is also set when **+trace** is set, to better emulate the default queries from a name server.
 
-**Note:** All negative options will override their corresponding positive options if both are given.'''
+**Note:** All negative options will override their corresponding positive options if both are given.
+
+This command features pipeline support.'''
 
 ECHO_FULL = \
 '''Echoes a given string within your current text channel.
@@ -139,7 +143,9 @@ Example: `$echo Repeat this back to me`
 
 This command has the following flags:
 * **-c**: Echoes the message in a different given channel.
-\tExample: `$echo -c #general Repeat this in the general channel`'''
+\tExample: `$echo -c #general Repeat this in the general channel`
+
+This command features pipeline support.'''
 
 FACT_FULL = \
 '''Sends a randomly selected fact.
@@ -168,7 +174,9 @@ This command has the following flags:
 
 GREP_FULL = \
 '''Return lines from a file in your server's directory that match a given pattern string.
-Example: `grep parody_bands Von`'''
+Example: `grep parody_bands Von`
+
+This command features pipeline support.'''
 
 HEAD_FULL = \
 '''Returns the first {line_count} lines of a given file.
@@ -178,7 +186,9 @@ Example: `$head nice rude
 
 This command has the following flags
 * **-n**: Specifies the number of lines to return
-\tExample: `$head -n 5 johnny`'''
+\tExample: `$head -n 5 johnny`
+
+This command features pipeline support.'''
 
 IGNORE_FULL = \
 '''Toggle whether the bot should respond to your messages without being prompted. The bot will still respond if your message contain its name, or if you use the `$prompt` command.
@@ -206,6 +216,30 @@ LEAVE_FULL = "Remove Karn from a voice channel."
 LIST_FULL = "List all active hats for this server."
 
 LS_FULL = "Lists the text files currently present in your server's directory."
+
+NL_FULL = \
+'''Outputs the lines of a given file from your server's directory with prefixed line numbers.
+Example: `$nl dracula`
+
+This command has the following flags:
+* **-b**: Specify the style for numbering body lines. The following subarguments are supported for style:
+  - *a*: number all lines. Example: `$nl -b a dracula`
+  - *n*: number no lines. Example: `$nl -b n dracula`
+  - *t*: number only nonempty lines [default]. Example: `$nl -b t dracula`
+* **-i**: Specify the line number increment at each line [default=1].
+\tExample: `$nl -i 3 dracula`
+* **-n**: Specify the format for inserting line numbers. The following subarguments are supported for format:
+  - *ln*: left justified, no leading zeros. Example: `$nl -n ln dracula`
+  - *rn*: right justified, no leading zeros [default]. Example: `$nl -n rn dracula`
+  - *rz*: right justified, leading zeros. Example: `$nl -n rz dracula`
+* **-s**: Specify the string used to separate line numbers from line content [default=" "].
+\tExample: `$nl -s " | " dracula`
+* **-v**: Specify the starting line number [default=1].
+\tExample: `$nl -v 67 dracula`
+* **-w**: Specify the number of reserved columns for line numbers [default=6].
+\tExample: `$nl -w 2 dracula`
+
+This command features pipeline support.'''
 
 NUMBER_FULL = \
 '''Returns a randomly chosen number between two given integers.
@@ -291,7 +325,7 @@ When rolling only one die, you may ommit the leading "1".
 Example: `$roll d6`
 
 This command has the following flags:
-* **-m**: Allows you to roll multiple dice simultaneously given by a comma-seperated list.
+* **-m**: Allows you to roll multiple dice simultaneously given by a comma-separated list.
 \tExample: `$roll -m 4d20, d3, 6d9`'''
 
 SAY_FULL = \
@@ -332,7 +366,7 @@ Example: `$show linux`'''
 
 SHUFFLE_FULL = \
 '''Returns a given list in a randomized order.
-The list can be of any size, with each item seperated by a comma
+The list can be of any size, with each item separated by a comma
 Example: `$shuffle Cryzel Rosechu, Magi-Chan, Mewtwo, Sylvana`'''
 
 SORT_FULL = \
@@ -347,7 +381,9 @@ This command has the following flags:
 * **-r**: Reverse the sorting order
 \tExample: `$sort -r dracula`
 * **-u**: Remove duplicate lines
-\tExample: `$sort -u dracula`'''
+\tExample: `$sort -u dracula`
+
+This command features pipeline support.'''
 
 TAIL_FULL = \
 '''Returns the last {line_count} lines of a given file.
@@ -357,7 +393,9 @@ Example: `$tail respond_nice response_rude`
 
 This command has the following flags
 * **-n**: Specifies the number of lines to return
-\tExample: `$tail -n 5 dracula`'''
+\tExample: `$tail -n 5 dracula`
+
+This command features pipeline support.'''
 
 TEE_FULL = \
 '''Writes user input into a given text file from your server's directory. By default, this command appends the data to the end of the given file.
@@ -367,7 +405,9 @@ This command has the following flags:
 * **-b**: Inserts a blank line before the appeneded line of data (or just a blank line if no data is provided).
 \tExample: `$tee -n test Add a line before this data` or `$tee -n test`
 * **-o**: Overwrites all existing data in the file with the provided data.
-\tExample: `$tee -o test This line will be the only line in this file now`'''
+\tExample: `$tee -o test This line will be the only line in this file now`
+
+This command features pipeline support.'''
 
 TIP_FULL = "Sends a random bot usage tip."
 
@@ -389,7 +429,9 @@ This command has the following flags:
 * **-i**: Ignore differences in case when comparing.
 \tExample: `$uniq -i dracula`
 * **-u**: Print only the unique lines.
-\tExample: `$uniq -u dracula`'''
+\tExample: `$uniq -u dracula`
+
+This command features pipeline support.'''
 
 VIDEO_FULL = \
 '''Search the web for videos with a given query
@@ -421,7 +463,9 @@ This command has the following flags:
 * **-m**: Return the character count for the file.
 \tExample: `$wc -m silverhand`
 * **-w**: Return the word count for the file.
-\tExample: `$wc -w jules`'''
+\tExample: `$wc -w jules`
+
+This command features pipeline support.'''
 
 WEATHER_FULL = \
 '''Returns the current weather for a given city

@@ -6,6 +6,7 @@ from openai import OpenAI
 import os
 from random import choices, randint
 from re import search
+from shlex import split
 from socket import socket
 from string import ascii_letters, digits
 
@@ -37,11 +38,11 @@ def get_cursor(conn, dictionary=False):
         conn.connect()
         return conn.cursor(dictionary=dictionary)
 
-def get_flags(args, join=False, make_dic=False, no_args=None, plus_args=False):
+def get_flags(args, join=False, make_dic=False, no_args=None, plus_args=False, shell=False):
     if args is None:
         return [], []
 
-    arg_list = args.split()
+    arg_list = split(args) if shell else args.split()
     flags = []
     not_flags = []
     flag_dic = {}
@@ -55,6 +56,8 @@ def get_flags(args, join=False, make_dic=False, no_args=None, plus_args=False):
                     flag_dic[arg[1]] = None if arg[1] in no_args else arg_list.pop(0)
                 except IndexError:
                     return None, None
+            elif len(arg) == 1:
+                not_flags.append(arg)
             else:
                 flags.extend(arg[1:])
         elif plus_args and arg[0] == '+':

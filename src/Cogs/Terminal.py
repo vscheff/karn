@@ -28,6 +28,14 @@ class Terminal(Cog):
                            "Please use `$help cat` for more information.")
             error.handled = True
 
+    @guild_only()
+    @hybrid_command(help='',
+                    brief='')
+    async def diff(self, ctx, *, args):
+        result = diff(ctx.guild.id, args)
+
+        await result.send(ctx)
+
     @hybrid_command(help=hlp.DIG_FULL,
                     brief="Perform a DNS lookup")
     async def dig(self, ctx, *, query):
@@ -92,7 +100,7 @@ class Terminal(Cog):
         await result.send(ctx)
 
     @guild_only()
-    @hybrid_command(help='',
+    @hybrid_command(help=hlp.NL_FULL,
                     brief=f"Outputs the lines of a given file with prefixed line numbers.")
     async def nl(self, ctx, *, filename: str):
         result = nl(ctx.guild.id, filename)

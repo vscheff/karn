@@ -1,3 +1,4 @@
+from difflib import SequenceMatcher
 from itertools import groupby
 from os import listdir
 from re import search
@@ -8,6 +9,7 @@ from src.util_objects import TerminalResult as TR
 
 
 DEFAULT_LINE_COUNT = 10
+DEFAULT_NUMBER_FORMAT = "rn"
 DEFAULT_NUMBER_WIDTH = 6
 DEFAULT_NUMBER_SEP = ' '
 
@@ -19,9 +21,9 @@ def cat(guild_id, arguments, stdin=None):
     if not response.succeeded:
         return response
 
-    skip_blank = 'b' in flags
+    number_blank = 'n' in flags
 
-    output_lines = number_lines(response.stdout, 'n' in flags or skip_blank, skip_blank, 's' in flags)
+    output_lines = number_lines(response.stdout, number_nonblank='b' in flags or number_blank, number_blank=number_blank, squeeze_blank='s' in flags)
 
     if 'E' in flags:
         output_lines = [f"{i[:-1]}$\n" if i.endswith('\n') else f"{i}$" for i in output_lines]
@@ -30,8 +32,56 @@ def cat(guild_id, arguments, stdin=None):
 
     return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
+def normal_diff(left, right):
+    def format_range(start, stop):
+        if (first := start + 1) == stop:
+            return str(first)
+
+        return f"{first},{stop}"
+
+    matcher = SequenceMatcher(None, left, right)
+    output = []
+
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+
+        if tag == "replace":
+            output.append(f"{format_range(i1, i2)}c{format_range(j1, j2)}\n")
+            output.extend(f"< {line}" for line in left[i1:i2])
+            output.append("---\n")
+            output.extend(f"> {line}" for line in right[j1:j2])
+        elif tag == "delete":
+            output.append(f"{format_range(i1, i2)}d{j1}\n")
+            output.extend(f"< {line}" for line in left[i1:i2])
+        elif tag == "insert":
+            output.append(f"{i1}a{format_range(j1, j2)}\n")
+            output.extend(f"> {line}" for line in right[j1:j2])
+
+    return ''.join(output)
+
+def diff(guild_id, arguments, stdin=None):
+    flags, args = get_flags(arguments)
+
+    if len(args) != 2:
+        return TR(stderr="You must provide exactly two files.\nUse `$help diff` for more usage information.", exit_code=2)
+
+    left = get_lines_from_file(guild_id, args[0], stdin=stdin if args[0] == '-' else None)
+
+    if not left.succeeded:
+        return left
+
+    right = get_lines_from_file(guild_id, args[1], stdin=stdin if args[1] == '-' else None)
+
+    if not right.succeeded:
+        return right
+
+    output = normal_diff(left.stdout, right.stdout)
+
+    return TR(stdout=output, formatted_output=f"```text\n{output}\n```" if output else None, exit_code=0)
+
 def nl(guild_id, arguments, stdin=None):
-    flags, args = get_flags(arguments, make_dic=True)
+    flags, args = get_flags(arguments, make_dic=True, shell=True)
 
     if len(args) < 1 and not stdin:
         return TR(stderr="You must include a filename with this command.\nUse `$help nl` for more information.", exit_code=1)
@@ -43,29 +93,66 @@ def nl(guild_id, arguments, stdin=None):
 
     number_nonblank = True
     number_blank = False
+    right_justified = True
+    zero_padded = False
     separator = flags['s'] if 's' in flags else DEFAULT_NUMBER_SEP
-    width = DEFAULT_NUMBER_WIDTH
 
-    if 'b' in flags:
-        for char in flags['b']:
-            match char:
-                case 'a':
-                    number_nonblank = number_blank = True
-                case 't':
-                    number_nonblank = True
-                    number_blank = False
-                case 'n':
-                    number_nonblank = number_blank = False
+    for char in flags.get('b', ''):
+        match char:
+            case 'a':
+                number_nonblank = number_blank = True
+            case 't':
+                number_nonblank = True
+                number_blank = False
+            case 'n':
+                number_nonblank = number_blank = False
 
-    if 'w' in flags:
-        try:
-            if (width := int(flags['w'])) < 0:
-                raise ValueError
-        except ValueError:
-            return TR(stderr="Bad subargument given for number width. Please only use valid nonnegative integers.\nUse `$help nl` for more information.",
-                      exit_code=2)
+    try:
+        increment = int(flags.get('i', 1))
+    except ValueError:
+        return TR(stderr="Bad subargument given for line increment. Please only use valid integers.\n"
+                         "Use `$help nl` for more information.",
+                  exit_code=2)
 
-    output_lines = number_lines(response.stdout, number_nonblank=number_nonblank, number_blank=number_blank, width=width, separator=separator)
+    match flags.get('n', DEFAULT_NUMBER_FORMAT):
+        case 'ln':
+            right_justified = False
+        case 'rn':
+            right_justified = True
+        case 'rz':
+            zero_padded = True
+        case _:
+            return TR(stderr="Bad subargument given for number format. Supported options include: `ln`, `rn`, and `rz`.\n"
+                             "Use `$help nl` for more information.",
+                      exit_code=3)
+
+    try:
+        start = int(flags.get('v', 1))
+    except ValueError:
+        return TR(stderr="Bad subargument given for starting line number. Please only use valid integers.\n"
+                         "Use `$help nl` for more information.",
+                  exit_code=4)
+
+    try:
+        if (width := int(flags.get('w', DEFAULT_NUMBER_WIDTH))) < 0:
+            raise ValueError
+    except ValueError:
+        return TR(stderr="Bad subargument given for number width. Please only use valid nonnegative integers.\n"
+                         "Use `$help nl` for more information.",
+                  exit_code=5)
+
+    output_lines = number_lines(
+                                response.stdout,
+                                number_nonblank=number_nonblank,
+                                number_blank=number_blank,
+                                width=width,
+                                separator=separator,
+                                start=start,
+                                increment=increment,
+                                right_justified=right_justified,
+                                zero_padded=zero_padded
+                               )
+
     output = ''.join(output_lines)
 
     return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
@@ -296,9 +383,20 @@ def get_lines_from_file(guild_id, filename, join=False, stdin=None):
 
     return TR(stdout=''.join(lines) if join else lines, exit_code=0)
 
-def number_lines(lines, number_nonblank=True, number_blank=False, squeeze_blank=False, width=DEFAULT_NUMBER_WIDTH, separator=DEFAULT_NUMBER_SEP):
+def number_lines(
+        lines,
+        number_nonblank=True,
+        number_blank=False,
+        squeeze_blank=False,
+        width=DEFAULT_NUMBER_WIDTH,
+        separator=DEFAULT_NUMBER_SEP,
+        start=1,
+        increment=1,
+        right_justified=True,
+        zero_padded=False
+):
     output = []
-    count = 1
+    count = start
     previous_blank = False
 
     for line in lines:
@@ -308,8 +406,8 @@ def number_lines(lines, number_nonblank=True, number_blank=False, squeeze_blank=
             continue
 
         if (number_nonblank and not is_blank) or (number_blank and is_blank):
-            output.append(f"{count:{width}}{separator}{line}")
-            count += 1
+            output.append(f"{count:{0 if zero_padded else ''}{'>' if right_justified else '<'}{width}}{separator}{line}")
+            count += increment
         else:
             output.append(line)
 
