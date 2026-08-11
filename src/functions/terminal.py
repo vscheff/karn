@@ -1,10 +1,9 @@
-from difflib import SequenceMatcher
 from itertools import groupby
 from os import listdir
-from re import search
+from re import finditer, search
 
 from src.global_vars import FILE_ROOT_DIR
-from src.utils import get_flags
+from src.utils import get_flags, get_lines_from_file
 from src.util_objects import TerminalResult as TR
 
 
@@ -31,54 +30,6 @@ def cat(guild_id, arguments, stdin=None):
     output = ''.join(output_lines)
 
     return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
-
-def normal_diff(left, right):
-    def format_range(start, stop):
-        if (first := start + 1) == stop:
-            return str(first)
-
-        return f"{first},{stop}"
-
-    matcher = SequenceMatcher(None, left, right)
-    output = []
-
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == "equal":
-            continue
-
-        if tag == "replace":
-            output.append(f"{format_range(i1, i2)}c{format_range(j1, j2)}\n")
-            output.extend(f"< {line}" for line in left[i1:i2])
-            output.append("---\n")
-            output.extend(f"> {line}" for line in right[j1:j2])
-        elif tag == "delete":
-            output.append(f"{format_range(i1, i2)}d{j1}\n")
-            output.extend(f"< {line}" for line in left[i1:i2])
-        elif tag == "insert":
-            output.append(f"{i1}a{format_range(j1, j2)}\n")
-            output.extend(f"> {line}" for line in right[j1:j2])
-
-    return ''.join(output)
-
-def diff(guild_id, arguments, stdin=None):
-    flags, args = get_flags(arguments)
-
-    if len(args) != 2:
-        return TR(stderr="You must provide exactly two files.\nUse `$help diff` for more usage information.", exit_code=2)
-
-    left = get_lines_from_file(guild_id, args[0], stdin=stdin if args[0] == '-' else None)
-
-    if not left.succeeded:
-        return left
-
-    right = get_lines_from_file(guild_id, args[1], stdin=stdin if args[1] == '-' else None)
-
-    if not right.succeeded:
-        return right
-
-    output = normal_diff(left.stdout, right.stdout)
-
-    return TR(stdout=output, formatted_output=f"```text\n{output}\n```" if output else None, exit_code=0)
 
 def nl(guild_id, arguments, stdin=None):
     flags, args = get_flags(arguments, make_dic=True, shell=True)
@@ -262,19 +213,36 @@ def sort(guild_id, args, stdin=None):
     return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
 def tee(guild_id, arguments, stdin=None):
-    flags, args = get_flags(arguments)
+    flags = []
+    filename = None
+    data_start = None
+
+    for token in list(finditer(r"\S+", arguments)):
+        value = token.group()
+
+        if filename is None and value.startswith('-') and len(value) > 1:
+            flags.extend(value[1:])
+        elif filename is None:
+            filename = value
+            data_start = token.end()
+            break
 
     blank_line = 'b' in flags
 
-    if not args or (len(args) < 2 and not blank_line):
+    if filename is None or (stdin is None and not blank_line and data_start == len(arguments)):
         return TR(stderr="Usage: `$tee [filename] [data]`", exit_code=1)
-
-    filename = args[0]
 
     if search(r"\W", filename):
         return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=2)
 
-    data = stdin if stdin else f"{'\n' if blank_line else ''}{' '.join(args[1:])}" if len(args) > 1 else ''
+    if stdin is not None:
+        data = stdin
+    elif blank_line:
+        data = '\n'
+    else:
+        if (data := arguments[data_start:]) and data[0].isspace():
+            data = data[1:]
+
     num_lines = len(data.split('\n'))
     filename = filename.lower()
 
@@ -362,26 +330,6 @@ def wc(guild_id, args, stdin=None):
     output = response[:-1]
 
     return TR(stdout=output, formatted_response=f"```text\n{formatted_response}\n```", exit_code=0)
-
-def get_lines_from_file(guild_id, filename, join=False, stdin=None):
-    if not stdin:
-        if not filename:
-            return TR(stderr="You must include a filename with this command.\nUse `$help uniq` for more usage information.")
-
-        filename = filename.lower()
-
-        if search(r"\W", filename):
-            return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=1)
-
-        try:
-            with open(f"{FILE_ROOT_DIR}/{guild_id}/{filename}.txt", "r") as in_file:
-                lines = in_file.readlines()
-        except FileNotFoundError:
-            return TR(stderr=f"No file named \"{filename}\" found! Try using `$tee` first.", exit_code=2)
-    else:
-        lines = stdin.splitlines(keepends=True)
-
-    return TR(stdout=''.join(lines) if join else lines, exit_code=0)
 
 def number_lines(
         lines,

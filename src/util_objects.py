@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from random import randint
 
-from src.utils import package_message
 
 MAX_TIME = timedelta(hours = 1)
 
@@ -44,6 +43,8 @@ class TerminalResult:
         return self.exit_code == 0
 
     async def send(self, ctx):
+        from src.utils import package_message
+        
         if self.stderr:
             await package_message(self.stderr, ctx, self.multi_send)
         elif self.formatted_output:

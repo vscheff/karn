@@ -11,6 +11,7 @@ from socket import socket
 from string import ascii_letters, digits
 
 from src.global_vars import FILE_ROOT_DIR, TEMP_DIR
+from src.util_objects import TerminalResult as TR
 
 OPENAI_CLIENT = OpenAI(api_key=os.getenv("CHATGPT_TOKEN"), organization=os.getenv("CHATGPT_ORG"))
 
@@ -50,6 +51,7 @@ def get_flags(args, join=False, make_dic=False, no_args=None, plus_args=False, s
 
     while arg_list:
         arg = arg_list.pop(0)
+        
         if arg[0] == '-':
             if len(arg) == 2 and make_dic:
                 try:
@@ -58,6 +60,9 @@ def get_flags(args, join=False, make_dic=False, no_args=None, plus_args=False, s
                     return None, None
             elif len(arg) == 1:
                 not_flags.append(arg)
+            elif make_dic:
+                for char in arg[1:]:
+                    flag_dic[char] = None
             else:
                 flags.extend(arg[1:])
         elif plus_args and arg[0] == '+':
@@ -107,6 +112,26 @@ def get_json_from_socket(auth):
         raise PermissionError
 
     return json_data["content"]
+
+def get_lines_from_file(guild_id, filename, join=False, stdin=None):
+    if not stdin:
+        if not filename:
+            return TR(stderr="You must include a filename with this command.\nUse `$help uniq` for more usage information.")
+
+        filename = filename.lower()
+
+        if search(r"\W", filename):
+            return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=1)
+
+        try:
+            with open(f"{FILE_ROOT_DIR}/{guild_id}/{filename}.txt", "r") as in_file:
+                lines = in_file.readlines()
+        except FileNotFoundError:
+            return TR(stderr=f"No file named \"{filename}\" found! Try using `$tee` first.", exit_code=2)
+    else:
+        lines = stdin.splitlines(keepends=True)
+
+    return TR(stdout=''.join(lines) if join else lines, exit_code=0)
 
 def get_readme():
     with open("README.md", 'r') as infile:

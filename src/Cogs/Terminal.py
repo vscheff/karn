@@ -3,6 +3,7 @@ from os import remove
 from random import choice
 from re import sub
 
+from src.functions.diff import diff
 from src.functions.dig import dig
 from src.functions.terminal import *
 from src.global_vars import FILE_ROOT_DIR, SEND_LINE_CHAR

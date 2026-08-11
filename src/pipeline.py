@@ -1,5 +1,6 @@
 import shlex
 
+from src.functions.diff import diff
 from src.functions.dig import dig
 from src.functions.terminal import *
 from src.response_strings import NO_DM_SUPPORT
@@ -172,12 +173,7 @@ async def process_command(guild_id, command_name, raw_arguments, stdin):
             if guild_id is None:
                 return TR(stderr=NO_DM_SUPPORT, exit_code=1)
 
-            filename, data = split_first_argument(raw_arguments)
-
-            if not filename:
-                return TR(stderr="usage: `tee <filename> [data]`", exit_code=1)
-
-            return tee(guild_id, filename, data, stdin=stdin) 
+            return tee(guild_id, raw_arguments, stdin=stdin) 
 
         case "wc":
             if guild_id is None and not stdin:
