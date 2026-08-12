@@ -30,13 +30,37 @@ class Terminal(Cog):
             error.handled = True
 
     @guild_only()
-    @hybrid_command(help='',
-                    brief='')
+    @hybrid_command(help=hlp.CP_FULL,
+                    brief="Copy a file")
+    async def cp(self, ctx, *, query):
+        result = cp(ctx.guild.id, query)
+
+        await result.send(ctx)
+
+    @cp.error
+    async def cp_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include two filenames with this command.\n"
+                           "Example: `$cp a_file copied_file`\n\n"
+                           "Please use `$help cp` for more information.")
+            error.handled = True
+    
+    @guild_only()
+    @hybrid_command(help=hlp.DIFF_FULL,
+                    brief="Compare files line by line")
     async def diff(self, ctx, *, args):
         result = diff(ctx.guild.id, args)
 
         await result.send(ctx)
 
+    @diff.error
+    async def diff_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include two filenames with this command.\n"
+                           "Example: `$diff this_file that_file`\n\n"
+                           "Please use `$help diff` for more information.")
+            error.handled = True
+    
     @hybrid_command(help=hlp.DIG_FULL,
                     brief="Perform a DNS lookup")
     async def dig(self, ctx, *, query):
@@ -100,6 +124,22 @@ class Terminal(Cog):
 
         await result.send(ctx)
 
+    @guild_only()
+    @hybrid_command(help=hlp.MV_FULL,
+                    brief="Rename a file")
+    async def mv(self, ctx, *, query):
+        result = mv(ctx.guild.id, query)
+
+        await result.send(ctx)
+
+    @mv.error
+    async def mv_error(self, ctx, error):
+        if isinstance(error, errors.MissingRequiredArgument):
+            await ctx.send("You must include two filenames with this command.\n"
+                           "Example: `$mv old_filename new_filename`\n\n"
+                           "Please use `$help mv` for more information.")
+            error.handled = True
+    
     @guild_only()
     @hybrid_command(help=hlp.NL_FULL,
                     brief=f"Outputs the lines of a given file with prefixed line numbers.")

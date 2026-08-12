@@ -68,6 +68,14 @@ This command has the following flags:
 * **l**: Lists all available comics.
 \tExample: `$comic -l`'''
 
+CP_FULL = \
+'''Copies a file in your server's directory.
+Example: `$cp original_file copied_file
+
+This command has the following flags:
+* **-n**: Prevents the command from overwriting an existing file.
+\tExample: `$cp -n original_file file_that_already_exists`'''
+
 DAILY_FULL = \
 '''Configure the daily messages being sent to a channel.
 Message categories include:
@@ -99,6 +107,28 @@ This command has the following flags:
 DEFINE_FULL = \
 '''Returns definitions for a given English word.
 Example: `$define love`'''
+
+DIFF_FULL = \
+'''Compares two files in your server's directory, and returns the differences between them.
+Example: `$diff this_file that_file`
+You can compare a file from your server's directory to the piped output from another command by using the `-` character for either file argument.
+Example: `$grep some_file [Pp]ython | diff - that_file`
+
+This comand has the following flags:
+* **-B**: Ignore changes where lines are all blank.
+\tExample: `$diff -B a_file a_file_with_blank_lines`
+* **-b**: Ignore changes in the amount of white space.
+\tExample: `$diff -b some_file some_file_with_more_white_space`
+* **-i**: Ignore case differences in file contents.
+\tExample: `$diff -i lowercase_file uppercase_file`
+* **-U**: Outputs the diff in unified format and allows you to specify the number of unified context lines [default=3].
+\tExample: `$diff -U 9 this_file that_file`
+* **-u**: Outputs the diff in unified format.
+\tExample: `$diff -u this_file that_file`
+* **-w**: Ignore all white space.
+\tExample: `$diff -w my_file my_file_with_white_space`
+
+This command features pipeline support.'''
 
 DIG_FULL = \
 '''Perform a DNS lookup on a given address.
@@ -216,6 +246,15 @@ LEAVE_FULL = "Remove Karn from a voice channel."
 LIST_FULL = "List all active hats for this server."
 
 LS_FULL = "Lists the text files currently present in your server's directory."
+
+MV_FULL = \
+'''Renames a file in your server's directory.
+Example: `$mv old_filename new_filename`
+By default, this command will return an error if the new filename already exists in your server's directory.
+
+This command has the following flags:
+* **-f**: Allows the command to overwrite an existing filename in your server's directory.
+\tExample: `$mv -f old_filename filename_that_already_exists`'''
 
 NL_FULL = \
 '''Outputs the lines of a given file from your server's directory with prefixed line numbers.

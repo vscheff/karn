@@ -1,6 +1,8 @@
 from itertools import groupby
 from os import listdir
+from pathlib import Path
 from re import finditer, search
+from shutil import copyfile
 
 from src.global_vars import FILE_ROOT_DIR
 from src.utils import get_flags, get_lines_from_file
@@ -31,11 +33,63 @@ def cat(guild_id, arguments, stdin=None):
 
     return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
+def cp(guild_id, arguments):
+    flags, args = get_flags(arguments)
+    
+    if len(args) < 2:
+        return TR(stderr="You must include two filenames with this command.\nUse `$help cp` for more usage information.", exit_code=1)
+
+    source, destination = (i.lower() for i in args[:2])
+
+    for filename in (source, destination):
+        if search(r"\W", filename):
+            return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=2)
+    
+    guild_dir = Path(FILE_ROOT_DIR) / str(guild_id)
+    source_path = guild_dir / f"{source}.txt"
+    destination_path = guild_dir / f"{destination}.txt"
+    
+    if 'n' in flags and destination_path.is_file():
+        return TR(stderr=f"File `{destination}` already exists.", exit_code=3)
+
+    try:
+        copyfile(source_path, destination_path)
+    except FileNotFoundError:
+        return TR(stderr=f"No file named \"{source}\" found! Try using `$tee` first.", exit_code=4)
+
+    return TR(stdout=f"`{destination}` succesfully created as a copy of `{source}`.", exit_code=0)
+
+def mv(guild_id, arguments):
+    flags, args = get_flags(arguments)
+
+    if len(args) < 2:
+        return TR(stderr="You must include two filenames with this command.\nUse `$help mv` for more usage information.", exit_code=1)
+
+    source, destination = (i.lower() for i in args[:2])
+
+    for filename in (source, destination):
+        if search(r"\W", filename):
+            return TR(stderr=f"Invalid filename: `{filename}`\nPlease only use word characters.", exit_code=2)
+   
+    guild_dir = Path(FILE_ROOT_DIR) / str(guild_id)
+    source_path = guild_dir / f"{source}.txt"
+    destination_path = guild_dir / f"{destination}.txt"
+
+    if 'f' not in flags and destination_path.exists():
+        return TR(stderr=f"File `{destination}` already exists.", exit_code=3)
+
+    try:
+        source_path.rename(destination_path)
+    except FileNotFoundError:
+        return TR(stderr=f"No file named \"{source}\" found! Try using `$tee` first.", exit_code=4)
+
+    return TR(stdout=f"`{source}` succesfully renamed to `{destination}`.", exit_code=0)
+
 def nl(guild_id, arguments, stdin=None):
     flags, args = get_flags(arguments, make_dic=True, shell=True)
 
     if len(args) < 1 and not stdin:
-        return TR(stderr="You must include a filename with this command.\nUse `$help nl` for more information.", exit_code=1)
+        return TR(stderr="You must include a filename with this command.\nUse `$help nl` for more usage information.", exit_code=1)
 
     response = get_lines_from_file(guild_id, None if stdin else args[0], join=False, stdin=stdin)
 
@@ -167,7 +221,9 @@ def get_lines(guild_id, filename, reverse=False, stdin=None):
     else:
         response.append(get_response_line("stdin", [i +'\n' for i in stdin.split('\n')], num_lines))
 
-    return TR(stdout=''.join(response).rstrip('\n'), exit_code=0)
+    output = ''.join(response).rstrip('\n')
+
+    return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
 def ls(guild_id, stdin=None):
 	file_names = sorted(listdir(f"{FILE_ROOT_DIR}/{guild_id}"))
