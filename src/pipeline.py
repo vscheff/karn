@@ -124,6 +124,12 @@ async def process_command(guild_id, command_name, raw_arguments, stdin):
         case "echo":
             return TR(stdout=raw_arguments, exit_code=0)
 
+        case "find":
+            if guild_id is None:
+                return TR(stderr=NO_DM_SUPPORT, exit_code=1)
+
+            return find(guild_id, raw_arguments)
+
         case "grep":
             if guild_id is None and not stdin:
                 return TR(stderr=NO_DM_SUPPORT, exit_code=1)

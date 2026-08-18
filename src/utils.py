@@ -4,6 +4,7 @@ from json import loads
 from mysql.connector.errors import OperationalError
 from openai import OpenAI
 import os
+from pathlib import Path
 from random import choices, randint
 from re import search
 from shlex import split
@@ -15,7 +16,6 @@ from src.util_objects import TerminalResult as TR
 
 OPENAI_CLIENT = OpenAI(api_key=os.getenv("CHATGPT_TOKEN"), organization=os.getenv("CHATGPT_ORG"))
 
-PACKAGE_FILEPATH = f"{TEMP_DIR}/msg.txt"
 SUPPORTED_FILE_FORMATS = (".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv", ".webm", ".mp4", ".wav")
 TTS_RAND_STR_LEN = 8
 
@@ -182,11 +182,14 @@ async def package_message(obj, ctx, multi_send=False):
 
         return
 
-    with open(PACKAGE_FILEPATH, 'w', encoding='utf8') as msg_file:
+    filepath = Path(TEMP_DIR) / f"msg_{''.join(choices(ascii_letters + digits, k=TTS_RAND_STR_LEN))}.txt"
+    
+    with open(filepath, 'w', encoding='utf8') as msg_file:
         msg_file.write(obj)
-    if os.path.exists(PACKAGE_FILEPATH):
-        await ctx.send(file=discord.File(PACKAGE_FILEPATH))
-        os.remove(PACKAGE_FILEPATH)
+
+    if os.path.exists(filepath):
+        await ctx.send(file=discord.File(filepath))
+        os.remove(filepath)
     else:
         print('Error occurred while packaging message. Temp file not created/deleted.')
 

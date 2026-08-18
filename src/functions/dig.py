@@ -274,7 +274,7 @@ def build_dig_output(response, elapsed_ms, options):
     query_count = len(response.question)
     answer_count = section_rr_count(response.answer)
     authority_count = section_rr_count(response.authority)
-    additional_rrs = [i for i in response.additional if rrset.rdtype != dns.rdatatype.OPT]
+    additional_rrs = [i for i in response.additional if i.rdtype != dns.rdatatype.OPT]
     additional_count = section_rr_count(additional_rrs) + (1 if response.opt else 0)
     when = datetime.now().astimezone().strftime("%a %b %d %H:%M:%S %Z %Y")
     msg_size = len(response.to_wire())

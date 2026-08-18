@@ -101,6 +101,14 @@ class Terminal(Cog):
             error.handled = True
 
     @guild_only()
+    @hybrid_command(help='',
+                    brief="Search for files")
+    async def find(self, ctx, *, arguments:str=''):
+        result = find(ctx.guild.id, arguments)
+
+        await result.send(ctx)
+
+    @guild_only()
     @hybrid_command(help=hlp.GREP_FULL,
                     brief="Search a file")
     async def grep(self, ctx, *, arguments: str):
@@ -168,14 +176,9 @@ class Terminal(Cog):
     @hybrid_command(help=hlp.RM_FULL,
                     brief="Remove a text file")
     async def rm(self, ctx, filename: str):
-        filename = filename.lower()
+        result = rm(ctx.guild.id, filename)
 
-        try:
-            remove(f"{FILE_ROOT_DIR}/{ctx.guild.id}/{filename}.txt")
-        except FileNotFoundError:
-            return await ctx.send(f"No file named \"{filename}\" found! Try using `$tee` first.")
-
-        await ctx.send(f"Successfully removed `{filename}`!")
+        await result.send(ctx)
 
     @rm.error
     async def rm_error(self, ctx, error):

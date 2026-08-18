@@ -4,6 +4,7 @@
 import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
+from logging import getLogger, WARNING
 from mysql.connector.errors import InterfaceError
 from os import getenv, listdir
 from random import choice
@@ -129,4 +130,5 @@ async def on_command_error(ctx, error):
 
 # Begin the bot's event loop
 if __name__ == "__main__":
+    getLogger("discord.gateway").setLevel(WARNING)
     bot.run(TOKEN)
