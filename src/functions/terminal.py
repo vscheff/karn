@@ -274,7 +274,9 @@ def ls(guild_id, stdin=None):
 
 def rm(guild_id, filename):
     if search(r"\W", filename):
-        return TR(stderr=f"`{file}`: No such file", exit_code=1)
+        return TR(stderr=f"`{filename}`: No such file", exit_code=1)
+
+    filename = filename.lower()
 
     try:
         remove(Path(FILE_ROOT_DIR) / str(guild_id) / f"{filename}.txt")
@@ -434,7 +436,7 @@ def wc(guild_id, args, stdin=None):
 
     output = response[:-1]
 
-    return TR(stdout=output, formatted_output=f"```text\n{formatted_response}\n```", exit_code=0)
+    return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
 def number_lines(
         lines,

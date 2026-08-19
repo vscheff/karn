@@ -183,16 +183,14 @@ async def package_message(obj, ctx, multi_send=False):
         return
 
     filepath = Path(TEMP_DIR) / f"msg_{''.join(choices(ascii_letters + digits, k=TTS_RAND_STR_LEN))}.txt"
-    
-    with open(filepath, 'w', encoding='utf8') as msg_file:
-        msg_file.write(obj)
 
-    if os.path.exists(filepath):
+    try:
+        with open(filepath, 'w', encoding='utf8') as msg_file:
+            msg_file.write(obj)
+
         await ctx.send(file=discord.File(filepath))
-        os.remove(filepath)
-    else:
-        print('Error occurred while packaging message. Temp file not created/deleted.')
-
+    finally:
+        filepath.unlink(missing_ok=True)
 
 async def run_blocking(func, *args, **kwargs):
     return await get_running_loop().run_in_executor(None, lambda: func(*args, **kwargs))
