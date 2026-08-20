@@ -2,6 +2,7 @@ import shlex
 
 from src.functions.diff import diff
 from src.functions.dig import dig
+from src.functions.find import find
 from src.functions.terminal import *
 from src.response_strings import NO_DM_SUPPORT
 from src.util_objects import TerminalResult as TR

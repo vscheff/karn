@@ -5,6 +5,7 @@ from re import sub
 
 from src.functions.diff import diff
 from src.functions.dig import dig
+from src.functions.find import find
 from src.functions.terminal import *
 from src.global_vars import FILE_ROOT_DIR, SEND_LINE_CHAR
 import src.help_messages as hlp

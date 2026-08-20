@@ -1,4 +1,3 @@
-from fnmatch import fnmatch
 from itertools import groupby
 from os import listdir, remove
 from os.path import isfile
@@ -60,42 +59,6 @@ def cp(guild_id, arguments):
         return TR(stderr=f"No file named \"{source}\" found! Try using `$tee` first.", exit_code=4)
 
     return TR(stdout=f"`{destination}` succesfully created as a copy of `{source}`.", exit_code=0)
-
-def find(guild_id, args):
-    directory = Path(FILE_ROOT_DIR) / str(guild_id)
-    files = [i for i in directory.iterdir() if i.is_file() and i.suffix == ".txt"]
-    
-    arguments = args.split()
-
-    if not arguments:
-        output = '\n'.join(f"./{i.stem}" for i in files)
-        return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
-
-    predicates = []
-
-    while arguments:
-        expression = arguments.pop(0)
-
-        match expression:
-            case "-name" | "-iname":
-                if not arguments:
-                    return TR(stderr=f"`{expression}` requires a pattern.", exit_code=1)
-
-                pattern = arguments.pop(0)
-
-                if expression == "-name":
-                    predicates.append(lambda path, pattern=pattern: fnmatch(path.stem, pattern))
-                else:
-                    pattern = pattern.lower()
-                    predicates.append(lambda path, pattern=pattern: fnmatch(path.stem.lower(), pattern))
-
-            case "-empty":
-                predicates.append(lambda path: path.stat().st_size == 0)
-
-    matches = [path for path in files if all(predicate(path) for predicate in predicates)]
-    output = '\n'.join(f"./{i.stem}" for i in matches) if matches else "No matches found!"
-    
-    return TR(stdout=output, formatted_output=f"```text\n{output}\n```", exit_code=0)
 
 def mv(guild_id, arguments):
     flags, args = get_flags(arguments)

@@ -184,6 +184,33 @@ This command has the following flags:
 * **-n**: Select from exclusively "not safe for work" facts.
 \tExample: `$fact -n`'''
 
+FIND_FULL = \
+'''Search for files your server's directory.
+Example: `$find -name dracula`
+
+The following tests are supported:
+* **-empty**: File is empty
+\tExample: `$find -empty`
+* **-iname __pattern__**: Like `-name`, but the match is case insensitive.
+\tExample: `$find -iname FiLe_WiTh_DiFfErEnT_CaSeS`
+* **-iregex __pattern__**: Like `-regex`, but the match is case insensitive.
+\tExample: `$find -iregex CAP*_files`
+* **-mmin __n__**: File's data was last modified less than, more than or exactly __n__ minutes ago.
+\tExample: `$find -mmin 67`
+* **-mtime __n__**: Files data was last modified less than, more than or exactly __n__*24 hours ago.
+\tExample: `$find -mtime 3`
+* **-name __pattern__**: File name matches shell pattern __pattern__.
+\tExample: `$find -name my_file`
+* **-newer __reference__**: Time of the last data modification of the current file is more recent than that of the last data modification of the __reference__ file.
+* **-regex __pattern__*: File name matches regular expression __pattern__. This is a match on the whole file name, not a search. The regular expressions understood by `$find` are Python regular expressions.
+\tExample: `$find *bar`
+* **-size __n__[ckMG]: File uses less than, more than or exactly __n__ units of space, rounding up. The following suffixes can be used:
+  - *c*: for bytes (this is the default if no suffix is used)
+  - *k*: for kibibytes (KiB, units of 1024 bytes)
+  - *M*: for mebibytes (MiB, units of 1204 * 1024 = 1048576 bytes)
+  - *G*: for gibibytes (GiB, units of 1024 * 1024 * 1024 = 1073741824 bytes)
+  '''
+
 FLIP_FULL = \
 '''Returns either "heads" or "tails" via random selection.
 To flip multiple coins simultaneously, include an integer argument.
