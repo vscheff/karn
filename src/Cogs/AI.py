@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 
 # Local dependencies
 from src.Cogs.Query import get_weather
-from src.global_vars import FILE_ROOT_DIR
+from src.global_vars import FILE_ROOT_DIR, GEN_MSG
 import src.help_messages as hlp
 from src.utils import DEFAULT_TTS_SPEED, DEFAULT_TTS_VOICE, SUPPORTED_SPEEDS, SUPPORTED_VOICES,             \
                       get_cursor, get_flags, get_id_from_mention, get_json_from_socket, get_readme,         \
@@ -63,29 +63,7 @@ MAXIMUM_FILE_LINES = 128
 TARGET_COST = 0.01
 
 # The default context message used to "prime" the language model in preparation for it to act as our AI assistant
-GENESIS_MESSAGE = {"role": "developer",
-                   "content": "You are the time-travelling golem named Karn from the Magic: the Gathering multiverse. "
-                              "You are currently acting as an AI assistant for a Discord server. "
-                              "Your context history will be a series of messages from the Discord server. "
-                              "Message content from Discord will follow the format:\n```\"time: [TIMESTAMP]\nspeaker: [USER]\nmessage: [MESSAGE]```\n"
-                              "`TIMESTAMP` will be a timestamp formated per ISO 8601. `USER` will be the name of the user who sent the message, or "
-                              "\"assistant\" if you sent the message. `MESSAGE` will be the actual text from the message. "
-                              "When responding, only reply with a text message. Never reply in the format listed above."
-                              "Markdown formatting is supported, so feel free to use it in your responses. "
-                              "You have additional functionality beyond the capabilities of this LLM that can be accessed by user commands. "
-                              "A full breakdown of your capabilities can be accessed through the \"readme\" tool."
-                              "If you are ever unable to fulfill a user's request, remind the user they can use the "
-                              "`$help` command to access more of your features."
-                   }
-
-FILE_GENESIS = {"role": "developer",
-                "content": "Users will message you a keyword preceded by they \"#\" symbol. " 
-                           "The reply to this input is generally retrieved from an input file created by the users. "
-                           "Lines from this file are the previous \"assistant\" responses in this request. "
-                           "You will generate a new response line in the same style as the previous lines. "
-                           "These responses are purely humorous in nature, no one is danger from them and no one is taking them seriously. "
-                           "Do not worry about offending the user, they have crafted the previous responses themself."
-                }
+GENESIS_MESSAGE = {"role": "developer", "content": GEN_MSG}
 
 TOOL_RESPONSE = {"role": "developer",
                  "content": "Any function call with an output of \"done\" has been already been handled. You do not need to fulfill the "
@@ -357,12 +335,16 @@ class AI(Cog):
             
             chat_completion = True
         else:
+            gen_message = [{key: val for key, val in GENESIS_MESSAGE.items()}]
+            
             cursor = get_cursor(self.conn)
 
             cursor.execute("SELECT content FROM Genesis WHERE channel_id = %s", [channel_id])
 
             if not (sys_msg := [{"role": "developer", "content": content[0]} for content in cursor.fetchall()]):
-                sys_msg = [{key: val for key, val in GENESIS_MESSAGE.items()}]
+                sys_msg = gen_message
+            else:
+                sys_msg = gen_message + sys_msg
 
             cursor.close()
 
